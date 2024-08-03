@@ -1,0 +1,20 @@
+import { NextApiRequest, NextApiResponse } from 'next';
+import { db, task } from '@/lib/db';
+import { NextResponse } from 'next/server';
+
+export  async function POST(req: Request, res: NextApiResponse) {
+  const body = await req.json();
+  try {
+      const newTask = await db.insert(task).values({
+        name: body.name,
+        status: body.status,
+        description: body.description,
+        deadline: new Date(body.deadline).toISOString(),
+        projectId: body.projectId,
+      }).returning();
+      return NextResponse.json(newTask);
+    } catch (error) {
+      console.log(error)
+      return NextResponse.json({ error: 'Error creating newTask' }, { status: 500 });
+    }
+}
