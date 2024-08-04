@@ -11,7 +11,7 @@ import { create } from "domain";
 import { z } from "zod";
 import { describe } from "node:test";
 import { db, task } from "@/lib/db";
-import { createMessage } from "../messages/route";
+import { createMessage } from "../messages/helper";
 
 export const maxDuration = 30;
 
@@ -86,6 +86,7 @@ export async function POST(req: Request) {
         content: e.text,
         projectId,
         role: "assistant",
+        //@ts-ignore
         toolInvocations: e.toolResults[0] ? e.toolResults : undefined,
       });
     },

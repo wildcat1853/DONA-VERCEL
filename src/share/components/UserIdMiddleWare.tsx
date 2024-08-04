@@ -1,14 +1,14 @@
 "use client";
 import { nanoid } from "nanoid";
-import React from "react";
+import React, { useEffect } from "react";
 type Props = {};
 
 function setUserId() {
   const userId = nanoid(8);
-  document.cookie = "userId=" + userId;
+  if (document) document.cookie = "userId=" + userId;
 }
 export function getUserId() {
-  const userIdStr = document.cookie
+  const userIdStr = document?.cookie
     .split(";")
     .find((el) => el.includes("userId"));
   if (!userIdStr) return setUserId();
@@ -17,7 +17,9 @@ export function getUserId() {
 }
 
 function UserIdMiddleWare({}: Props) {
-  getUserId();
+  useEffect(() => {
+    getUserId();
+  }, []);
 
   return <></>;
 }
