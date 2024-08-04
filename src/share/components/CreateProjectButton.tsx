@@ -4,6 +4,7 @@ import { Button } from "../ui/button";
 import { useRouter } from "next/navigation";
 import { Project } from "@/app/api/projects/route";
 import { getUserId } from "./UserIdMiddleWare";
+import apiUrl from "@/lib/apiUrl";
 
 type Props = {};
 
@@ -12,7 +13,7 @@ function CreateProjectButton({}: Props) {
   const userId = getUserId();
   const createProject = async () => {
     const data: Project[] = await (
-      await fetch("http://localhost:3000/api/projects", {
+      await fetch(apiUrl() + "/projects", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
