@@ -1,9 +1,10 @@
 // lib/db.ts
 
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Client } from 'pg';
-import { project, task, message } from './schemas';
-import { ENV } from './env';
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Client } from "pg";
+import { project, task, message } from "./schemas";
+import { ENV } from "./env";
+import * as schema from "./schemas";
 
 const DATABASE_URL = ENV.DATABASE_URL;
 
@@ -13,5 +14,5 @@ const client = new Client({
 
 client.connect();
 
-export const db = drizzle(client);
+export const db = drizzle(client, { schema: schema });
 export { project, task, message };

@@ -1,0 +1,1 @@
+ALTER TABLE "tasks" ALTER COLUMN "deadline" SET DATA TYPE timestamp;
