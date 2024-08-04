@@ -5,7 +5,6 @@ import { Card } from "@/share/ui/card";
 import React from "react";
 import { cookies } from "next/headers";
 import Link from "next/link";
-import apiUrl from "@/lib/apiUrl";
 
 type Props = {};
 
