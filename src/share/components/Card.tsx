@@ -1,4 +1,4 @@
-import { Task } from "@/app/api/tasks/route";
+import { Task } from "@/lib/define";
 import React from "react";
 import { Card } from "../ui/card";
 import { Badge } from "../ui/badge";

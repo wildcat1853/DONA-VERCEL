@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
-import { message, MyToolInvocationType } from "@/lib/schemas";
+import { MyToolInvocationType } from "@/lib/define";
+import { message } from "@/lib/schemas";
 
 export async function createMessage({
   content,

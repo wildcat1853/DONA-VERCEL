@@ -1,5 +1,5 @@
 "use client";
-import { Task } from "@/app/api/tasks/route";
+import { Task } from "@/lib/define";
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Card } from "../ui/card";

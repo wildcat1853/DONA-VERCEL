@@ -1,9 +1,6 @@
 import { NextApiResponse } from "next";
 import { db, project } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { InferSelectModel } from "drizzle-orm";
-
-export type Project = InferSelectModel<typeof project>;
 
 export async function GET() {
   return NextResponse.json({ data: "klskjdls" });

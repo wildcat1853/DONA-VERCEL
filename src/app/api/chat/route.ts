@@ -7,9 +7,7 @@ export async function GET(req: Request) {
 import { openai } from "@ai-sdk/openai";
 import { streamText, StreamData } from "ai";
 import { systemPrompt } from "./systemPromt";
-import { create } from "domain";
 import { z } from "zod";
-import { describe } from "node:test";
 import { db, task } from "@/lib/db";
 import { createMessage } from "../messages/helper";
 
@@ -90,7 +88,10 @@ export async function POST(req: Request) {
         toolInvocations: e.toolResults[0] ? e.toolResults : undefined,
       });
     },
-    messages: [{ role: "system", content: systemPrompt }, ...messages],
+    messages: [
+      { role: "system", content: systemPrompt(new Date().toISOString()) },
+      ...messages,
+    ],
   });
 
   return result.toDataStreamResponse({ data });

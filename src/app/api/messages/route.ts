@@ -1,7 +1,5 @@
 import { NextApiResponse } from "next";
-import { db, message } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { MyToolInvocationType } from "@/lib/schemas";
 import { createMessage } from "./helper";
 
 export async function POST(req: Request, res: NextApiResponse) {

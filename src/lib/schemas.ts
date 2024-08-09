@@ -12,6 +12,7 @@ import {
   json,
 } from "drizzle-orm/pg-core";
 import { ToolInvocation } from "ai";
+import { MyToolInvocationType } from "./define";
 
 export const project = pgTable("projects", {
   id: text("id")
@@ -42,13 +43,6 @@ export const task = pgTable("tasks", {
 });
 
 export const roleEnum = pgEnum("role", ["user", "assistant"]);
-export type MyToolInvocationType = {
-  args: {
-    title: string;
-    description: string;
-    deadline: string;
-  };
-};
 export const message = pgTable("messages", {
   id: text("id")
     .primaryKey()

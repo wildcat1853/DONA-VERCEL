@@ -1,4 +1,4 @@
-import { Task } from "@/app/api/tasks/route";
+import { Task } from "@/lib/define";
 import { db } from "@/lib/db";
 import Chat from "@/share/components/Chat";
 import TaskTabs from "@/share/components/TaskTabs";

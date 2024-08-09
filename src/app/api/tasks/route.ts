@@ -3,8 +3,6 @@ import { db, task } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { eq, InferSelectModel } from "drizzle-orm";
 
-export type Task = InferSelectModel<typeof task>;
-
 export async function POST(req: Request, res: NextApiResponse) {
   const body = await req.json();
   try {
