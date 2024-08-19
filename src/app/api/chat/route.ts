@@ -9,7 +9,7 @@ import { streamText, StreamData } from "ai";
 import { systemPrompt } from "./systemPromt";
 import { z } from "zod";
 import { db, task } from "@/lib/db";
-import { createMessage } from "../messages/helper";
+import { createMessage } from "./helpers";
 
 export const maxDuration = 30;
 

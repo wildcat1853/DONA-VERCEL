@@ -27,5 +27,6 @@ export async function createMessage({
     return newMessage;
   } catch (error) {
     console.log(error);
+    throw error;
   }
 }
