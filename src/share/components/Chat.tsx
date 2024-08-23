@@ -8,7 +8,7 @@ import { Form, FormControl, FormField, FormItem } from "../ui/form";
 import { useChat } from "ai/react";
 import { AiChatRow, UserChatRow } from "./ChatRows";
 import { useRouter } from "next/navigation";
-import { CardProgress } from "./Card";
+import TaskCard from "./TaskCard";
 
 type Props = { projectId: string; serverMessages: any[] };
 
@@ -44,6 +44,7 @@ function Chat({ projectId, serverMessages }: Props) {
     setMessages(serverMessages);
     if (!ran && serverMessages.length == 0) {
       ran = true;
+      // temporary
       append({ role: "user", content: "Hi" });
     }
   }, []);
@@ -78,8 +79,8 @@ function Chat({ projectId, serverMessages }: Props) {
   }, [messages]);
 
   return (
-    <>
-      <div className="mx-auto px-16 w-3/4 max-w-4xl grow overflow-auto flex flex-col-reverse gap-3">
+    <div className="px-9 bg-gray-100 flex flex-col w-full h-screen max-h-screen">
+      <div className="mx-auto w-full grow overflow-auto flex flex-col-reverse gap-3 ">
         {
           // [
           //   {
@@ -91,6 +92,11 @@ function Chat({ projectId, serverMessages }: Props) {
           //     id: 2,
           //     role: "user",
           //     content: "lsjdfllkajsdg;lsdjagl;akhsdg;kajsdkl;sjaf",
+          //   },
+          //   {
+          //     id: 2,
+          //     role: "user",
+          //     content: "yes",
           //   },
           // ]
           messages
@@ -110,11 +116,12 @@ function Chat({ projectId, serverMessages }: Props) {
                       <p>To-do List</p>
                       <div className=" flex  gap-2">
                         {el.toolInvocations.map((el) => (
-                          <CardProgress
+                          <TaskCard
                             description={el.args.description}
                             name={el.args.title}
                             id={el.args.id}
                             key={el.args.id}
+                            status={el.args.status}
                           />
                         ))}
                       </div>
@@ -128,7 +135,7 @@ function Chat({ projectId, serverMessages }: Props) {
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="flex items-center gap-4 mx-auto my-10 border-[#E7E7E7] border-solid border rounded-2xl w-2/4 px-3"
+          className="flex items-center gap-4 mx-auto my-10 bg-white border-[#E7E7E7] border-solid border rounded-2xl w-full px-3"
         >
           <FormField
             control={form.control}
@@ -148,12 +155,16 @@ function Chat({ projectId, serverMessages }: Props) {
               </FormItem>
             )}
           />
-          <Button variant={"ghost"} type="submit">
+          <Button
+            variant={"ghost"}
+            className="text-secondary-foreground hover:text-secondary"
+            type="submit"
+          >
             <Send />
           </Button>
         </form>
       </Form>
-    </>
+    </div>
   );
 }
 
