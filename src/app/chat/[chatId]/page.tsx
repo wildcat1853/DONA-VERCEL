@@ -42,9 +42,9 @@ async function page({ params }: Props) {
       </div>
       <div className="w-5/12 relative ">
         <div className="absolute left-1/2 transform -translate-x-1/2 top-6 ">
-          <Avatar className="rounded-full size-32 ">
-            <AvatarImage src="https://s3-alpha-sig.figma.com/img/4fe0/1d8f/13661e3a07d998d6cb8a763a2fb3cf06?Expires=1723420800&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=RhgxBVgDu-N7jhubUBA9gQDpCc8Lj-N1fRLwOKKBF9DBHlDGk-YoadhrSe64VVrJ4IQwdm0oYcD2W~0WtRocuyuQI8JTvrZyeyvTdt9T~wlSJjJ73RAenkCNw0wqIPpyBhUJitLDd9RnFeZuIB4Daa7ubEj8ExCGZvBSxskHgvkgCskbXHcCLNTI57kzu5xRbPwxPinDWFFftXdSJ1F~sCSQVIYUxliOjl8gwg4snVg8lRKTlRlz-C2ZMvIi2cGYTNiHGgRcDATN24NMMH0JKLQ-UBMy7c3W71yqRvPe3LxBSmIZ8U7klrjqEU6xyr~Qhne6BQE2kfEqql2UrRwm5A__" />
-            <AvatarFallback>Dn</AvatarFallback>
+          <Avatar className="rounded-full size-32 flex justify-center items-center ">
+            <AvatarImage src="" />
+            <AvatarFallback className="text-black text-2xl">Dn</AvatarFallback>
           </Avatar>
         </div>
         <Chat projectId={params.chatId} serverMessages={serverMessages} />
