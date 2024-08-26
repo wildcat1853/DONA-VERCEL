@@ -2,13 +2,13 @@
 import { Button } from "@/share/ui/button";
 import { Textarea } from "@/share/ui/textarea";
 import { Send } from "lucide-react";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem } from "../ui/form";
-import { useChat } from "ai/react";
+import { useAssistant, useChat } from "ai/react";
 import { AiChatRow, UserChatRow } from "./ChatRows";
 import { useRouter } from "next/navigation";
-import { CardProgress } from "./Card";
+import TaskCard from "./TaskCard";
 
 type Props = { projectId: string; serverMessages: any[] };
 
@@ -20,30 +20,25 @@ type MessageType = {
 
 function Chat({ projectId, serverMessages }: Props) {
   const form = useForm({ values: { message: "" } });
+
   const {
+    status,
     messages,
-    input,
+    submitMessage,
     handleInputChange,
-    handleSubmit,
-    isLoading,
-    append,
-    data,
     setMessages,
-  } = useChat({
-    keepLastMessageOnError: true,
-    body: {
-      projectId,
-    },
-  });
+    append,
+    threadId,
+  } = useAssistant({ api: "/api/chat" });
+
   const router = useRouter();
 
   const watch = form.watch("message");
 
-  let ran = false;
   useEffect(() => {
     setMessages(serverMessages);
-    if (!ran && serverMessages.length == 0) {
-      ran = true;
+    console.log(serverMessages.length);
+    if (messages.length == 0 && serverMessages.length == 0) {
       append({ role: "user", content: "Hi" });
     }
   }, []);
@@ -53,7 +48,7 @@ function Chat({ projectId, serverMessages }: Props) {
   }, [watch]);
 
   const onSubmit = (data: any) => {
-    handleSubmit();
+    submitMessage();
     form.reset();
   };
   useEffect(() => {
@@ -61,74 +56,47 @@ function Chat({ projectId, serverMessages }: Props) {
       router.refresh();
     }
     console.log(messages);
-    // (async () => {
-    //   const dataJson = await fetch("http://localhost:3000/api/chat", {
-    //     method: "POST",
-    //     headers: {
-    //       "Content-Type": "application/json",
-    //     },
-    //     body: JSON.stringify({
-    //       messages,
-    //       projectId,
-    //     }),
-    //   });
-    //   const data = await dataJson.json();
-    //   console.log(data);
-    // })();
   }, [messages]);
 
   return (
-    <>
-      <div className="mx-auto px-16 w-3/4 max-w-4xl grow overflow-auto flex flex-col-reverse gap-3">
-        {
-          // [
-          //   {
-          //     id: 1,
-          //     role: "ai",
-          //     content: "lsjdfllkajsdg;lsdjagl;akhsdg;kajsdkl;sjaf",
-          //   },
-          //   {
-          //     id: 2,
-          //     role: "user",
-          //     content: "lsjdfllkajsdg;lsdjagl;akhsdg;kajsdkl;sjaf",
-          //   },
-          // ]
-          messages
-            .toReversed()
-            .filter((el) => el.content != "Hi")
-            .map((el) => {
-              console.log(el.toolInvocations);
-              return (
-                <React.Fragment key={el.id}>
-                  {el.role != "user" ? (
-                    <AiChatRow el={el} />
-                  ) : (
-                    <UserChatRow el={el} />
-                  )}
-                  {el.toolInvocations ? (
-                    <div className="bg-gray-200">
-                      <p>To-do List</p>
-                      <div className=" flex  gap-2">
-                        {el.toolInvocations.map((el) => (
-                          <CardProgress
-                            description={el.args.description}
-                            name={el.args.title}
-                            id={el.args.id}
-                            key={el.args.id}
-                          />
-                        ))}
-                      </div>
+    <div className="px-9 bg-gray-100 flex flex-col w-full h-screen max-h-screen">
+      <div className="mx-auto w-full grow overflow-auto flex flex-col-reverse gap-3 ">
+        {messages
+          .toReversed()
+          .filter((el) => el.content != "Hi")
+          .map((el) => {
+            console.log(el.toolInvocations);
+            return (
+              <React.Fragment key={el.id}>
+                {el.role != "user" ? (
+                  <AiChatRow el={el} />
+                ) : (
+                  <UserChatRow el={el} />
+                )}
+                {el.toolInvocations ? (
+                  <div className="bg-gray-200">
+                    <p>To-do List</p>
+                    <div className=" flex  gap-2">
+                      {el.toolInvocations.map((el) => (
+                        <TaskCard
+                          description={el.args.description}
+                          name={el.args.title}
+                          id={el.args.id}
+                          key={el.args.id}
+                          status={el.args.status}
+                        />
+                      ))}
                     </div>
-                  ) : null}
-                </React.Fragment>
-              );
-            })
-        }
+                  </div>
+                ) : null}
+              </React.Fragment>
+            );
+          })}
       </div>
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="flex items-center gap-4 mx-auto my-10 border-[#E7E7E7] border-solid border rounded-2xl w-2/4 px-3"
+          className="flex items-center gap-4 mx-auto my-10 bg-white border-[#E7E7E7] border-solid border rounded-2xl w-full px-3"
         >
           <FormField
             control={form.control}
@@ -140,7 +108,7 @@ function Chat({ projectId, serverMessages }: Props) {
                     rows={1}
                     className="resize-none border-0 !max-h-20 focus:ring-0 focus-visible:ring-0"
                     placeholder="Send a message"
-                    disabled={isLoading}
+                    disabled={status == "in_progress"}
                     {...field}
                   />
                 </FormControl>
@@ -148,12 +116,16 @@ function Chat({ projectId, serverMessages }: Props) {
               </FormItem>
             )}
           />
-          <Button variant={"ghost"} type="submit">
+          <Button
+            variant={"ghost"}
+            className="text-secondary-foreground hover:text-secondary"
+            type="submit"
+          >
             <Send />
           </Button>
         </form>
       </Form>
-    </>
+    </div>
   );
 }
 
