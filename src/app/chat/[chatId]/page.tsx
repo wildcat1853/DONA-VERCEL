@@ -40,7 +40,7 @@ async function page({ params }: Props) {
           </div>
         </div>
       </div>
-      <div className="w-5/12 relative ">
+      <div className="w-5/12 relative">
         <div className="absolute left-1/2 transform -translate-x-1/2 top-6 ">
           <Avatar className="rounded-full size-32 flex justify-center items-center ">
             <AvatarImage src="" />

@@ -5,10 +5,13 @@ import { Card } from "@/share/ui/card";
 import React from "react";
 import { cookies } from "next/headers";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { nanoid } from "nanoid";
 
 type Props = {};
 
 async function page({}: Props) {
+  redirect("/chat/" + nanoid(4));
   const userId = cookies().get("userId")?.value;
 
   const projects = await db.query.project.findMany({
