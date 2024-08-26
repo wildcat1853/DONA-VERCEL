@@ -1,5 +1,4 @@
 import React from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Message } from "ai";
 
 type Props = { el: Message };
@@ -9,7 +8,7 @@ function AiChatRow({ el }: Props) {
     <div
       key={el.id}
       style={{ maxWidth: "70%" }}
-      className={"py-5 px-6 justify-start text-base bg-white rounded-full"}
+      className={"py-5 px-6 justify-start text-base bg-white rounded-3xl"}
     >
       <p>{el.content}</p>
     </div>
@@ -21,7 +20,7 @@ function UserChatRow({ el }: Props) {
     <div className="flex justify-end">
       <div
         style={{ maxWidth: "70%" }}
-        className="bg-[#1871FD] rounded-full py-5 px-6 text-white"
+        className="bg-[#1871FD] rounded-3xl py-5 px-6 text-white"
       >
         <p>{el.content}</p>
       </div>

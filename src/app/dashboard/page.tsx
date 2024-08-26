@@ -45,4 +45,4 @@ async function page({}: Props) {
   );
 }
 
-// export default page;
+export default page;

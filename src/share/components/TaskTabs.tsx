@@ -2,8 +2,6 @@
 import { Task } from "@/lib/define";
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { Card } from "../ui/card";
-import { Badge } from "../ui/badge";
 import TaskCard from "./TaskCard";
 import { Button } from "../ui/button";
 import { Plus } from "lucide-react";
@@ -31,15 +29,7 @@ function TaskTabs({ tasks }: Props) {
         value="to do"
         className="text-white flex flex-col mt-6 gap-3"
       >
-        {/* {tasks */}
-        {[
-          {
-            id: "1",
-            status: "in progress",
-            description: "description",
-            name: "Task 1",
-          },
-        ]
+        {tasks
           .filter((el) => el.status == "in progress")
           .map((el) => (
             <TaskCard

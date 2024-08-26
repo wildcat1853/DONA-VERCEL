@@ -1,98 +1,93 @@
+import { AssistantResponse } from "ai";
 import { NextResponse } from "next/server";
+import OpenAI from "openai";
+import { RunSubmitToolOutputsParams } from "openai/resources/beta/threads/runs/runs.mjs";
 
-export async function GET(req: Request) {
-  return NextResponse.json({ name: "works" });
-}
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || "",
+});
 
-import { openai } from "@ai-sdk/openai";
-import { streamText, StreamData } from "ai";
-import { systemPrompt } from "./systemPromt";
-import { z } from "zod";
-import { db, task } from "@/lib/db";
-import { createMessage } from "./helpers";
-
+// Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
 
-const onBoardingMessages = [
-  {
-    content: "What's the project",
-  },
-  {
-    content: "Where are you now?",
-  },
-  {
-    content: "How long does it take time to finish?",
-  },
-  {
-    content: "Tell me one small step that will bring you closer to",
-  },
-];
+export async function POST(req: Request, res: NextResponse) {
+  // Parse the request body
+  const input: {
+    threadId: string | null;
+    message: string;
+  } = await req.json();
 
-export async function POST(req: Request) {
-  const json = await req.json();
-  const { messages, projectId } = json;
-  const data = new StreamData();
-  createMessage({
-    content: messages[messages.length - 1].content,
-    projectId,
+  // Create a thread if needed
+  const threadId = input.threadId ?? (await openai.beta.threads.create({})).id;
+
+  // Add a message to the thread
+  const createdMessage = await openai.beta.threads.messages.create(threadId, {
     role: "user",
+    content: input.message,
   });
-  data.append({ test: "value" });
 
-  const result = await streamText({
-    model: openai("gpt-4o"),
-    tools: {
-      createTask: {
-        description: "Create a new task",
-        parameters: z.object({
-          title: z.string(),
-          description: z.string(),
-          deadline: z.string(),
-        }),
-        execute: async (data: {
-          title: string;
-          description: string;
-          deadline: string;
-        }) => {
-          console.log(data);
-          console.log("texgsd");
-          try {
-            const taskData = await db
-              .insert(task)
-              .values({
-                name: data.title,
-                description: data.description,
-                status: "in progress",
-                projectId,
-                deadline: new Date(data.deadline),
-              })
-              .returning()
-              .execute();
-            console.log(taskData);
-            return NextResponse.json(taskData);
-          } catch (error) {
-            console.log(error);
-          }
-        },
-      },
-    },
-
-    onFinish(e) {
-      data.close();
-      console.log(e);
-      createMessage({
-        content: e.text,
-        projectId,
-        role: "assistant",
-        //@ts-ignore
-        toolInvocations: e.toolResults[0] ? e.toolResults : undefined,
+  return AssistantResponse(
+    { threadId, messageId: createdMessage.id },
+    async ({ forwardStream, sendDataMessage }) => {
+      // Run the assistant on the thread
+      const runStream = openai.beta.threads.runs.stream(threadId, {
+        assistant_id:
+          process.env.ASSISTANT_ID ??
+          (() => {
+            throw new Error("ASSISTANT_ID is not set");
+          })(),
       });
-    },
-    messages: [
-      { role: "system", content: systemPrompt(new Date().toISOString()) },
-      ...messages,
-    ],
-  });
 
-  return result.toDataStreamResponse({ data });
+      // forward run status would stream message deltas
+      let runResult = await forwardStream(runStream);
+      console.log("before switch");
+      // status can be: queued, in_progress, requires_action, cancelling, cancelled, failed, completed, or expired
+      while (
+        runResult?.status === "requires_action" &&
+        runResult.required_action?.type === "submit_tool_outputs"
+      ) {
+        const tool_outputs =
+          runResult.required_action.submit_tool_outputs.tool_calls.map(
+            (toolCall: any) => {
+              const parameters = JSON.parse(toolCall.function.arguments);
+              console.log(toolCall.function.name);
+              switch (toolCall.function.name) {
+                // configure your tool calls here
+                case "createTask":
+                  return (async () => {
+                    // {
+                    //   mainTask: 'Create layout for landing page (MVP for your cat business SaaS)',
+                    //   subTasks: [ { name: 'Design the hero section', deadline: '2023-10-16' } ]
+                    // }
+                    console.log("create", parameters);
+                    return {
+                      tool_call_id: toolCall.id,
+                      output: "done",
+                    } satisfies RunSubmitToolOutputsParams.ToolOutput;
+                  })();
+                  break;
+                default:
+                  return {
+                    tool_call_id: toolCall.id,
+                    output: "there is no such function",
+                  };
+                //   throw new Error(
+                //     `Unknown tool call function: ${toolCall.function.name}`
+                //   );
+              }
+            }
+          );
+
+        const toolOutputs = await Promise.all(tool_outputs);
+
+        runResult = await forwardStream(
+          openai.beta.threads.runs.submitToolOutputsStream(
+            threadId,
+            runResult.id,
+            { tool_outputs: toolOutputs }
+          )
+        );
+      }
+    }
+  );
 }
