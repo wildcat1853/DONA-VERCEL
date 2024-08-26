@@ -1,4 +1,6 @@
+import { db, project, task } from "@/lib/db";
 import { AssistantResponse } from "ai";
+import { eq, Param } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { RunSubmitToolOutputsParams } from "openai/resources/beta/threads/runs/runs.mjs";
@@ -15,8 +17,8 @@ export async function POST(req: Request, res: NextResponse) {
   const input: {
     threadId: string | null;
     message: string;
+    projectId: string;
   } = await req.json();
-
   // Create a thread if needed
   const threadId = input.threadId ?? (await openai.beta.threads.create({})).id;
 
@@ -55,11 +57,49 @@ export async function POST(req: Request, res: NextResponse) {
                 // configure your tool calls here
                 case "createTask":
                   return (async () => {
-                    // {
-                    //   mainTask: 'Create layout for landing page (MVP for your cat business SaaS)',
-                    //   subTasks: [ { name: 'Design the hero section', deadline: '2023-10-16' } ]
-                    // }
+                    const PARAMETERS = parameters as {
+                      mainTask: string;
+                      subTasks: { name: string; deadline: string }[];
+                    };
+                    try {
+                      const projectData = await db
+                        .select()
+                        .from(project)
+                        .where(eq(project.id, input.projectId));
+                      if (!projectData.some((el) => el.id == input.projectId)) {
+                        await db
+                          .insert(project)
+                          .values({
+                            userId: "someUser",
+                            id: input.projectId,
+                          })
+                          .execute();
+                      }
+                      const tasks = await db
+                        .insert(task)
+                        .values(
+                          PARAMETERS.subTasks.map(
+                            (el) =>
+                              ({
+                                name: el.name,
+                                projectId: input.projectId,
+                                deadline: new Date(el.deadline),
+                                status: "in progress",
+                              } as const)
+                          )
+                        )
+                        .returning();
+                    } catch (e) {
+                      console.log(e);
+                      throw e;
+                    }
                     console.log("create", parameters);
+                    sendDataMessage({
+                      role: "data",
+                      data: {
+                        text: "created task",
+                      },
+                    });
                     return {
                       tool_call_id: toolCall.id,
                       output: "done",
@@ -79,7 +119,7 @@ export async function POST(req: Request, res: NextResponse) {
           );
 
         const toolOutputs = await Promise.all(tool_outputs);
-
+        console.log("after toolOutputs");
         runResult = await forwardStream(
           openai.beta.threads.runs.submitToolOutputsStream(
             threadId,

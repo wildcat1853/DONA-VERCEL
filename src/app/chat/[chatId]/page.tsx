@@ -43,7 +43,7 @@ async function page({ params }: Props) {
       <div className="w-5/12 relative">
         <div className="absolute left-1/2 transform -translate-x-1/2 top-6 ">
           <Avatar className="rounded-full size-32 flex justify-center items-center ">
-            <AvatarImage src="" />
+            <AvatarImage src="https://s3-alpha-sig.figma.com/img/f519/87bd/f29e3840b6571edddafad02003369c3c?Expires=1725840000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=KfLOvejhugXgfsU-FtAkQcI8KkXzq7l82C9SwzMaRA7cSY2V2mkg1-aSIxP1D0O9xPE0Aw7ijiWldqJiptST-KY6nICLFKZHWkdh0ovm0yXqPwBB1bApulhyarFDnYtN9Jkbq9pMNF562~6krVryvjIifWEbneCfMkaMM14hCuBYwljOrwkRW8qYH957ASOnr3DAGIxJnuagXVQnnlAyYJO5WglFchZYLNTRl9nTJxf6hjWDG9j4Ua8lO80N8YHqPAsVmz6pTJ4-TMgLUbqRFUGxhA8Bzt0v2uB6axFBUZooTzNoXjP40YSVI53ssXwhZtXQQjRt~Da1xE9e-ChrRQ__" />
             <AvatarFallback className="text-black text-2xl">Dn</AvatarFallback>
           </Avatar>
         </div>
