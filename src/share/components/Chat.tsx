@@ -29,7 +29,12 @@ function Chat({ projectId, serverMessages }: Props) {
     setMessages,
     append,
     threadId,
-  } = useAssistant({ api: "/api/chat" });
+  } = useAssistant({
+    api: "/api/chat",
+    body: {
+      projectId,
+    },
+  });
 
   const router = useRouter();
 
@@ -42,6 +47,12 @@ function Chat({ projectId, serverMessages }: Props) {
       append({ role: "user", content: "Hi" });
     }
   }, []);
+
+  useEffect(() => {
+    const lastMsg = messages.at(-1);
+    //@ts-ignore
+    if (lastMsg?.data?.text) router.refresh();
+  }, [messages]);
 
   useEffect(() => {
     handleInputChange({ target: { value: watch } } as any);
@@ -63,7 +74,7 @@ function Chat({ projectId, serverMessages }: Props) {
       <div className="mx-auto w-full grow overflow-auto flex flex-col-reverse gap-3 ">
         {messages
           .toReversed()
-          .filter((el) => el.content != "Hi")
+          .filter((el) => el.content != "Hi" && el.content)
           .map((el) => {
             console.log(el.toolInvocations);
             return (
@@ -108,7 +119,6 @@ function Chat({ projectId, serverMessages }: Props) {
                     rows={1}
                     className="resize-none border-0 !max-h-20 focus:ring-0 focus-visible:ring-0"
                     placeholder="Send a message"
-                    disabled={status == "in_progress"}
                     {...field}
                   />
                 </FormControl>
@@ -120,6 +130,7 @@ function Chat({ projectId, serverMessages }: Props) {
             variant={"ghost"}
             className="text-secondary-foreground hover:text-secondary"
             type="submit"
+            disabled={status == "in_progress"}
           >
             <Send />
           </Button>
