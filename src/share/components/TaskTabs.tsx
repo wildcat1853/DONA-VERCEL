@@ -27,7 +27,7 @@ function TaskTabs({ tasks }: Props) {
       </div>
       <TabsContent
         value="to do"
-        className="text-white flex flex-col mt-6 gap-3"
+        className="text-white flex flex-col mt-6 gap-3 overflow-auto"
       >
         {tasks
           .filter((el) => el.status == "in progress")
@@ -41,7 +41,10 @@ function TaskTabs({ tasks }: Props) {
             />
           ))}
       </TabsContent>
-      <TabsContent value="done">
+      <TabsContent
+        value="done"
+        className="text-white flex flex-col mt-6 gap-3 overflow-auto"
+      >
         {tasks
           .filter((el) => el.status == "done")
           .map((el) => (
