@@ -1,6 +1,6 @@
 import { db, project, task } from "@/lib/db";
 import { AssistantResponse } from "ai";
-import { eq, Param } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { RunSubmitToolOutputsParams } from "openai/resources/beta/threads/runs/runs.mjs";

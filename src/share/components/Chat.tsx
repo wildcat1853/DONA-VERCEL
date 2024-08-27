@@ -48,11 +48,17 @@ function Chat({ projectId, serverMessages }: Props) {
     }
   }, []);
 
+  const [usedDataId, setUsedDataId] = useState<string[]>([]);
+
   useEffect(() => {
-    const lastMsg = messages.at(-1);
+    const lastMsg = messages.filter((el) => el.role == "data").at(-1);
+    console.log(messages);
+    if (!lastMsg) return;
+    if (usedDataId.some((el) => el == lastMsg.id)) return;
+    setUsedDataId((prev) => [...prev, lastMsg.id]);
     //@ts-ignore
     if (lastMsg?.data?.text) router.refresh();
-  }, [messages]);
+  }, [JSON.stringify(messages.filter((el) => el.role == "data"))]);
 
   useEffect(() => {
     handleInputChange({ target: { value: watch } } as any);
