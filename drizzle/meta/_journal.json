@@ -29,6 +29,20 @@
       "when": 1722779610955,
       "tag": "0003_wide_pixie",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1724938469681,
+      "tag": "0004_loving_lord_tyger",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1724940679251,
+      "tag": "0005_gorgeous_ultragirl",
+      "breakpoints": true
     }
   ]
 }

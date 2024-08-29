@@ -2,17 +2,28 @@
 
 import { nanoid } from "nanoid";
 import {
-  serial,
-  date,
   text,
-  integer,
   timestamp,
   pgTable,
   pgEnum,
   json,
 } from "drizzle-orm/pg-core";
-import { ToolInvocation } from "ai";
 import { MyToolInvocationType } from "./define";
+
+
+export type User = typeof user.$inferSelect;
+export const user = pgTable("users", {
+  id: text("id")
+    .primaryKey()
+    .notNull()
+    .$defaultFn(() => nanoid(8)),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  image: text("image"),
+  createdAt: timestamp("created_at")
+    .$default(() => new Date())
+    .notNull(),
+});
 
 export const project = pgTable("projects", {
   id: text("id")
@@ -20,7 +31,10 @@ export const project = pgTable("projects", {
     .notNull()
     .$defaultFn(() => nanoid(8)),
   name: text("name"),
-  userId: text("userId").notNull(),
+  userId: text("userId")
+    .notNull()
+    .references(() => user.id),
+  threadId: text('threadId'),
   createdAt: timestamp("created_at")
     .$default(() => new Date())
     .notNull(),
