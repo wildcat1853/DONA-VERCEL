@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 import React from "react";
-import { authOptions } from "../api/auth/[...nextauth]/route";
+import { authConfig } from "../api/auth/[...nextauth]/authConfig";
 import ClientAuth from "./ClientAuth";
 import { redirect } from "next/navigation";
 import getServerUser from "@/hooks/getServerUser";
@@ -10,7 +10,7 @@ import { project } from "@/lib/schemas";
 type Props = {};
 
 async function page({}: Props) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authConfig);
   if (session?.user) {
     const userData = await getServerUser();
     const projectData = await db.query.project.findFirst({
