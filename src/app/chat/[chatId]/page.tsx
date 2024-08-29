@@ -1,5 +1,5 @@
 import { Task } from "@/lib/define";
-import { db } from "@/lib/db";
+import { db, project } from "@/lib/db";
 import Chat from "@/share/components/Chat";
 import TaskTabs from "@/share/components/TaskTabs";
 import { Avatar, AvatarImage } from "@/share/ui/avatar";
@@ -8,6 +8,9 @@ import { AvatarFallback } from "@radix-ui/react-avatar";
 import React from "react";
 import Image from "next/image";
 import start from "@/../public/stars.svg";
+import AccountButton from "@/share/components/AccountButton";
+import getServerUser from "@/hooks/getServerUser";
+import { redirect } from "next/navigation";
 
 type Props = {
   params: { chatId: string };
@@ -15,14 +18,25 @@ type Props = {
 };
 
 async function page({ params }: Props) {
+  const userData = await getServerUser();
+  const projectData = await db.query.project.findFirst({
+    where: (project, { eq, and }) =>
+      and(eq(project.id, params.chatId), eq(project.userId, userData.id)),
+  });
+
+  if (!projectData) {
+    redirect("/dashboard");
+  }
   const tasks: Task[] = await db.query.task.findMany({
-    where: (tasks, { eq }) => eq(tasks.projectId, params.chatId),
+    where: (tasks, { eq }) => eq(tasks.projectId, projectData.id),
   });
   const serverMessages = await db.query.message.findMany({
     where: (messages, { eq }) => eq(messages.projectId, params.chatId),
   });
+
   return (
-    <div className="flex">
+    <div className="relative flex">
+      <AccountButton user={userData} />
       <div className="w-7/12 flex justify-center">
         <div className="relative w-2/3 flex flex-col  gap-9 max-h-[100vh] mt-40">
           <div>

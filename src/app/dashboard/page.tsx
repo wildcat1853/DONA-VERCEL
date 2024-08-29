@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, project } from "@/lib/db";
 import CreateProjectButton from "@/share/components/CreateProjectButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/share/ui/avatar";
 import { Card } from "@/share/ui/card";
@@ -7,12 +7,29 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { nanoid } from "nanoid";
+import getServerUser from "@/hooks/getServerUser";
 
 type Props = {};
 
 async function page({}: Props) {
-  redirect("/chat/" + nanoid(4));
-  const userId = cookies().get("userId")?.value;
+  const userData = await getServerUser();
+  const projectData = await db.query.project.findFirst({
+    where: (project, { eq }) => eq(project.userId, userData.id),
+  });
+
+  if (!projectData) {
+    const newProject = (
+      await db
+        .insert(project)
+        .values({
+          name: "My Project",
+          userId: userData.id,
+        })
+        .returning()
+    )[0];
+    redirect("/chat/" + newProject.id);
+  }
+  redirect("/chat/" + projectData.id);
 
   const projects = await db.query.project.findMany({
     //@ts-ignore

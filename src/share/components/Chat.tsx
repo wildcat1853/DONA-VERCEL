@@ -5,12 +5,16 @@ import { Send } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem } from "../ui/form";
-import { useAssistant, useChat } from "ai/react";
+import { useAssistant } from "ai/react";
 import { AiChatRow, UserChatRow } from "./ChatRows";
 import { useRouter } from "next/navigation";
 import TaskCard from "./TaskCard";
+import { User } from "next-auth";
 
-type Props = { projectId: string; serverMessages: any[] };
+type Props = {
+  projectId: string;
+  serverMessages: any[];
+};
 
 type MessageType = {
   id: number;
@@ -31,9 +35,7 @@ function Chat({ projectId, serverMessages }: Props) {
     threadId,
   } = useAssistant({
     api: "/api/chat",
-    body: {
-      projectId,
-    },
+    body: { projectId },
   });
 
   const router = useRouter();
@@ -68,12 +70,12 @@ function Chat({ projectId, serverMessages }: Props) {
     submitMessage();
     form.reset();
   };
-  useEffect(() => {
-    if (messages[messages.length - 1]?.toolInvocations) {
-      router.refresh();
-    }
-    console.log(messages);
-  }, [messages]);
+  // useEffect(() => {
+  //   if (messages[messages.length - 1]?.toolInvocations) {
+  //     router.refresh();
+  //   }
+  //   console.log(messages);
+  // }, [messages]);
 
   return (
     <div className="px-9 bg-gray-100 flex flex-col w-full h-screen max-h-screen">

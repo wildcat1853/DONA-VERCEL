@@ -1,4 +1,5 @@
 import { db, project, task } from "@/lib/db";
+import { ENV } from "@/lib/env";
 import { AssistantResponse } from "ai";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -6,7 +7,7 @@ import OpenAI from "openai";
 import { RunSubmitToolOutputsParams } from "openai/resources/beta/threads/runs/runs.mjs";
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "",
+  apiKey: ENV.OPENAI_API_KEY || "",
 });
 
 // Allow streaming responses up to 30 seconds
@@ -34,7 +35,7 @@ export async function POST(req: Request, res: NextResponse) {
       // Run the assistant on the thread
       const runStream = openai.beta.threads.runs.stream(threadId, {
         assistant_id:
-          process.env.ASSISTANT_ID ??
+          ENV.ASSISTANT_ID ??
           (() => {
             throw new Error("ASSISTANT_ID is not set");
           })(),

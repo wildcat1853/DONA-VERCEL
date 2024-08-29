@@ -1,0 +1,41 @@
+import { getServerSession } from "next-auth";
+import React from "react";
+import { authOptions } from "../api/auth/[...nextauth]/route";
+import ClientAuth from "./ClientAuth";
+import { redirect } from "next/navigation";
+import getServerUser from "@/hooks/getServerUser";
+import { db } from "@/lib/db";
+import { project } from "@/lib/schemas";
+
+type Props = {};
+
+async function page({}: Props) {
+  const session = await getServerSession(authOptions);
+  if (session?.user) {
+    const userData = await getServerUser();
+    const projectData = await db.query.project.findFirst({
+      where: (project, { eq }) => eq(project.userId, userData?.id),
+    });
+    if (!projectData) {
+      const newProject = (
+        await db
+          .insert(project)
+          .values({
+            name: "My Project",
+            userId: userData.id,
+          })
+          .returning()
+      )[0];
+      redirect("/chat/" + newProject.id);
+    }
+    redirect("/chat/" + projectData.id);
+  }
+  return (
+    <div>
+      You are being redirected to auth
+      <ClientAuth user={session?.user} />
+    </div>
+  );
+}
+
+export default page;
