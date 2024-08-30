@@ -60,11 +60,19 @@ function Chat({ projectId, serverMessages }: Props) {
     if (lastMsg?.data?.text) router.refresh();
   }, [messages]);
 
+  const [padding, setPadding] = useState("");
+
   useEffect(() => {
+    if (!inputRef.current) throw new Error("Input ref is null");
+    inputRef.current.style.height = "auto";
+    inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
+    setPadding(60 + +inputRef.current.style.height.replace("px", "") + "px");
     handleInputChange({ target: { value: form.watch("message") } } as any);
   }, [form.watch("message")]);
 
   const onSubmit = () => {
+    if (!inputRef.current) throw new Error("Input ref is null");
+    inputRef.current.style.height = "auto";
     submitMessage();
     form.reset();
   };
@@ -84,7 +92,10 @@ function Chat({ projectId, serverMessages }: Props) {
 
   return (
     <div className="px-9 bg-gray-100 flex flex-col w-full h-screen max-h-screen">
-      <div className="mx-auto w-full grow overflow-auto flex flex-col-reverse gap-3 ">
+      <div
+        style={{ paddingBottom: padding }}
+        className="mx-auto w-full h-full overflow-auto flex flex-col-reverse gap-3 pt-20"
+      >
         {messages
           .toReversed()
           .filter((el) => el.content != "Hi" && el.content)
@@ -120,18 +131,19 @@ function Chat({ projectId, serverMessages }: Props) {
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="flex items-center gap-4 mx-auto my-10 bg-white border-[#E7E7E7] border-solid border rounded-2xl w-full px-3"
+          className="absolute left-1/2 transform -translate-x-1/2 bottom-6 flex items-center gap-3  bg-white border-[#E7E7E7] border-solid border rounded-2xl w-11/12"
         >
           <FormField
             control={form.control}
             name="message"
             render={({ field }) => (
-              <FormItem className="w-full">
+              <FormItem className="w-full h-full">
                 <FormControl>
                   <Textarea
+                    // style={{ height }}
                     onKeyDown={submitWithEnter}
                     rows={1}
-                    className="resize-none border-0 !max-h-20 focus:ring-0 focus-visible:ring-0"
+                    className="resize-none h-full border-0  focus:ring-0 focus-visible:ring-0"
                     placeholder="Send a message"
                     {...field}
                     ref={inputRef}

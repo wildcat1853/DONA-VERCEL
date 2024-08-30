@@ -10,7 +10,7 @@ type Props = { tasks: Task[] };
 
 function TaskTabs({ tasks }: Props) {
   return (
-    <Tabs defaultValue="to do" className="w-full  !overflow-auto">
+    <Tabs defaultValue="to do" className="w-full ">
       <div className="flex justify-between items-center">
         <TabsList className="grid  grid-cols-2 ">
           <TabsTrigger className="cursor-pointer" value="to do">
