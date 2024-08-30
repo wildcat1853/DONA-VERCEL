@@ -3,10 +3,8 @@ import CreateProjectButton from "@/share/components/CreateProjectButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/share/ui/avatar";
 import { Card } from "@/share/ui/card";
 import React from "react";
-import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { nanoid } from "nanoid";
 import getServerUser from "@/hooks/getServerUser";
 
 type Props = {};

@@ -27,13 +27,16 @@ async function page({ params }: Props) {
   if (!projectData) {
     redirect("/dashboard");
   }
-  const tasks: Task[] = await db.query.task.findMany({
+  const tasksPromise = db.query.task.findMany({
     where: (tasks, { eq }) => eq(tasks.projectId, projectData.id),
   });
-  const serverMessages = await db.query.message.findMany({
+  const serverMessagesPromise = db.query.message.findMany({
     where: (messages, { eq }) => eq(messages.projectId, params.chatId),
   });
-
+  const [tasks, serverMessages] = await Promise.all([
+    tasksPromise,
+    serverMessagesPromise,
+  ]);
   return (
     <div className="relative flex max-h-screen">
       <AccountButton user={userData} />
