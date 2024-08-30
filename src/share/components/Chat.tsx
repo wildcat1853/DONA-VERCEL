@@ -2,7 +2,7 @@
 import { Button } from "@/share/ui/button";
 import { Textarea } from "@/share/ui/textarea";
 import { Send } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem } from "../ui/form";
 import { useAssistant } from "ai/react";
@@ -32,6 +32,7 @@ function Chat({ projectId, serverMessages }: Props) {
     setMessages,
     append,
     threadId,
+    input,
   } = useAssistant({
     api: "/api/chat",
     body: { projectId },
@@ -39,11 +40,9 @@ function Chat({ projectId, serverMessages }: Props) {
 
   const router = useRouter();
 
-  const watch = form.watch("message");
-
   useEffect(() => {
     setMessages(serverMessages);
-    console.log(serverMessages.length);
+    // console.log(serverMessages.length);
     if (messages.length == 0 && serverMessages.length == 0) {
       append({ role: "user", content: "Hi" });
     }
@@ -53,7 +52,7 @@ function Chat({ projectId, serverMessages }: Props) {
 
   useEffect(() => {
     const lastMsg = messages.at(-2);
-    console.log(messages);
+    // console.log(messages);
     if (!lastMsg || lastMsg?.role != "data") return;
     if (usedDataId.some((el) => el == lastMsg.id)) return;
     setUsedDataId((prev) => [...prev, lastMsg.id]);
@@ -62,42 +61,24 @@ function Chat({ projectId, serverMessages }: Props) {
   }, [messages]);
 
   useEffect(() => {
-    handleInputChange({ target: { value: watch } } as any);
-  }, [watch]);
+    handleInputChange({ target: { value: form.watch("message") } } as any);
+  }, [form.watch("message")]);
 
-  const onSubmit = (data: any) => {
+  const onSubmit = () => {
     submitMessage();
     form.reset();
   };
 
-  useEffect(() => {
-    const func = (e: KeyboardEvent) => {
-      console.log(e);
-      if (e.code === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        onSubmit(form.getValues());
-        console.log("submit");
-      }
-      if (e.code === "Enter" && e.shiftKey) {
-        e.preventDefault();
-        form.setValue("message", form.getValues().message + `\n`);
-        console.log("newLine");
-      }
-    };
-    const textarea = inputRef.current;
-    textarea?.addEventListener("keypress", func);
-
-    return () => {
-      console.log("remove");
-      textarea?.removeEventListener("keypress", func);
-    };
-  }, []);
-  // useEffect(() => {
-  //   if (messages[messages.length - 1]?.toolInvocations) {
-  //     router.refresh();
-  //   }
-  //   console.log(messages);
-  // }, [messages]);
+  const submitWithEnter = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.code === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (status != "in_progress") onSubmit();
+    }
+    if (e.code === "Enter" && e.shiftKey) {
+      e.preventDefault();
+      form.setValue("message", form.getValues().message + `\n`);
+    }
+  };
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -148,6 +129,7 @@ function Chat({ projectId, serverMessages }: Props) {
               <FormItem className="w-full">
                 <FormControl>
                   <Textarea
+                    onKeyDown={submitWithEnter}
                     rows={1}
                     className="resize-none border-0 !max-h-20 focus:ring-0 focus-visible:ring-0"
                     placeholder="Send a message"

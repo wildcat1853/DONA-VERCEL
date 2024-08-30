@@ -63,30 +63,24 @@ export async function POST(req: Request, res: NextResponse) {
                       subTasks: { name: string; deadline: string }[];
                     };
                     try {
-                      const projectData = await db
-                        .select()
-                        .from(project)
-                        .where(eq(project.id, input.projectId));
-                      if (!projectData.some((el) => el.id == input.projectId)) {
-                        await db
-                          .insert(project)
-                          .values({
-                            userId: "someUser",
-                            id: input.projectId,
-                          })
-                          .execute();
+                      const projectData = await db.query.project.findFirst({
+                        where: (project, { eq }) => eq(project.id, input.projectId)
+                      })
+                      console.log(projectData);
+                      if (!projectData) {
+                        throw new Error("Project not found");
                       }
                       const tasks = await db
                         .insert(task)
                         .values(
                           PARAMETERS.subTasks.map(
                             (el) =>
-                              ({
-                                name: el.name,
-                                projectId: input.projectId,
-                                deadline: new Date(el.deadline),
-                                status: "in progress",
-                              } as const)
+                            ({
+                              name: el.name,
+                              projectId: input.projectId,
+                              deadline: new Date(el.deadline),
+                              status: "in progress",
+                            } as const)
                           )
                         )
                         .returning();
