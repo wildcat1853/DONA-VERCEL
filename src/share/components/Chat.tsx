@@ -2,14 +2,13 @@
 import { Button } from "@/share/ui/button";
 import { Textarea } from "@/share/ui/textarea";
 import { Send } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem } from "../ui/form";
 import { useAssistant } from "ai/react";
 import { AiChatRow, UserChatRow } from "./ChatRows";
 import { useRouter } from "next/navigation";
 import TaskCard from "./TaskCard";
-import { User } from "next-auth";
 
 type Props = {
   projectId: string;
@@ -70,12 +69,37 @@ function Chat({ projectId, serverMessages }: Props) {
     submitMessage();
     form.reset();
   };
+
+  useEffect(() => {
+    const func = (e: KeyboardEvent) => {
+      console.log(e);
+      if (e.code === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        onSubmit(form.getValues());
+        console.log("submit");
+      }
+      if (e.code === "Enter" && e.shiftKey) {
+        e.preventDefault();
+        form.setValue("message", form.getValues().message + `\n`);
+        console.log("newLine");
+      }
+    };
+    const textarea = inputRef.current;
+    textarea?.addEventListener("keypress", func);
+
+    return () => {
+      console.log("remove");
+      textarea?.removeEventListener("keypress", func);
+    };
+  }, []);
   // useEffect(() => {
   //   if (messages[messages.length - 1]?.toolInvocations) {
   //     router.refresh();
   //   }
   //   console.log(messages);
   // }, [messages]);
+
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   return (
     <div className="px-9 bg-gray-100 flex flex-col w-full h-screen max-h-screen">
@@ -95,7 +119,7 @@ function Chat({ projectId, serverMessages }: Props) {
                 {el.toolInvocations ? (
                   <div className="bg-gray-200">
                     <p>To-do List</p>
-                    <div className=" flex  gap-2">
+                    <div className="flex gap-2">
                       {el.toolInvocations.map((el) => (
                         <TaskCard
                           description={el.args.description}
@@ -128,6 +152,7 @@ function Chat({ projectId, serverMessages }: Props) {
                     className="resize-none border-0 !max-h-20 focus:ring-0 focus-visible:ring-0"
                     placeholder="Send a message"
                     {...field}
+                    ref={inputRef}
                   />
                 </FormControl>
                 {/* <FormMessage /> */}
