@@ -1,7 +1,7 @@
-import { db, project, task } from "@/lib/db";
+import { db, message, task } from "@/lib/db";
+import { Message } from "@/lib/define";
 import { ENV } from "@/lib/env";
 import { AssistantResponse } from "ai";
-import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { RunSubmitToolOutputsParams } from "openai/resources/beta/threads/runs/runs.mjs";
@@ -28,7 +28,16 @@ export async function POST(req: Request, res: NextResponse) {
     role: "user",
     content: input.message,
   });
-
+  //@ts-ignore
+  const userMessage = createdMessage.content[0].text.value;
+  let userDbMessagePromise: Promise<Message[]>;
+  if (userMessage != 'Hi') {
+    userDbMessagePromise = db.insert(message).values({
+      content: userMessage,
+      projectId: input.projectId,
+      role: "user",
+    }).returning()
+  }
   return AssistantResponse(
     { threadId, messageId: createdMessage.id },
     async ({ forwardStream, sendDataMessage }) => {
@@ -41,9 +50,23 @@ export async function POST(req: Request, res: NextResponse) {
           })(),
       });
 
+      runStream.on('end', async () => {
+        console.log('before before before')
+        //@ts-ignore
+        const aiMessage = (await runStream.finalMessages())[0].content[0].text.value;
+        const userDbMessage = await userDbMessagePromise
+        const dbMessage = await db.insert(message).values({
+          content: aiMessage,
+          projectId: input.projectId,
+          role: "assistant",
+        })
+      })
       // forward run status would stream message deltas
       let runResult = await forwardStream(runStream);
       console.log("before switch");
+
+
+
       // status can be: queued, in_progress, requires_action, cancelling, cancelled, failed, completed, or expired
       while (
         runResult?.status === "requires_action" &&
@@ -84,6 +107,12 @@ export async function POST(req: Request, res: NextResponse) {
                           )
                         )
                         .returning();
+                      const dbMessage = await db.insert(message).values({
+                        content: "",
+                        projectId: input.projectId,
+                        role: "data",
+                        toolInvocations: tasks
+                      })
                     } catch (e) {
                       console.log(e);
                       throw e;

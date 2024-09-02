@@ -9,10 +9,12 @@ import { useAssistant } from "ai/react";
 import { AiChatRow, UserChatRow } from "./ChatRows";
 import { useRouter } from "next/navigation";
 import TaskCard from "./TaskCard";
+import { getProject, setProjectThreadId } from "@/app/actions/project";
 
 type Props = {
   projectId: string;
   serverMessages: any[];
+  projectThreadId: string | undefined;
 };
 
 type MessageType = {
@@ -21,7 +23,7 @@ type MessageType = {
   isMy: boolean;
 };
 
-function Chat({ projectId, serverMessages }: Props) {
+function Chat({ projectId, serverMessages, projectThreadId }: Props) {
   const form = useForm({ values: { message: "" } });
 
   const {
@@ -35,10 +37,21 @@ function Chat({ projectId, serverMessages }: Props) {
     input,
   } = useAssistant({
     api: "/api/chat",
+    threadId: projectThreadId,
     body: { projectId },
   });
 
   const router = useRouter();
+  useEffect(() => {
+    console.log(threadId);
+    if (!projectThreadId && threadId)
+      (async () => {
+        const project = await getProject(projectId);
+        if (!project) throw new Error("no such project");
+        if (project.threadId) return;
+        await setProjectThreadId(projectId, threadId);
+      })();
+  }, [threadId]);
 
   useEffect(() => {
     setMessages(serverMessages);

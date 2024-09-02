@@ -1,5 +1,4 @@
-import { Task } from "@/lib/define";
-import { db, project } from "@/lib/db";
+import { db } from "@/lib/db";
 import Chat from "@/share/components/Chat";
 import TaskTabs from "@/share/components/TaskTabs";
 import { Avatar, AvatarImage } from "@/share/ui/avatar";
@@ -62,7 +61,13 @@ async function page({ params }: Props) {
             <AvatarFallback className="text-black text-2xl">Dn</AvatarFallback>
           </Avatar>
         </div>
-        <Chat projectId={params.chatId} serverMessages={serverMessages} />
+        <Chat
+          projectId={params.chatId}
+          serverMessages={serverMessages}
+          projectThreadId={
+            projectData.threadId ? projectData.threadId : undefined
+          }
+        />
       </div>
     </div>
   );

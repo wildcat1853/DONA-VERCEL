@@ -1,4 +1,3 @@
-// lib/schemas.ts
 
 import { nanoid } from "nanoid";
 import {
@@ -8,7 +7,7 @@ import {
   pgEnum,
   json,
 } from "drizzle-orm/pg-core";
-import { MyToolInvocationType } from "./define";
+import { MyToolInvocationType, Task } from "./define";
 
 
 export type User = typeof user.$inferSelect;
@@ -56,7 +55,7 @@ export const task = pgTable("tasks", {
     .references(() => project.id),
 });
 
-export const roleEnum = pgEnum("role", ["user", "assistant"]);
+export const roleEnum = pgEnum("role", ["user", "assistant", 'data']);
 export const message = pgTable("messages", {
   id: text("id")
     .primaryKey()
@@ -70,5 +69,5 @@ export const message = pgTable("messages", {
   projectId: text("projectId")
     .notNull()
     .references(() => project.id),
-  toolInvocations: json("toolInvocations").$type<MyToolInvocationType[]>(),
+  toolInvocations: json("toolInvocations").$type<Task[]>(),
 });
