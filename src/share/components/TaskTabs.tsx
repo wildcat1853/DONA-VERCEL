@@ -38,6 +38,7 @@ function TaskTabs({ tasks }: Props) {
               id={el.id}
               key={el.id}
               status={el.status}
+              deadline={el.deadline}
             />
           ))}
       </TabsContent>
@@ -54,6 +55,7 @@ function TaskTabs({ tasks }: Props) {
               id={el.id}
               key={el.id}
               status={el.status}
+              deadline={el.deadline}
             />
           ))}
       </TabsContent>

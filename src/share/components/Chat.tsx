@@ -43,7 +43,7 @@ function Chat({ projectId, serverMessages, projectThreadId }: Props) {
 
   const router = useRouter();
   useEffect(() => {
-    console.log(threadId);
+    console.log(projectThreadId);
     if (!projectThreadId && threadId)
       (async () => {
         const project = await getProject(projectId);
@@ -121,7 +121,7 @@ function Chat({ projectId, serverMessages, projectThreadId }: Props) {
                 ) : (
                   <UserChatRow el={el} />
                 )}
-                {el.toolInvocations ? (
+                {/* {el.toolInvocations ? (
                   <div className="bg-gray-200">
                     <p>To-do List</p>
                     <div className="flex gap-2">
@@ -136,7 +136,7 @@ function Chat({ projectId, serverMessages, projectThreadId }: Props) {
                       ))}
                     </div>
                   </div>
-                ) : null}
+                ) : null} */}
               </React.Fragment>
             );
           })}

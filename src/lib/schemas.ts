@@ -48,8 +48,8 @@ export const task = pgTable("tasks", {
     .$defaultFn(() => nanoid(8)),
   name: text("name").notNull(),
   description: text("description"),
-  status: statusEnum("status").$type<"done" | "in progress">(),
-  deadline: timestamp("deadline"),
+  status: statusEnum("status").$type<"done" | "in progress">().notNull().default('in progress'),
+  deadline: timestamp("deadline").notNull(),
   projectId: text("projectId")
     .notNull()
     .references(() => project.id),

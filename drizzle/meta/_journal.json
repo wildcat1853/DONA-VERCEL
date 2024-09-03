@@ -50,6 +50,13 @@
       "when": 1725283760333,
       "tag": "0006_moaning_sue_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1725355268240,
+      "tag": "0007_fair_talos",
+      "breakpoints": true
     }
   ]
 }
