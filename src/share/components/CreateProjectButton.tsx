@@ -1,7 +1,7 @@
 // "use client";
 import React from "react";
 import { Button } from "../ui/button";
-import { createProject } from "@/lib/actions";
+// import { createProject } from "@/lib/actions";
 
 type Props = {};
 
@@ -17,7 +17,8 @@ function CreateProjectButton({}: Props) {
 
   // };
   return (
-    <form action={createProject}>
+    <form>
+      {/* <form action={createProject}> */}
       <Button type="submit">Create new project</Button>
     </form>
   );
