@@ -6,10 +6,9 @@ import React, { KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem } from "../ui/form";
 import { useAssistant } from "ai/react";
-import { AiChatRow, UserChatRow } from "./ChatRows";
 import { useRouter } from "next/navigation";
-import TaskCard from "./TaskCard";
 import { getProject, setProjectThreadId } from "@/app/actions/project";
+import ChatMessages from "./ChatMessages";
 
 type Props = {
   projectId: string;
@@ -22,6 +21,8 @@ type MessageType = {
   message: string;
   isMy: boolean;
 };
+
+const usedDataId = new Set<string>();
 
 function Chat({ projectId, serverMessages, projectThreadId }: Props) {
   const form = useForm({ values: { message: "" } });
@@ -61,14 +62,11 @@ function Chat({ projectId, serverMessages, projectThreadId }: Props) {
     }
   }, []);
 
-  const [usedDataId, setUsedDataId] = useState<string[]>([]);
-
   useEffect(() => {
     const lastMsg = messages.at(-2);
-    // console.log(messages);
     if (!lastMsg || lastMsg?.role != "data") return;
-    if (usedDataId.some((el) => el == lastMsg.id)) return;
-    setUsedDataId((prev) => [...prev, lastMsg.id]);
+    if (usedDataId.has(lastMsg.id)) return;
+    usedDataId.add(lastMsg.id);
     //@ts-ignore
     if (lastMsg?.data?.text) router.refresh();
   }, [messages]);
@@ -105,42 +103,7 @@ function Chat({ projectId, serverMessages, projectThreadId }: Props) {
 
   return (
     <div className="px-9 bg-gray-100 flex flex-col w-full h-screen max-h-screen">
-      <div
-        style={{ paddingBottom: padding }}
-        className="mx-auto w-full h-full overflow-auto flex flex-col-reverse gap-3 pt-20"
-      >
-        {messages
-          .toReversed()
-          .filter((el) => el.content != "Hi" && el.content)
-          .map((el) => {
-            console.log(el.toolInvocations);
-            return (
-              <React.Fragment key={el.id}>
-                {el.role != "user" ? (
-                  <AiChatRow el={el} />
-                ) : (
-                  <UserChatRow el={el} />
-                )}
-                {/* {el.toolInvocations ? (
-                  <div className="bg-gray-200">
-                    <p>To-do List</p>
-                    <div className="flex gap-2">
-                      {el.toolInvocations.map((el) => (
-                        <TaskCard
-                          description={el.args.description}
-                          name={el.args.title}
-                          id={el.args.id}
-                          key={el.args.id}
-                          status={el.args.status}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ) : null} */}
-              </React.Fragment>
-            );
-          })}
-      </div>
+      <ChatMessages messages={messages} padding={padding} />
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
