@@ -24,19 +24,24 @@ export async function POST(req: Request, res: NextResponse) {
   const threadId = input.threadId ?? (await openai.beta.threads.create({})).id;
 
   // Add a message to the thread
-  const createdMessage = await openai.beta.threads.messages.create(threadId, {
-    role: "user",
-    content: input.message,
-  });
-  //@ts-ignore
-  const userMessage = createdMessage.content[0].text.value;
+  let createdMessage: OpenAI.Beta.Threads.Messages.Message;
   let userDbMessagePromise: Promise<Message[]>;
-  if (userMessage != 'Hi') {
+  if (input.message != 'Hi') {
+    createdMessage = await openai.beta.threads.messages.create(threadId, {
+      role: "user",
+      content: input.message,
+    });
     userDbMessagePromise = db.insert(message).values({
-      content: userMessage,
+      content: input.message,
       projectId: input.projectId,
       role: "user",
     }).returning()
+  } else {
+    createdMessage = await openai.beta.threads.messages.create(threadId, {
+      role: "user",
+      content: input.message + `
+      today is: ${new Date().toLocaleString()}`,
+    });
   }
   return AssistantResponse(
     { threadId, messageId: createdMessage.id },
