@@ -1,5 +1,6 @@
 import React from "react";
 import { Message } from "ai";
+import isValidJSON from "@/helpers/isValidJSON";
 
 type Props = { el: Message };
 
@@ -22,7 +23,11 @@ function UserChatRow({ el }: Props) {
         style={{ maxWidth: "70%" }}
         className="bg-[#1871FD] rounded-3xl py-5 px-6 text-white"
       >
-        <p>{el.content}</p>
+        <p>
+          {isValidJSON(el.content)
+            ? JSON.parse(el.content).message
+            : el.content}
+        </p>
       </div>
     </div>
   );

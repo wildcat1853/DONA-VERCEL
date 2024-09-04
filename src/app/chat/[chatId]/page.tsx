@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, message } from "@/lib/db";
 import Chat from "@/share/components/Chat";
 import TaskTabs from "@/share/components/TaskTabs";
 import { Avatar, AvatarImage } from "@/share/ui/avatar";
@@ -31,6 +31,7 @@ async function page({ params }: Props) {
   });
   const serverMessagesPromise = db.query.message.findMany({
     where: (messages, { eq }) => eq(messages.projectId, params.chatId),
+    orderBy: message.createdAt,
   });
   const [tasks, serverMessages] = await Promise.all([
     tasksPromise,

@@ -55,7 +55,7 @@ export const task = pgTable("tasks", {
     .references(() => project.id),
 });
 
-export const roleEnum = pgEnum("role", ["user", "assistant", 'data']);
+export const roleEnum = pgEnum("role", ["user", "assistant", 'data', 'system']);
 export const message = pgTable("messages", {
   id: text("id")
     .primaryKey()

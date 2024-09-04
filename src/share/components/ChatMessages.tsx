@@ -15,7 +15,12 @@ function ChatMessages({ messages, padding }: Props) {
     >
       {messages
         .toReversed()
-        .filter((el) => el.content != "Hi" && el.content)
+        .filter(
+          (el) =>
+            el.content != "Hi" &&
+            el.content &&
+            (el.role == "user" || el.role == "assistant")
+        )
         .map((el) => {
           console.log(el.toolInvocations);
           return (
