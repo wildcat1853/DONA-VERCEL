@@ -1,6 +1,7 @@
 import React from "react";
 import { Message } from "ai";
 import isValidJSON from "@/helpers/isValidJSON";
+import Markdown from "markdown-to-jsx";
 
 type Props = { el: Message };
 
@@ -11,7 +12,9 @@ function AiChatRow({ el }: Props) {
       style={{ maxWidth: "70%" }}
       className={"py-5 px-6 justify-start text-base bg-white rounded-3xl"}
     >
-      <p>{el.content}</p>
+      <p>
+        <Markdown>{el.content}</Markdown>
+      </p>
     </div>
   );
 }
