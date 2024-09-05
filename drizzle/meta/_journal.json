@@ -64,6 +64,13 @@
       "when": 1725470960006,
       "tag": "0008_small_madame_masque",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1725473138702,
+      "tag": "0009_rich_rumiko_fujikawa",
+      "breakpoints": true
     }
   ]
 }

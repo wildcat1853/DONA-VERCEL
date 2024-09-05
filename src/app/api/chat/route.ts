@@ -22,7 +22,6 @@ export async function POST(req: Request, res: NextResponse) {
   } = await req.json();
   const jsonMessage = JSON.parse(_input.message);
   const input = { threadId: _input.threadId, role: jsonMessage.role, message: jsonMessage.message, projectId: _input.projectId }
-  console.log(input);
   // Create a thread if needed
   const threadId = input.threadId ?? (await openai.beta.threads.create({})).id;
 
@@ -62,6 +61,7 @@ export async function POST(req: Request, res: NextResponse) {
           })(),
       });
 
+      if (input.role == 'system') return;
       runStream.on('end', async () => {
         console.log('before before before')
         //@ts-ignore
@@ -74,7 +74,6 @@ export async function POST(req: Request, res: NextResponse) {
         })
       })
 
-      if (input.role == 'system') return;
       // forward run status would stream message deltas
       let runResult = await forwardStream(runStream);
       console.log("before switch");

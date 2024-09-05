@@ -7,7 +7,7 @@ import {
   pgEnum,
   json,
 } from "drizzle-orm/pg-core";
-import { MyToolInvocationType, Task } from "./define";
+import { Task } from "./define";
 
 
 export type User = typeof user.$inferSelect;
@@ -52,7 +52,9 @@ export const task = pgTable("tasks", {
   deadline: timestamp("deadline").notNull(),
   projectId: text("projectId")
     .notNull()
-    .references(() => project.id),
+    .references(() => project.id), createdAt: timestamp("created_at")
+      .$default(() => new Date())
+      .notNull(),
 });
 
 export const roleEnum = pgEnum("role", ["user", "assistant", 'data', 'system']);
