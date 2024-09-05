@@ -5,15 +5,10 @@ import { Send } from "lucide-react";
 import React, { KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem } from "../ui/form";
-import useAssistant from "@/hooks/useAssistant";
-import { useRouter } from "next/navigation";
-import { getProject, setProjectThreadId } from "@/app/actions/project";
 import ChatMessages from "./ChatMessages";
 
 type Props = {
-  projectId: string;
-  serverMessages: any[];
-  projectThreadId: string | undefined;
+  assistantData: any;
 };
 
 type MessageType = {
@@ -22,59 +17,9 @@ type MessageType = {
   isMy: boolean;
 };
 
-const usedDataId = new Set<string>();
-function Chat({ projectId, serverMessages, projectThreadId }: Props) {
+function Chat({ assistantData }: Props) {
   const form = useForm({ values: { message: "" } });
-  const { status, messages, setMessages, append, threadId } = useAssistant({
-    projectId,
-    projectThreadId,
-  });
-
-  const router = useRouter();
-  useEffect(() => {
-    console.log(projectThreadId);
-    if (!projectThreadId && threadId)
-      (async () => {
-        const project = await getProject(projectId);
-        if (!project) throw new Error("no such project");
-        if (project.threadId) return;
-        await setProjectThreadId(projectId, threadId);
-      })();
-  }, [threadId]);
-
-  useEffect(() => {
-    setMessages(serverMessages);
-    // console.log(serverMessages.length);
-    if (messages.length == 0 && serverMessages.length == 0) {
-      append({ role: "user", content: "Hi" });
-    }
-  }, []);
-  useEffect(() => {
-    console.log(status);
-  }, [status]);
-  useEffect(() => {
-    // append({
-    //   role: "system",
-    //   content: "Today is " + new Date().toLocaleString(),
-    // });
-    // append({
-    //   role: "data",
-    //   content:
-    //     "i have a task for today to create layout design. I want you to ask me how i'm doing with it",
-    // });
-  }, []);
-  useEffect(() => console.log(messages), [messages]);
-  // useEffect(() => console.log(serverMessages), [messages]);
-
-  useEffect(() => {
-    const lastMsg = messages.at(-2);
-    if (!lastMsg || lastMsg?.role != "data") return;
-    if (usedDataId.has(lastMsg.id)) return;
-    usedDataId.add(lastMsg.id);
-    //@ts-ignore
-    if (lastMsg?.data?.text) router.refresh();
-  }, [messages]);
-
+  const { status, messages, append } = assistantData;
   const [padding, setPadding] = useState("");
 
   useEffect(() => {
@@ -140,7 +85,7 @@ function Chat({ projectId, serverMessages, projectThreadId }: Props) {
             variant={"ghost"}
             className="text-secondary-foreground hover:text-secondary"
             type="submit"
-            disabled={status == "in_progress"}
+            disabled={status != "awaiting_message"}
           >
             <Send />
           </Button>

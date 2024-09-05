@@ -6,9 +6,10 @@ import TaskCard from "./TaskCard";
 import { Button } from "../ui/button";
 import { Plus } from "lucide-react";
 
-type Props = { tasks: Task[] };
+type Props = { tasks: Task[]; assistantData: any };
 
-function TaskTabs({ tasks }: Props) {
+function TaskTabs({ tasks, assistantData }: Props) {
+  const { status, append } = assistantData;
   return (
     <Tabs defaultValue="to do" className="w-full ">
       <div className="flex justify-between items-center">
@@ -20,7 +21,17 @@ function TaskTabs({ tasks }: Props) {
             Done
           </TabsTrigger>
         </TabsList>
-        <Button variant={"secondary"}>
+        <Button
+          variant={"secondary"}
+          disabled={status != "awaiting_message"}
+          onClick={() => {
+            if (status == "awaiting_message")
+              append({
+                role: "user",
+                content: "please help me create a task",
+              });
+          }}
+        >
           Add task
           <Plus />
         </Button>
