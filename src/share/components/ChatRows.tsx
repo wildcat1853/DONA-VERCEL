@@ -12,9 +12,7 @@ function AiChatRow({ el }: Props) {
       style={{ maxWidth: "70%" }}
       className={"py-5 px-6 justify-start text-base bg-white rounded-3xl"}
     >
-      <p>
-        <Markdown>{el.content}</Markdown>
-      </p>
+      <Markdown>{el.content}</Markdown>
     </div>
   );
 }
