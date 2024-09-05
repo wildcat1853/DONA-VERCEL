@@ -22,7 +22,6 @@ function ChatMessages({ messages, padding }: Props) {
             (el.role == "user" || el.role == "assistant")
         )
         .map((el) => {
-          console.log(el.toolInvocations);
           return (
             <React.Fragment key={el.id}>
               {el.role != "user" ? (

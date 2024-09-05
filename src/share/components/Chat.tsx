@@ -50,10 +50,13 @@ function Chat({ projectId, serverMessages, projectThreadId }: Props) {
     }
   }, []);
   useEffect(() => {
-    append({
-      role: "system",
-      content: "Today is " + new Date().toLocaleString(),
-    });
+    console.log(status);
+  }, [status]);
+  useEffect(() => {
+    // append({
+    //   role: "system",
+    //   content: "Today is " + new Date().toLocaleString(),
+    // });
     // append({
     //   role: "data",
     //   content:
