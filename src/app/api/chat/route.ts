@@ -15,27 +15,33 @@ export const maxDuration = 30;
 
 export async function POST(req: Request, res: NextResponse) {
   // Parse the request body
-  const input: {
+  const _input: {
     threadId: string | null;
     message: string;
     projectId: string;
   } = await req.json();
+  const jsonMessage = JSON.parse(_input.message);
+  const input = { threadId: _input.threadId, role: jsonMessage.role, message: jsonMessage.message, projectId: _input.projectId }
   // Create a thread if needed
   const threadId = input.threadId ?? (await openai.beta.threads.create({})).id;
 
   // Add a message to the thread
   let createdMessage: OpenAI.Beta.Threads.Messages.Message;
   let userDbMessagePromise: Promise<Message[]>;
+
   if (input.message != 'Hi') {
     createdMessage = await openai.beta.threads.messages.create(threadId, {
-      role: "user",
+      role: 'user',
       content: input.message,
     });
-    userDbMessagePromise = db.insert(message).values({
-      content: input.message,
-      projectId: input.projectId,
-      role: "user",
-    }).returning()
+    if (input.role != 'system') {
+      console.log(createdMessage.role)
+      userDbMessagePromise = db.insert(message).values({
+        content: input.message,
+        projectId: input.projectId,
+        role: input.role,
+      }).returning()
+    }
   } else {
     createdMessage = await openai.beta.threads.messages.create(threadId, {
       role: "user",
@@ -55,6 +61,7 @@ export async function POST(req: Request, res: NextResponse) {
           })(),
       });
 
+      if (input.role == 'system') return;
       runStream.on('end', async () => {
         console.log('before before before')
         //@ts-ignore
@@ -66,6 +73,7 @@ export async function POST(req: Request, res: NextResponse) {
           role: "assistant",
         })
       })
+
       // forward run status would stream message deltas
       let runResult = await forwardStream(runStream);
       console.log("before switch");
@@ -125,9 +133,7 @@ export async function POST(req: Request, res: NextResponse) {
                     console.log("create", parameters);
                     sendDataMessage({
                       role: "data",
-                      data: {
-                        text: "created task",
-                      },
+                      data: { text: "created task", },
                     });
                     return {
                       tool_call_id: toolCall.id,
@@ -135,6 +141,14 @@ export async function POST(req: Request, res: NextResponse) {
                     } satisfies RunSubmitToolOutputsParams.ToolOutput;
                   })();
                   break;
+                // case 'updateTask': return (async () => {
+                //   const PARAMETERS = parameters as {
+                //     projectId: string;
+                //     mainTask: string;
+                //     status: TaskStatusType
+                //   };
+                //   const tasks = await db.update(task).set({ status: PARAMETERS.status }).where(eq(task.id, PARAMETERS.projectId))
+                // })();
                 default:
                   return {
                     tool_call_id: toolCall.id,

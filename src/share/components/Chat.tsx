@@ -5,7 +5,7 @@ import { Send } from "lucide-react";
 import React, { KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem } from "../ui/form";
-import { useAssistant } from "ai/react";
+import useAssistant from "@/hooks/useAssistant";
 import { useRouter } from "next/navigation";
 import { getProject, setProjectThreadId } from "@/app/actions/project";
 import ChatMessages from "./ChatMessages";
@@ -23,23 +23,11 @@ type MessageType = {
 };
 
 const usedDataId = new Set<string>();
-
 function Chat({ projectId, serverMessages, projectThreadId }: Props) {
   const form = useForm({ values: { message: "" } });
-
-  const {
-    status,
-    messages,
-    submitMessage,
-    handleInputChange,
-    setMessages,
-    append,
-    threadId,
-    input,
-  } = useAssistant({
-    api: "/api/chat",
-    threadId: projectThreadId,
-    body: { projectId },
+  const { status, messages, setMessages, append, threadId } = useAssistant({
+    projectId,
+    projectThreadId,
   });
 
   const router = useRouter();
@@ -61,6 +49,19 @@ function Chat({ projectId, serverMessages, projectThreadId }: Props) {
       append({ role: "user", content: "Hi" });
     }
   }, []);
+  useEffect(() => {
+    append({
+      role: "system",
+      content: "Today is " + new Date().toLocaleString(),
+    });
+    // append({
+    //   role: "data",
+    //   content:
+    //     "i have a task for today to create layout design. I want you to ask me how i'm doing with it",
+    // });
+  }, []);
+  useEffect(() => console.log(messages), [messages]);
+  // useEffect(() => console.log(serverMessages), [messages]);
 
   useEffect(() => {
     const lastMsg = messages.at(-2);
@@ -78,13 +79,16 @@ function Chat({ projectId, serverMessages, projectThreadId }: Props) {
     inputRef.current.style.height = "auto";
     inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
     setPadding(60 + +inputRef.current.style.height.replace("px", "") + "px");
-    handleInputChange({ target: { value: form.watch("message") } } as any);
   }, [form.watch("message")]);
 
   const onSubmit = () => {
     if (!inputRef.current) throw new Error("Input ref is null");
     inputRef.current.style.height = "auto";
-    submitMessage();
+    append({
+      role: "user",
+      content: form.watch("message"),
+      data: { data: "lksjdf" },
+    });
     form.reset();
   };
 
