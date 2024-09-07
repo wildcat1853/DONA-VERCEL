@@ -41,7 +41,10 @@ function TaskTabs({ tasks, assistantData }: Props) {
         className="text-white flex flex-col mt-6 gap-3 overflow-auto"
       >
         {tasks
-          .filter((el) => el.status == "in progress")
+          .filter(
+            (el): el is Task & { status: "in progress" } =>
+              el.status == "in progress"
+          )
           .map((el) => (
             <TaskCard
               description={el.description}
@@ -49,7 +52,16 @@ function TaskTabs({ tasks, assistantData }: Props) {
               id={el.id}
               key={el.id}
               status={el.status}
+              assistantStatus={status}
               deadline={el.deadline}
+              onCheckBoxCLick={() => {
+                if (status == "awaiting_message") {
+                  append({
+                    role: "data",
+                    content: `I just finished task: ${el.name}`,
+                  });
+                }
+              }}
             />
           ))}
       </TabsContent>
@@ -58,7 +70,7 @@ function TaskTabs({ tasks, assistantData }: Props) {
         className="text-white flex flex-col mt-6 gap-3 overflow-auto"
       >
         {tasks
-          .filter((el) => el.status == "done")
+          .filter((el): el is Task & { status: "done" } => el.status == "done")
           .map((el) => (
             <TaskCard
               description={el.description}
@@ -66,6 +78,7 @@ function TaskTabs({ tasks, assistantData }: Props) {
               id={el.id}
               key={el.id}
               status={el.status}
+              assistantStatus={status}
               deadline={el.deadline}
             />
           ))}

@@ -7,24 +7,31 @@ import { Button } from "../ui/button";
 import { AlarmCheck } from "lucide-react";
 import { TaskStatusType } from "@/lib/define";
 import { toggleTaskStatus } from "@/app/actions/task";
+import { AssistantStatus } from "ai";
 
 type Props = {
   name: string;
   description: string | null;
   id: string;
-  status: TaskStatusType;
+  assistantStatus: AssistantStatus;
   deadline: Date;
-};
+} & (
+  | { status: "done" }
+  | { status: "in progress"; onCheckBoxCLick: () => void }
+);
 
-function TaskCard({ description, name, id, status, deadline }: Props) {
+function TaskCard(props: Props) {
+  const { description, name, id, status, deadline, assistantStatus } = props;
   return (
     <Card className="px-5 py-3 bg-gray-100 flex items-start gap-4">
       <Checkbox
         className="mt-2"
+        disabled={assistantStatus != "awaiting_message"}
         checked={status == "done"}
         onClick={() => {
           console.log("click");
           toggleTaskStatus(id);
+          if (status == "in progress") props.onCheckBoxCLick();
         }}
       />
       <div className="w-full">
