@@ -1,6 +1,6 @@
 import { db, message, task } from "@/../../../db";
 import { Message } from "@/../../../define";
-import { ENV } from "@/../../../env";
+import { ENV } from "@/lib/env";
 import { AssistantResponse } from "ai";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";

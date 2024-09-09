@@ -19,7 +19,7 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "../db.ts",
-    "../env.ts",
+    "env.ts",
     "../define.ts",
     "../schemas.ts"
   ],
