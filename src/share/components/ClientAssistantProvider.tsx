@@ -28,6 +28,7 @@ function ClientAssistantProvider({
   const assistantData = useAssistant({ projectId, projectThreadId });
   const { status, messages, setMessages, append, threadId } = assistantData;
   const router = useRouter();
+
   useEffect(() => {
     if (!projectThreadId && threadId)
       (async () => {
@@ -40,13 +41,27 @@ function ClientAssistantProvider({
 
   useEffect(() => {
     setMessages(serverMessages);
-    append({
-      role: "data",
-      content:
-        "Today is " +
-        new Date().toLocaleString() +
-        ", but forget about it. Just say hi to me!",
-    });
+    const todaysTasks = tasks.filter(
+      (task) =>
+        task.status == "in progress" &&
+        new Date(task.deadline).toDateString() == new Date().toDateString()
+    );
+    const todaysMissedTasks = todaysTasks.filter(
+      (task) => new Date(task.deadline) < new Date()
+    );
+    if (todaysMissedTasks.length) {
+      append({
+        role: "data",
+        content: `Today is ${new Date().toLocaleString()}, but forget about it. My today's tasks are ${todaysMissedTasks
+          .map((task) => ({ id: task.id, name: task.name }))
+          .join(" , ")} ask me how is my progress`,
+      });
+    } else {
+      append({
+        role: "data",
+        content: `Today is ${new Date().toLocaleString()}, but forget about it. Just say hi to me!`,
+      });
+    }
   }, []);
   useEffect(() => {
     const lastMsg = messages.at(-2);
