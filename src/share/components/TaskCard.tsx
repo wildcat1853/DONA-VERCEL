@@ -5,9 +5,9 @@ import { Badge } from "../ui/badge";
 import { Checkbox } from "../ui/checkbox";
 import { Button } from "../ui/button";
 import { AlarmCheck } from "lucide-react";
-import { TaskStatusType } from "@/lib/define";
 import { toggleTaskStatus } from "@/app/actions/task";
 import { AssistantStatus } from "ai";
+import { createEventURL } from "@/app/actions/calendar";
 
 type Props = {
   name: string;
@@ -46,7 +46,19 @@ function TaskCard(props: Props) {
           ) : (
             <Badge className="bg-[#59E7B3] text-[#323232]">Done</Badge>
           )}
-          <Button>Add to calendar</Button>
+          <Button
+            onClick={async () => {
+              window.open(
+                await createEventURL({
+                  title: name,
+                  start: new Date(),
+                  end: deadline,
+                })
+              );
+            }}
+          >
+            Add to calendar
+          </Button>
         </div>
       </div>
     </Card>

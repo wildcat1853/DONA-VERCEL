@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import Chat from "./Chat";
 import { Task } from "@/lib/define";
 import start from "@/../public/stars.svg";
+import { useRouter } from "next/navigation";
 
 type Props = {
   projectId: string;
@@ -26,6 +27,7 @@ function ClientAssistantProvider({
 }: Props) {
   const assistantData = useAssistant({ projectId, projectThreadId });
   const { status, messages, setMessages, append, threadId } = assistantData;
+  const router = useRouter();
   useEffect(() => {
     if (!projectThreadId && threadId)
       (async () => {
@@ -52,7 +54,9 @@ function ClientAssistantProvider({
     if (usedDataId.has(lastMsg.id)) return;
     usedDataId.add(lastMsg.id);
     //@ts-ignore
-    if (lastMsg?.data?.text) router.refresh();
+    if (lastMsg?.data?.text) {
+      router.refresh();
+    }
   }, [messages]);
 
   return (
