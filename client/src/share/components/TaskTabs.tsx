@@ -1,5 +1,5 @@
 "use client";
-import { Task } from "@/lib/define";
+import { Task } from "@/../../../define";
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import TaskCard from "./TaskCard";

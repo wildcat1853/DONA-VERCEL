@@ -1,9 +1,9 @@
 "use server";
 import { authConfig } from "@/app/api/auth/[...nextauth]/authConfig";
-import { db } from "@/lib/db";
+import { db } from "@/../../../db";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { user } from "@/lib/schemas";
+import { user } from "@/../../../schemas";
 
 export default async function getServerUser() {
   const session = await getServerSession(authConfig);

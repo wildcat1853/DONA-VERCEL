@@ -1,6 +1,6 @@
 'use server'
 
-import { db, project } from "@/lib/db"
+import { db, project } from "@/../../../db"
 import { eq } from "drizzle-orm";
 
 export async function getProject(projectId: string) {

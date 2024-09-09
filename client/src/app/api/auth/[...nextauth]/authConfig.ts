@@ -1,4 +1,4 @@
-import { ENV } from "@/lib/env";
+import { ENV } from "@/../../../env";
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 export const authConfig: NextAuthOptions = {

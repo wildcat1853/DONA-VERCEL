@@ -11,15 +11,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "incremental": true
   },
   "include": [
     "next-env.d.ts",
@@ -29,7 +21,7 @@
     "../db.ts",
     "../env.ts",
     "../define.ts",
-    "../drizzle.config.ts"
+    "../schemas.ts"
   ],
   "exclude": ["node_modules"]
 }

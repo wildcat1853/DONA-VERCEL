@@ -7,7 +7,7 @@ import { Separator } from "../ui/separator";
 import TaskTabs from "./TaskTabs";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import Chat from "./Chat";
-import { Task } from "@/lib/define";
+import { Task } from "@/../.../../../../define";
 import start from "@/../public/stars.svg";
 import { useRouter } from "next/navigation";
 

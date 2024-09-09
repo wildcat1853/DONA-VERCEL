@@ -1,4 +1,4 @@
-import { db, project } from "@/lib/db";
+import { db, project } from "@/../../../db";
 import CreateProjectButton from "@/share/components/CreateProjectButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/share/ui/avatar";
 import { Card } from "@/share/ui/card";

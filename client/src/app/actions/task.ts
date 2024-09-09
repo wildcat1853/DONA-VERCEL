@@ -1,6 +1,6 @@
 'use server'
 
-import { db, task } from "@/lib/db"
+import { db, task } from "@/../../../db"
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
