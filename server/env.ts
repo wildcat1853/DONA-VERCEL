@@ -10,7 +10,11 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   RESEND_KEY: z.string()
 });
-
+console.log({
+  DATABASE_URL: process.env.DATABASE_URL,
+  RESEND_KEY: process.env.RESEND_KEY
+})
 export const ENV = envSchema.parse({
+  DATABASE_URL: process.env.DATABASE_URL,
   RESEND_KEY: process.env.RESEND_KEY
 });

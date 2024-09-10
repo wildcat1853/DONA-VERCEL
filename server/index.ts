@@ -8,6 +8,8 @@ import { Project, Task, User } from '../define';
 
 const resend = new Resend(ENV.RESEND_KEY);
 
+console.log('server is running')
+
 setInterval(async () => {
     const userData = (await db.select().from(user)
         .leftJoin(project, eq(user.id, project.userId))
