@@ -19,6 +19,11 @@
     "@radix-ui/react-separator": "^1.1.0",
     "@radix-ui/react-slot": "^1.1.0",
     "@radix-ui/react-tabs": "^1.1.0",
+    "@react-three/drei": "^9.114.0",
+    "@react-three/fiber": "^8.17.9",
+    "@readyplayerme/react-avatar-creator": "^0.5.0",
+    "@readyplayerme/visage": "^6.4.4",
+    "@types/three": "^0.169.0",
     "ai": "^3.3.0",
     "calendar-link": "^2.7.0",
     "class-variance-authority": "^0.7.0",
@@ -32,9 +37,10 @@
     "react": "^18",
     "react-dom": "^18",
     "react-hook-form": "^7.52.2",
+    "shared": "file:../",
     "tailwind-merge": "^2.4.0",
     "tailwindcss-animate": "^1.0.7",
-    "shared": "file:../"
+    "three": "^0.169.0"
   },
   "devDependencies": {
     "@types/node": "^20",

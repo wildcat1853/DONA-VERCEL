@@ -5,6 +5,7 @@ import getServerUser from "@/hooks/getServerUser";
 import { redirect } from "next/navigation";
 import ClientAssistantProvider from "@/share/components/ClientAssistantProvider";
 
+
 type Props = {
   params: { chatId: string };
   searchParams: {};

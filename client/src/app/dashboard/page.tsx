@@ -1,6 +1,6 @@
 import { db, project } from "@/../../../db";
 import CreateProjectButton from "@/share/components/CreateProjectButton";
-import { Avatar, AvatarFallback, AvatarImage } from "@/share/ui/avatar";
+// Add this import
 import { Card } from "@/share/ui/card";
 import React from "react";
 import Link from "next/link";
@@ -38,10 +38,7 @@ async function page({}: Props) {
     <main className="max-w-[700px] mx-auto">
       <div className="flex items-end justify-between mt-24">
         <div className="flex flex-col gap-3">
-          <Avatar className="w-16 h-16">
-            <AvatarImage src="https://s3-alpha-sig.figma.com/img/5fc7/ec20/ea720662bbdf4919d249c61963e54b80?Expires=1723420800&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=d5pY5FyOI5moVLEpSy7PjO5l2H7S0l0VcJhb2qrt2ygJcvnl9s7ebxcgmFBjTrNcwjfV38xwYYBHZhCfAgoN6~6l7z~HIsd4Btn~c2AIu5Yu4Q5pnDxGozgA8yVOIibhBExfy03gRmMisiAzMYFuAHiEKpo5bKDpKuqvDJWR1CALq5AWaLR~-KDTP80pXDEkxxRCDNAXU~bdocwJ9Jm4oKIVxskJhOdQCaPqYdpUEQmfNfzJw59itrAjmUHptw2T00ca-2wDheO2cnmKp0ce0ixqeA0SS6Mo7i8szcp~C~xf1ndrcDrVOVgA978~rMiV8cyP87K9S65Bufd9bDWzkA__" />
-            <AvatarFallback>DN</AvatarFallback>
-          </Avatar>
+         
           <p className="font-semibold text-2xl">Welcome to Dona AI</p>
         </div>
         <CreateProjectButton />
