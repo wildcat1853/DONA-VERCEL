@@ -5,10 +5,13 @@ import { AssistantResponse } from "ai";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { RunSubmitToolOutputsParams } from "openai/resources/beta/threads/runs/runs.mjs";
+import WebSocket from 'ws';
 
 const openai = new OpenAI({
   apiKey: ENV.OPENAI_API_KEY || "",
 });
+
+const WS_SERVER_URL = process.env.WS_SERVER_URL || 'ws://localhost:8080';
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
@@ -72,6 +75,17 @@ export async function POST(req: Request, res: NextResponse) {
           projectId: input.projectId,
           role: "assistant",
         })
+
+        // Send the AI message to the WebSocket server for text-to-speech conversion
+        try {
+          const ws = new WebSocket(WS_SERVER_URL);
+          ws.on('open', () => {
+            ws.send(JSON.stringify({ type: 'tts_request', text: aiMessage }));
+            ws.close();
+          });
+        } catch (error) {
+          console.error('Failed to send message to WebSocket server:', error);
+        }
       })
 
       // forward run status would stream message deltas

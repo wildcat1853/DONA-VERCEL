@@ -2,7 +2,7 @@
 import { getProject, setProjectThreadId } from "@/app/actions/project";
 import useAssistant from "@/hooks/useAssistant";
 import Image from "next/image";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Separator } from "../ui/separator";
 import TaskTabs from "./TaskTabs";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -11,6 +11,7 @@ import { Task } from "@/../.../../../../define";
 import start from "@/../public/stars.svg";
 import { useRouter } from "next/navigation";
 import ReadyPlayerMeAvatar from "@/share/components/ReadyPlayerMeAvatar"; // Add this import at the top of the file
+import { connectWebSocket, disconnectWebSocket } from '../../services/websocket'; // Add this import at the top of the file
 
 type Props = {
   projectId: string;
@@ -31,6 +32,9 @@ function ClientAssistantProvider({
   const assistantData = useAssistant({ projectId, projectThreadId });
   const { status, messages, setMessages, append, threadId } = assistantData;
   const router = useRouter();
+
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   useEffect(() => {
     if (!projectThreadId && threadId)
@@ -77,6 +81,30 @@ function ClientAssistantProvider({
     }
   }, [messages]);
 
+  useEffect(() => {
+    audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+    connectWebSocket((audioChunk) => {
+      const audioData = base64ToArrayBuffer(audioChunk);
+      audioContextRef.current!.decodeAudioData(audioData, (buffer) => {
+        if (audioSourceRef.current) {
+          audioSourceRef.current.stop();
+        }
+        audioSourceRef.current = audioContextRef.current!.createBufferSource();
+        audioSourceRef.current.buffer = buffer;
+        audioSourceRef.current.connect(audioContextRef.current!.destination);
+        audioSourceRef.current.start();
+      });
+    });
+
+    return () => {
+      disconnectWebSocket();
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
+  }, []);
+
   return (
     <>
       <div className="w-7/12 flex justify-center max-h-screen overflow-auto">
@@ -119,6 +147,16 @@ function ClientAssistantProvider({
       </div>
     </>
   );
+}
+
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const binaryString = window.atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
 }
 
 export default ClientAssistantProvider;

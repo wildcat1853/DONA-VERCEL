@@ -1,27 +1,16 @@
 {
   "compilerOptions": {
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
+    "target": "ES2020",                   // Specify ECMAScript target version
+    "module": "NodeNext",                 // Use NodeNext module system
+    "moduleResolution": "NodeNext",       // Node.js module resolution for ES modules
+    "strict": true,                       // Enable all strict type-checking options
+    "esModuleInterop": true,              // Enables interoperability between CommonJS and ES Modules
+    "allowSyntheticDefaultImports": true, // Allow default imports from modules with no default export
+    "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true
+    "noEmit": true,                       // No files will be emitted; ts-node handles this
+    "isolatedModules": true
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    "../db.ts",
-    "env.ts",
-    "../define.ts",
-    "../schemas.ts"
-  ],
+  "include": ["**/*.ts"],
   "exclude": ["node_modules"]
 }
