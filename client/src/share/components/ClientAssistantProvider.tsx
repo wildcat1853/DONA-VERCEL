@@ -82,19 +82,44 @@ function ClientAssistantProvider({
   }, [messages]);
 
   useEffect(() => {
-    audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
 
-    connectWebSocket((audioChunk) => {
-      const audioData = base64ToArrayBuffer(audioChunk);
-      audioContextRef.current!.decodeAudioData(audioData, (buffer) => {
-        if (audioSourceRef.current) {
-          audioSourceRef.current.stop();
-        }
-        audioSourceRef.current = audioContextRef.current!.createBufferSource();
-        audioSourceRef.current.buffer = buffer;
-        audioSourceRef.current.connect(audioContextRef.current!.destination);
-        audioSourceRef.current.start();
-      });
+    let audioChunks: string[] = [];
+    let expectedChunks = 0;
+
+    connectWebSocket((message) => {
+      const { data, chunkIndex, totalChunks, isLast } = message;
+      console.log(`Received chunk ${chunkIndex + 1} of ${totalChunks}`);
+
+      audioChunks[chunkIndex] = data;
+      expectedChunks = totalChunks;
+
+      if (isLast) {
+        const completeAudioBase64 = audioChunks.join('');
+        console.log('All chunks received, audio length:', completeAudioBase64.length);
+
+        const audioData = base64ToArrayBuffer(completeAudioBase64);
+        audioContextRef.current!.decodeAudioData(audioData, (buffer) => {
+          if (audioSourceRef.current) {
+            audioSourceRef.current.stop();
+          }
+          audioSourceRef.current = audioContextRef.current!.createBufferSource();
+          audioSourceRef.current.buffer = buffer;
+          audioSourceRef.current.connect(audioContextRef.current!.destination);
+          
+          console.log('About to pronounce message:', new Date().toISOString());
+          
+          audioSourceRef.current.start();
+        }, (error) => {
+          console.error('Error decoding audio:', error);
+        });
+
+        // Reset for next message
+        audioChunks = [];
+        expectedChunks = 0;
+      }
     });
 
     return () => {

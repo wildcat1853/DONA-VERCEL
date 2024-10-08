@@ -67,30 +67,45 @@ export async function POST(req: Request, res: NextResponse) {
 
       if (input.role == 'system') return;
       runStream.on('end', async () => {
-        console.log('Processing completed');
+        console.log('AI response generation completed');
         //@ts-ignore
         const aiMessage = (await runStream.finalMessages())[0].content[0].text.value;
-        const userDbMessage = await userDbMessagePromise
-        const dbMessage = await db.insert(message).values({
-          content: aiMessage,
-          projectId: input.projectId,
-          role: "assistant",
-        })
+        console.log('AI Message:', aiMessage);
 
-        // Generate speech from the AI message
         try {
+          console.log('Attempting to generate speech');
           const speechResponse = await openai.audio.speech.create({
             model: "tts-1",
             voice: "alloy",
             input: aiMessage,
           });
+          console.log('Speech generated successfully');
 
-          // Convert the speech response to a base64 string
           const audioBuffer = await speechResponse.arrayBuffer();
           const audioBase64 = Buffer.from(audioBuffer).toString('base64');
+          console.log('Audio converted to base64, length:', audioBase64.length);
 
-          // Send the audio data to the Ably channel
-          await channel.publish('audio_chunk', audioBase64);
+          // Implement chunking
+          const chunkSize = 32000; // 32KB chunks (leaving some room for metadata)
+          const chunks = [];
+          for (let i = 0; i < audioBase64.length; i += chunkSize) {
+            chunks.push(audioBase64.slice(i, i + chunkSize));
+          }
+
+          console.log(`Splitting audio into ${chunks.length} chunks`);
+
+          // Publish chunks
+          for (let i = 0; i < chunks.length; i++) {
+            await channel.publish('audio_chunk', {
+              data: chunks[i],
+              chunkIndex: i,
+              totalChunks: chunks.length,
+              isLast: i === chunks.length - 1
+            });
+            console.log(`Published chunk ${i + 1} of ${chunks.length}`);
+          }
+
+          console.log('All audio chunks published to Ably channel');
         } catch (error) {
           console.error('Failed to generate or send speech:', error);
         }
