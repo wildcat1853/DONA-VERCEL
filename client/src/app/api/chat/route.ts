@@ -5,13 +5,14 @@ import { AssistantResponse } from "ai";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { RunSubmitToolOutputsParams } from "openai/resources/beta/threads/runs/runs.mjs";
-import WebSocket from 'ws';
+import * as Ably from 'ably';
 
 const openai = new OpenAI({
   apiKey: ENV.OPENAI_API_KEY || "",
 });
 
-const WS_SERVER_URL = process.env.WS_SERVER_URL || 'ws://localhost:8080';
+const ably = new Ably.Realtime({ key: process.env.NEXT_PUBLIC_ABLY_API_KEY });
+const channel = ably.channels.get('audio-channel');
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
@@ -66,7 +67,7 @@ export async function POST(req: Request, res: NextResponse) {
 
       if (input.role == 'system') return;
       runStream.on('end', async () => {
-        console.log('before before before')
+        console.log('Processing completed');
         //@ts-ignore
         const aiMessage = (await runStream.finalMessages())[0].content[0].text.value;
         const userDbMessage = await userDbMessagePromise
@@ -76,15 +77,22 @@ export async function POST(req: Request, res: NextResponse) {
           role: "assistant",
         })
 
-        // Send the AI message to the WebSocket server for text-to-speech conversion
+        // Generate speech from the AI message
         try {
-          const ws = new WebSocket(WS_SERVER_URL);
-          ws.on('open', () => {
-            ws.send(JSON.stringify({ type: 'tts_request', text: aiMessage }));
-            ws.close();
+          const speechResponse = await openai.audio.speech.create({
+            model: "tts-1",
+            voice: "alloy",
+            input: aiMessage,
           });
+
+          // Convert the speech response to a base64 string
+          const audioBuffer = await speechResponse.arrayBuffer();
+          const audioBase64 = Buffer.from(audioBuffer).toString('base64');
+
+          // Send the audio data to the Ably channel
+          await channel.publish('audio_chunk', audioBase64);
         } catch (error) {
-          console.error('Failed to send message to WebSocket server:', error);
+          console.error('Failed to generate or send speech:', error);
         }
       })
 

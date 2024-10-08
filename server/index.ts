@@ -1,10 +1,10 @@
 import { Resend } from 'resend';
 import Component from './unfinished-task-notification';
-import { eq } from 'drizzle-orm'
-import { db, task } from '../db'
-import { project, user } from '../schemas';
-import { ENV } from './env';
-import { Project, Task, User } from '../define';
+import { eq } from 'drizzle-orm';
+import { db, task } from '../db.js';
+import { project, user } from '../schemas.js';
+import { ENV } from './env.js';
+import { Project, Task, User } from '../define.js';
 
 
 const resend = new Resend(ENV.RESEND_KEY);

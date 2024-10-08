@@ -20,7 +20,7 @@ type Props = {
   tasks: Task[];
 };
 
-const avatarUrl = 'https://models.readyplayer.me/66fff8ab8fcc54d1d062d962.glb';
+const avatarUrl = 'https://models.readyplayer.me/6702ac102075ee5f35a0a783.glb';
 
 const usedDataId = new Set<string>();
 function ClientAssistantProvider({
@@ -126,7 +126,7 @@ function ClientAssistantProvider({
         {/* Background div */}
         <div className="absolute top-0 right-0 w-full h-full bg-F1F2F4">
           {/* Gradient div as background for avatar */}
-          <div className="absolute top-0 left-0 w-full h-80 bg-gradient-to-b from-gray-200 via-gray-200 to-transparent">
+          <div className="absolute top-0 left-0 w-full h-[60vh] bg-gradient-to-b from-gray-200 via-gray-200 to-transparent">
             {/* Avatar container */}
             <div className="absolute left-1/2 transform -translate-x-1/2 top-6">
               <div className="w-64 h-64 rounded-full overflow-hidden bg-gray-100 shadow-glow">

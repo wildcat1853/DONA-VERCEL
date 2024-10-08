@@ -1,33 +1,35 @@
-let socket: WebSocket | null = null;
+import * as Ably from 'ably';
+let ably: Ably.Realtime | null = null;
+let channel: Ably.RealtimeChannel | null = null;
 
 export function connectWebSocket(onAudioChunk: (chunk: string) => void) {
-  const WS_SERVER_URL = process.env.NEXT_PUBLIC_WS_SERVER_URL || 'ws://localhost:8080';
-  
-  socket = new WebSocket(WS_SERVER_URL);
+  ably = new Ably.Realtime({ key: process.env.NEXT_PUBLIC_ABLY_API_KEY });
+  channel = ably.channels.get('audio-channel');
 
-  socket.onopen = () => {
-    console.log('Connected to WebSocket server');
-  };
+  channel.subscribe('audio_chunk', (message) => {
+    onAudioChunk(message.data);
+  });
 
-  socket.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    if (data.type === 'audio_chunk') {
-      onAudioChunk(data.data);
-    }
-  };
+  ably.connection.on('connected', () => {
+    console.log('Connected to Ably');
+  });
 
-  socket.onerror = (error) => {
-    console.error('WebSocket error:', error);
-  };
-
-  socket.onclose = () => {
-    console.log('Disconnected from WebSocket server');
-  };
+  ably.connection.on('failed', () => {
+    console.error('Failed to connect to Ably');
+  });
 }
 
 export function disconnectWebSocket() {
-  if (socket) {
-    socket.close();
-    socket = null;
+  if (channel) {
+    channel.unsubscribe();
+  }
+  if (ably) {
+    ably.close();
+  }
+}
+
+export function sendMessage(message: string) {
+  if (channel) {
+    channel.publish('tts_request', { text: message });
   }
 }
