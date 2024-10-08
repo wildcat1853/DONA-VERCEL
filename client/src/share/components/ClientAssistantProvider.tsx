@@ -133,7 +133,7 @@ function ClientAssistantProvider({
   return (
     <>
       <div className="w-7/12 flex justify-center max-h-screen overflow-auto">
-        <div className="w-2/3 flex flex-col  gap-9 mt-40">
+        <div className="w-2/3 flex flex-col  gap-9 mt-32">
           <div>
             <div className="flex gap-4">
               <Image src={start} alt="stars" />
@@ -141,9 +141,9 @@ function ClientAssistantProvider({
                 Project name
               </p>
             </div>
-            <p className="text-base mt-5">Project description</p>
+            {/* <p className="text-base mt-5">Project description</p> */}
           </div>
-          <Separator className="bg-gray-300" />
+          <Separator className="bg-gray-200" />
           <TaskTabs tasks={tasks} assistantData={assistantData} />
         </div>
       </div>
@@ -162,6 +162,12 @@ function ClientAssistantProvider({
                     height="100%" 
                   />
                 </div>
+              </div>
+              {/* Mood tag */}
+              <div className="mt-4 text-center">
+                <span className="px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                  Donna is in a good mood
+                </span>
               </div>
             </div>
           </div>
