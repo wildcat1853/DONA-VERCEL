@@ -130,6 +130,24 @@ function ClientAssistantProvider({
     };
   }, []);
 
+  const initAudioContext = () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    // Attempt to resume the context immediately
+    audioContextRef.current!.resume().catch(console.error);
+  };
+
+  // Call initAudioContext on a user interaction, e.g., button click
+  useEffect(() => {
+    const handleInteraction = () => {
+      initAudioContext();
+      document.removeEventListener('click', handleInteraction);
+    };
+    document.addEventListener('click', handleInteraction);
+    return () => document.removeEventListener('click', handleInteraction);
+  }, []);
+
   return (
     <>
       <div className="w-7/12 flex justify-center max-h-screen overflow-auto">
