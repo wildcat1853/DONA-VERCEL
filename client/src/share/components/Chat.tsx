@@ -21,6 +21,7 @@ function Chat({ assistantData }: Props) {
   const form = useForm({ values: { message: "" } });
   const { status, messages, append } = assistantData;
   const [padding, setPadding] = useState("");
+  const isAiResponding = status === "in_progress"; // Add this line
 
   useEffect(() => {
     if (!inputRef.current) throw new Error("Input ref is null");
@@ -55,7 +56,11 @@ function Chat({ assistantData }: Props) {
 
   return (
     <div className="px-9 bg-gray-100 flex flex-col w-full h-screen max-h-screen">
-      <ChatMessages messages={messages} padding={padding} />
+      <ChatMessages 
+        messages={messages} 
+        padding={padding} 
+        isAiResponding={isAiResponding} // Add this prop
+      />
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}

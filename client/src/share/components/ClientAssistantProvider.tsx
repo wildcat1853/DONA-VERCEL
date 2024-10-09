@@ -174,7 +174,7 @@ function ClientAssistantProvider({
         </div>
         
         {/* Chat component */}
-        <Chat assistantData={assistantData} />
+        <Chat assistantData={{...assistantData, status}} />
       </div>
     </>
   );

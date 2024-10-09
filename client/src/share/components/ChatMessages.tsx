@@ -1,18 +1,21 @@
 import React, { memo } from "react";
 import { AiChatRow, UserChatRow } from "./ChatRows";
 import { Message } from "ai";
+import WritingBubble from "./WritingBubble";
 
 type Props = {
   messages: Message[];
   padding: string;
+  isAiResponding: boolean; // Add this prop
 };
 
-function ChatMessages({ messages, padding }: Props) {
+function ChatMessages({ messages, padding, isAiResponding }: Props) {
   return (
     <div
       style={{ paddingBottom: padding }}
       className="mx-auto w-full h-full overflow-auto flex flex-col-reverse gap-3 pt-20"
     >
+      {isAiResponding && <WritingBubble />} {/* Add this line */}
       {messages
         .toReversed()
         .filter(
@@ -29,22 +32,6 @@ function ChatMessages({ messages, padding }: Props) {
               ) : (
                 <UserChatRow el={el} />
               )}
-              {/* {el.toolInvocations ? (
-              <div className="bg-gray-200">
-                <p>To-do List</p>
-                <div className="flex gap-2">
-                  {el.toolInvocations.map((el) => (
-                    <TaskCard
-                      description={el.args.description}
-                      name={el.args.title}
-                      id={el.args.id}
-                      key={el.args.id}
-                      status={el.args.status}
-                    />
-                  ))}
-                </div>
-              </div>
-            ) : null} */}
             </React.Fragment>
           );
         })}
