@@ -66,6 +66,7 @@ export async function POST(req: Request, res: NextResponse) {
       });
 
       if (input.role == 'system') return;
+
       runStream.on('end', async () => {
         console.log('AI response generation completed');
         //@ts-ignore
@@ -74,11 +75,22 @@ export async function POST(req: Request, res: NextResponse) {
 
         try {
           console.log('Attempting to generate speech');
-          const speechResponse = await openai.audio.speech.create({
+          const speechPromise = openai.audio.speech.create({
             model: "tts-1",
             voice: "alloy",
             input: aiMessage,
           });
+
+          // Start processing the text response immediately
+          const dbMessagePromise = db.insert(message).values({
+            content: aiMessage,
+            projectId: input.projectId,
+            role: "assistant",
+          });
+
+          // Wait for both the speech generation and database insertion to complete
+          const [speechResponse, dbMessage] = await Promise.all([speechPromise, dbMessagePromise]);
+
           console.log('Speech generated successfully');
 
           const audioBuffer = await speechResponse.arrayBuffer();
@@ -109,13 +121,11 @@ export async function POST(req: Request, res: NextResponse) {
         } catch (error) {
           console.error('Failed to generate or send speech:', error);
         }
-      })
+      });
 
       // forward run status would stream message deltas
       let runResult = await forwardStream(runStream);
       console.log("before switch");
-
-
 
       // status can be: queued, in_progress, requires_action, cancelling, cancelled, failed, completed, or expired
       while (
