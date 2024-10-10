@@ -190,7 +190,7 @@ function ClientAssistantProvider({
           <div className="absolute top-0 left-0 w-full h-[60vh] bg-gradient-to-b from-gray-200 via-gray-200 to-transparent">
             {/* Avatar container */}
             <div className="absolute left-1/2 transform -translate-x-1/2 top-6">
-              <div className="w-64 h-64 rounded-full overflow-hidden bg-gray-100 shadow-glow">
+              <div className="w-[32rem] h-[32rem] rounded-full overflow-hidden bg-gray-100 shadow-glow">
                 <ReadyPlayerMeAvatar 
                   avatarUrl={avatarUrl} 
                 />
