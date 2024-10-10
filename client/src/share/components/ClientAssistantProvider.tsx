@@ -2,7 +2,7 @@
 import { getProject, setProjectThreadId } from "@/app/actions/project";
 import useAssistant from "@/hooks/useAssistant";
 import Image from "next/image";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Separator } from "../ui/separator";
 import TaskTabs from "./TaskTabs";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -20,7 +20,9 @@ type Props = {
   tasks: Task[];
 };
 
-const avatarUrl = 'https://models.readyplayer.me/6702ac102075ee5f35a0a783.glb';
+
+const avatarUrl = 'https://models.readyplayer.me/6702ac102075ee5f35a0a783.glb?morphTargets=mouthSmile,mouthOpen,mouthFunnel,browOuterUpLeft,browOuterUpRight,tongueOut,ARKit';
+
 
 const usedDataId = new Set<string>();
 function ClientAssistantProvider({
@@ -35,6 +37,8 @@ function ClientAssistantProvider({
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const audioBufferRef = useRef<AudioBuffer | null>(null);
 
   useEffect(() => {
     if (!projectThreadId && threadId)
@@ -82,6 +86,14 @@ function ClientAssistantProvider({
   }, [messages]);
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && !audioContext) {
+      const newContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      setAudioContext(newContext);
+      console.log('AudioContext created:', newContext);
+    }
+  }, []);
+
+  useEffect(() => {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
@@ -89,7 +101,7 @@ function ClientAssistantProvider({
     let audioChunks: string[] = [];
     let expectedChunks = 0;
 
-    connectWebSocket((message) => {
+    const handleAudioMessage = async (message: any) => {
       const { data, chunkIndex, totalChunks, isLast } = message;
       console.log(`Received chunk ${chunkIndex + 1} of ${totalChunks}`);
 
@@ -98,10 +110,14 @@ function ClientAssistantProvider({
 
       if (isLast) {
         const completeAudioBase64 = audioChunks.join('');
-        console.log('All chunks received, audio length:', completeAudioBase64.length);
+        console.log('Complete audio received, length:', completeAudioBase64.length);
 
-        const audioData = base64ToArrayBuffer(completeAudioBase64);
-        audioContextRef.current!.decodeAudioData(audioData, (buffer) => {
+        try {
+          const audioData = base64ToArrayBuffer(completeAudioBase64);
+          const buffer = await audioContextRef.current!.decodeAudioData(audioData);
+          audioBufferRef.current = buffer;
+          console.log('Audio buffer created:', buffer);
+
           if (audioSourceRef.current) {
             audioSourceRef.current.stop();
           }
@@ -112,15 +128,17 @@ function ClientAssistantProvider({
           console.log('About to pronounce message:', new Date().toISOString());
           
           audioSourceRef.current.start();
-        }, (error) => {
+        } catch (error) {
           console.error('Error decoding audio:', error);
-        });
+        }
 
         // Reset for next message
         audioChunks = [];
         expectedChunks = 0;
       }
-    });
+    };
+
+    connectWebSocket(handleAudioMessage);
 
     return () => {
       disconnectWebSocket();
@@ -173,13 +191,9 @@ function ClientAssistantProvider({
             {/* Avatar container */}
             <div className="absolute left-1/2 transform -translate-x-1/2 top-6">
               <div className="w-64 h-64 rounded-full overflow-hidden bg-gray-100 shadow-glow">
-                <div className="w-full h-full">
-                  <ReadyPlayerMeAvatar 
-                    avatarUrl={avatarUrl} 
-                    width="100%" 
-                    height="100%" 
-                  />
-                </div>
+                <ReadyPlayerMeAvatar 
+                  avatarUrl={avatarUrl} 
+                />
               </div>
               {/* Mood tag */}
               <div className="mt-4 text-center">
