@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^0.0.40",
+    "@google-cloud/text-to-speech": "^5.4.0",
     "@hookform/resolvers": "^3.9.0",
     "@nanostores/react": "github:ai/react",
     "@radix-ui/react-avatar": "^1.1.0",
@@ -28,9 +29,11 @@
     "calendar-link": "^2.7.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "cmu-pronouncing-dictionary": "^3.0.0",
     "dotenv": "^16.4.5",
     "lucide-react": "^0.424.0",
     "markdown-to-jsx": "^7.5.0",
+    "natural": "^8.0.1",
     "next": "14.2.5",
     "next-auth": "^4.24.7",
     "openai": "^4.67.2",
@@ -45,6 +48,7 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@types/natural": "^5.1.5",
     "@types/node": "^20",
     "@types/pg": "^8.11.6",
     "@types/react": "^18",
