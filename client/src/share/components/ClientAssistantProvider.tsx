@@ -39,7 +39,6 @@ function ClientAssistantProvider({
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
   const audioBufferRef = useRef<AudioBuffer | null>(null);
-  const [currentAudioBuffer, setCurrentAudioBuffer] = useState<AudioBuffer | null>(null);
 
   useEffect(() => {
     if (!projectThreadId && threadId)
@@ -116,7 +115,7 @@ function ClientAssistantProvider({
         try {
           const audioData = base64ToArrayBuffer(completeAudioBase64);
           const buffer = await audioContextRef.current!.decodeAudioData(audioData);
-          setCurrentAudioBuffer(buffer);
+          audioBufferRef.current = buffer;
           console.log('Audio buffer created:', buffer);
 
           if (audioSourceRef.current) {
@@ -191,10 +190,10 @@ function ClientAssistantProvider({
           <div className="absolute top-0 left-0 w-full h-[60vh] bg-gradient-to-b from-gray-200 via-gray-200 to-transparent">
             {/* Avatar container */}
             <div className="absolute left-1/2 transform -translate-x-1/2 top-6">
-              <div className="w-[32rem] h-[32rem] rounded-full overflow-hidden bg-gray-100 shadow-glow">
+              <div className="w-96 h-96 rounded-full overflow-hidden bg-gray-100 shadow-glow">
                 <ReadyPlayerMeAvatar 
                   avatarUrl={avatarUrl} 
-                  audioBuffer={currentAudioBuffer}
+                  audioBuffer={audioBufferRef.current}
                 />
               </div>
               {/* Mood tag */}
