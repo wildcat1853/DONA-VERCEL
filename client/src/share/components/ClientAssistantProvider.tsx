@@ -12,6 +12,7 @@ import start from "@/../public/stars.svg";
 import { useRouter } from "next/navigation";
 import ReadyPlayerMeAvatar from "@/share/components/ReadyPlayerMeAvatar"; // Add this import at the top of the file
 import { connectWebSocket, disconnectWebSocket } from '../../services/websocket'; // Add this import at the top of the file
+import dynamic from 'next/dynamic';
 
 type Props = {
   projectId: string;
@@ -191,7 +192,7 @@ function ClientAssistantProvider({
             {/* Avatar container */}
             <div className="absolute left-1/2 transform -translate-x-1/2 top-6">
               <div className="w-96 h-96 rounded-full overflow-hidden bg-gray-100 shadow-glow">
-                <ReadyPlayerMeAvatar 
+                <AvatarScene 
                   avatarUrl={avatarUrl} 
                   audioBuffer={audioBufferRef.current}
                 />
@@ -222,5 +223,8 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
   }
   return bytes.buffer;
 }
+
+// Dynamically import AvatarScene with SSR disabled
+const AvatarScene = dynamic(() => import('./AvatarScene'), { ssr: false });
 
 export default ClientAssistantProvider;
