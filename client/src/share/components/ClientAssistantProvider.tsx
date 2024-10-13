@@ -26,12 +26,12 @@ const avatarUrl = 'https://models.readyplayer.me/6702ac102075ee5f35a0a783.glb?mo
 
 
 const usedDataId = new Set<string>();
-function ClientAssistantProvider({
+const ClientAssistantProvider: React.FC<Props> = ({
   projectId,
   projectThreadId,
   serverMessages,
   tasks,
-}: Props) {
+}) => {
   const assistantData = useAssistant({ projectId, projectThreadId });
   const { status, messages, setMessages, append, threadId } = assistantData;
   const router = useRouter();
@@ -184,25 +184,17 @@ function ClientAssistantProvider({
           <TaskTabs tasks={tasks} assistantData={assistantData} />
         </div>
       </div>
-      <div className="w-5/12 relative">
+      <div className="w-5/12 relative h-screen">
         {/* Background div */}
         <div className="absolute top-0 right-0 w-full h-full bg-F1F2F4">
           {/* Gradient div as background for avatar */}
-          <div className="absolute top-0 left-0 w-full h-[60vh] bg-gradient-to-b from-gray-200 via-gray-200 to-transparent">
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-gray-200 via-gray-200 to-transparent">
             {/* Avatar container */}
-            <div className="absolute left-1/2 transform -translate-x-1/2 top-6">
-              <div className="w-96 h-96 rounded-full overflow-hidden bg-gray-100 shadow-glow">
-                <AvatarScene 
-                  avatarUrl={avatarUrl} 
-                  audioBuffer={audioBufferRef.current}
-                />
-              </div>
-              {/* Mood tag */}
-              <div className="mt-4 text-center">
-                <span className="px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                💡 Good mood!
-                </span>
-              </div>
+            <div className="absolute inset-0">
+              <AvatarScene 
+                avatarUrl={avatarUrl} 
+                audioBuffer={audioBufferRef.current}
+              />
             </div>
           </div>
         </div>
