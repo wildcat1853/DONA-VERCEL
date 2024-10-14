@@ -17,10 +17,10 @@ const AvatarScene: React.FC<AvatarSceneProps> = ({ avatarUrl, audioBuffer }) => 
     <Canvas
       style={{ width: '100%', height: '100%' }}
     >
-      <PerspectiveCamera makeDefault position={[0.43, 0, 0.43]} fov={40} />
+      <PerspectiveCamera makeDefault position={[0.9, 0, 0.9]} fov={40} />
       {/* Lights */}
-      <ambientLight intensity={0.9} />
-      <directionalLight position={[0, 5, 5]} intensity={1} />
+      <ambientLight intensity={1} />
+      <directionalLight position={[0, 2, 2]} intensity={1.8} />
       {/* Controls */}
       <OrbitControls
         ref={controlsRef}
@@ -32,7 +32,7 @@ const AvatarScene: React.FC<AvatarSceneProps> = ({ avatarUrl, audioBuffer }) => 
         <ReadyPlayerMeAvatar 
           avatarUrl={avatarUrl} 
           audioBuffer={audioBuffer} 
-          position={[0, -1.1, 0]}  // Move the avatar down
+          position={[0, -0.9, 0]}  // Move the avatar down
         />
       </React.Suspense>
     </Canvas>

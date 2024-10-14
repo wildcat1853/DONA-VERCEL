@@ -27,6 +27,17 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   // For interpolating morph target values
   const previousMorphValuesRef = useRef<{ [key: string]: number }>({});
 
+  // Add these new refs for smiling animation
+  const lastSmileTimeRef = useRef(0);
+  const smileDurationRef = useRef(0);
+  const timeBetweenSmilesRef = useRef(0);
+
+  // Add these new refs for hand gesture animation
+  const lastGestureTimeRef = useRef(0);
+  const gestureDurationRef = useRef(0);
+  const timeBetweenGesturesRef = useRef(0);
+  const rightArmBonesRef = useRef<{[key: string]: THREE.Bone}>({});
+
   useEffect(() => {
     if (scene) {
       scene.traverse((child: any) => {
@@ -35,7 +46,22 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
           console.log('Avatar mesh found:', child);
           console.log('Available morph targets:', child.morphTargetDictionary);
         }
+        if (child.isBone) {
+          if (['RightHand', 'RightLowerArm', 'RightUpperArm'].includes(child.name)) {
+            rightArmBonesRef.current[child.name] = child;
+          }
+        }
       });
+
+      // Initialize smiling animation parameters
+      lastSmileTimeRef.current = performance.now() / 1000;
+      smileDurationRef.current = 2; // Smile duration in seconds
+      timeBetweenSmilesRef.current = Math.random() * 10 + 5; // Random time between smiles (5-15 seconds)
+
+      // Initialize hand gesture animation parameters
+      lastGestureTimeRef.current = performance.now() / 1000;
+      gestureDurationRef.current = 2; // Gesture duration in seconds
+      timeBetweenGesturesRef.current = Math.random() * 20 + 10; // Random time between gestures (10-30 seconds)
     }
   }, [scene]);
 
@@ -65,7 +91,7 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
     }
   }, [audioBuffer]);
 
-  useFrame(() => {
+  useFrame((state, delta) => {
     if (
       analyserRef.current &&
       dataArrayRef.current &&
@@ -205,6 +231,58 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
         }
       });
 
+      // Smiling animation
+      const currentTime = performance.now() / 1000;
+      const timeSinceLastSmile = currentTime - lastSmileTimeRef.current;
+
+      if (timeSinceLastSmile > timeBetweenSmilesRef.current) {
+        // Start a new smile
+        lastSmileTimeRef.current = currentTime;
+        smileDurationRef.current = Math.random() * 1 + 1; // Random smile duration (1-2 seconds)
+        timeBetweenSmilesRef.current = Math.random() * 10 + 5; // Random time until next smile
+      }
+
+      const smileMorphTargets = ['mouthSmile', 'mouthSmileLeft', 'mouthSmileRight'];
+      const smileProgress = Math.min(timeSinceLastSmile / smileDurationRef.current, 1);
+      const smileIntensity = Math.sin(smileProgress * Math.PI) * 0.1; // Smooth in and out
+
+      smileMorphTargets.forEach((morphTargetName) => {
+        const index = avatarMeshRef.current!.morphTargetDictionary![morphTargetName];
+        if (index !== undefined) {
+          const previousValue = previousMorphValuesRef.current[morphTargetName] || 0;
+          const targetValue = smileIntensity;
+          const newValue = THREE.MathUtils.lerp(previousValue, targetValue, 0.1);
+          avatarMeshRef.current!.morphTargetInfluences![index] = newValue;
+          previousMorphValuesRef.current[morphTargetName] = newValue;
+        } else {
+          console.warn(`Morph target "${morphTargetName}" not found`);
+        }
+      });
+
+      // Hand gesture animation
+      const timeSinceLastGesture = currentTime - lastGestureTimeRef.current;
+
+      if (timeSinceLastGesture > timeBetweenGesturesRef.current) {
+        // Start a new gesture
+        lastGestureTimeRef.current = currentTime;
+        gestureDurationRef.current = Math.random() * 1 + 1; // Random gesture duration (1-2 seconds)
+        timeBetweenGesturesRef.current = Math.random() * 20 + 10; // Random time until next gesture
+      }
+
+      const gestureProgress = Math.min(timeSinceLastGesture / gestureDurationRef.current, 1);
+      const gestureIntensity = Math.sin(gestureProgress * Math.PI); // Smooth in and out
+
+      // Apply hand gesture
+      if (rightArmBonesRef.current.RightUpperArm && rightArmBonesRef.current.RightLowerArm && rightArmBonesRef.current.RightHand) {
+        const upperArmRotation = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -Math.PI / 6 * gestureIntensity));
+        const lowerArmRotation = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -Math.PI / 4 * gestureIntensity));
+        const handRotation = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, Math.PI / 4 * gestureIntensity));
+
+        rightArmBonesRef.current.RightUpperArm.rotation.setFromQuaternion(upperArmRotation);
+        rightArmBonesRef.current.RightLowerArm.rotation.setFromQuaternion(lowerArmRotation);
+        rightArmBonesRef.current.RightHand.rotation.setFromQuaternion(handRotation);
+      }
+
       // Optionally, reset other morph targets to zero
       const allMorphTargets = Object.keys(avatarMeshRef.current.morphTargetDictionary);
       allMorphTargets.forEach((morphTargetName) => {
@@ -213,7 +291,8 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
           !lipMorphTargets.includes(morphTargetName) &&
           !cheekMorphTargets.includes(morphTargetName) &&
           !eyeMorphTargets.includes(morphTargetName) &&
-          !eyebrowMorphTargets.includes(morphTargetName)
+          !eyebrowMorphTargets.includes(morphTargetName) &&
+          !smileMorphTargets.includes(morphTargetName)
         ) {
           const index = avatarMeshRef.current!.morphTargetDictionary![morphTargetName];
           if (index !== undefined) {

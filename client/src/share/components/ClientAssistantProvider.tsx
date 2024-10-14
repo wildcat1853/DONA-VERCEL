@@ -22,7 +22,7 @@ type Props = {
 };
 
 
-const avatarUrl = 'https://models.readyplayer.me/6702ac102075ee5f35a0a783.glb?morphTargets=mouthSmile,mouthOpen,mouthFunnel,browOuterUpLeft,browOuterUpRight,tongueOut,ARKit';
+const avatarUrl = 'https://models.readyplayer.me/670c2238e4f39be58fe308ae.glb?morphTargets=mouthSmile,mouthOpen,mouthFunnel,browOuterUpLeft,browOuterUpRight,tongueOut,ARKit';
 
 
 const usedDataId = new Set<string>();
