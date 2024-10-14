@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import ReadyPlayerMeAvatar from "@/share/components/ReadyPlayerMeAvatar"; // Add this import at the top of the file
 import { connectWebSocket, disconnectWebSocket } from '../../services/websocket'; // Add this import at the top of the file
 import dynamic from 'next/dynamic';
+import SpeechRecognition from './SpeechRecognition'; // Add this import
 
 type Props = {
   projectId: string;
@@ -44,6 +45,21 @@ const ClientAssistantProvider: React.FC<Props> = ({
 
   const [audioQueue, setAudioQueue] = useState<AudioBuffer[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
+
+
+  //  speech recognition
+  const [isListening, setIsListening] = useState(false);
+
+  const handleTranscript = useCallback((transcript: string) => {
+    if (transcript.trim()) {
+      append({
+        role: "user",
+        content: transcript,
+      });
+    }
+  }, [append]);
+
+  // end of speech recognition
 
   useEffect(() => {
     if (!projectThreadId && threadId)
@@ -219,8 +235,28 @@ const ClientAssistantProvider: React.FC<Props> = ({
           </div>
         </div>
         
-        {/* Chat component */}
-        <Chat assistantData={{...assistantData, status}} />
+        {/* Add SpeechRecognition component */}
+        <SpeechRecognition
+          onTranscript={handleTranscript}
+          isListening={isListening}
+          setIsListening={setIsListening}
+        />
+        
+        {/* Add listening indicator */}
+        <div className="absolute top-4 right-4 px-4 py-2 rounded-full z-20">
+          {isListening ? (
+            <div className="bg-blue-500 text-white">
+              Listening...
+            </div>
+          ) : (
+            <div className="bg-gray-300 text-gray-700">
+              Not listening
+            </div>
+          )}
+        </div>
+        
+        {/* Keep Chat component as is */}
+        <Chat assistantData={assistantData} />
 
         {/* Good mood label */}
         <div className="absolute bottom-60 left-1/2 transform -translate-x-1/2 bg-green-200 text-green-600 px-3 py-1 rounded-full text-sm z-10">
