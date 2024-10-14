@@ -33,6 +33,7 @@ const AvatarScene: React.FC<AvatarSceneProps> = ({ avatarUrl, audioBuffer }) => 
           avatarUrl={avatarUrl} 
           audioBuffer={audioBuffer} 
           position={[0, -0.9, 0]}  // Move the avatar down
+          isPlaying={true}  // Added isPlaying prop
         />
       </React.Suspense>
     </Canvas>

@@ -8,11 +8,13 @@ import * as THREE from 'three';
 interface ReadyPlayerMeAvatarProps extends GroupProps {
   avatarUrl: string;
   audioBuffer?: AudioBuffer | null;
+  isPlaying: boolean; // Add this prop
 }
 
 const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   avatarUrl,
   audioBuffer,
+  isPlaying, // Add this prop
   ...props
 }) => {
   const { scene } = useGLTF(avatarUrl) as any;
@@ -21,7 +23,7 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   const dataArrayRef = useRef<Uint8Array>();
 
   // For smoothing audio amplitude
-  const smoothingFactor = 0.1; // Adjust between 0 (no smoothing) and 1 (maximum smoothing)
+  const smoothingFactor = 0.5; // Adjust between 0 (no smoothing) and 1 (maximum smoothing)
   const smoothedAmplitudeRef = useRef(0);
 
   // For interpolating morph target values
@@ -113,7 +115,7 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
         smoothingFactor * smoothedAmplitudeRef.current +
         (1 - smoothingFactor) * currentAmplitude;
 
-      const morphValue = smoothedAmplitudeRef.current * 1.5; // Adjust scaling as needed
+      const morphValue = smoothedAmplitudeRef.current * 1.0; // Reduced scaling
 
       // Mouth movement morph targets
       const mouthMorphTargets = [

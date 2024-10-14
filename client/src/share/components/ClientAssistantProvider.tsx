@@ -2,7 +2,7 @@
 import { getProject, setProjectThreadId } from "@/app/actions/project";
 import useAssistant from "@/hooks/useAssistant";
 import Image from "next/image";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Separator } from "../ui/separator";
 import TaskTabs from "./TaskTabs";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -26,6 +26,7 @@ const avatarUrl = 'https://models.readyplayer.me/670c2238e4f39be58fe308ae.glb?mo
 
 
 const usedDataId = new Set<string>();
+
 const ClientAssistantProvider: React.FC<Props> = ({
   projectId,
   projectThreadId,
@@ -40,6 +41,9 @@ const ClientAssistantProvider: React.FC<Props> = ({
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
   const audioBufferRef = useRef<AudioBuffer | null>(null);
+
+  const [audioQueue, setAudioQueue] = useState<AudioBuffer[]>([]);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     if (!projectThreadId && threadId)
@@ -74,6 +78,12 @@ const ClientAssistantProvider: React.FC<Props> = ({
         content: `Today is ${new Date().toLocaleString()}, but forget about it. Just say hi to me!`,
       });
     }
+    
+    // Add an initial greeting from Dona
+    append({
+      role: "assistant",
+      content: "Hello! I'm Dona, your AI assistant. How can I help you today?",
+    });
   }, []);
   useEffect(() => {
     const lastMsg = messages.at(-2);
@@ -111,24 +121,10 @@ const ClientAssistantProvider: React.FC<Props> = ({
 
       if (isLast) {
         const completeAudioBase64 = audioChunks.join('');
-        console.log('Complete audio received, length:', completeAudioBase64.length);
-
         try {
           const audioData = base64ToArrayBuffer(completeAudioBase64);
           const buffer = await audioContextRef.current!.decodeAudioData(audioData);
-          audioBufferRef.current = buffer;
-          console.log('Audio buffer created:', buffer);
-
-          if (audioSourceRef.current) {
-            audioSourceRef.current.stop();
-          }
-          audioSourceRef.current = audioContextRef.current!.createBufferSource();
-          audioSourceRef.current.buffer = buffer;
-          audioSourceRef.current.connect(audioContextRef.current!.destination);
-          
-          console.log('About to pronounce message:', new Date().toISOString());
-          
-          audioSourceRef.current.start();
+          setAudioQueue(prevQueue => [...prevQueue, buffer]);
         } catch (error) {
           console.error('Error decoding audio:', error);
         }
@@ -167,6 +163,29 @@ const ClientAssistantProvider: React.FC<Props> = ({
     return () => document.removeEventListener('click', handleInteraction);
   }, []);
 
+  const processAudioQueue = useCallback(() => {
+    if (audioQueue.length > 0 && !isPlaying) {
+      setIsPlaying(true);
+      const currentBuffer = audioQueue[0];
+      
+      if (audioContextRef.current) {
+        const source = audioContextRef.current.createBufferSource();
+        source.buffer = currentBuffer;
+        source.connect(audioContextRef.current.destination);
+        source.onended = () => {
+          setAudioQueue(prevQueue => prevQueue.slice(1));
+          setIsPlaying(false);
+        };
+        source.start();
+      }
+    }
+  }, [audioQueue, isPlaying]);
+
+  // Use an effect to trigger audio processing
+  useEffect(() => {
+    processAudioQueue();
+  }, [audioQueue, processAudioQueue]);
+
   return (
     <>
       <div className="w-7/12 flex justify-center max-h-screen overflow-auto">
@@ -193,7 +212,8 @@ const ClientAssistantProvider: React.FC<Props> = ({
             <div className="absolute inset-0">
               <AvatarScene 
                 avatarUrl={avatarUrl} 
-                audioBuffer={audioBufferRef.current}
+                audioBuffer={audioQueue[0] || null}
+                isPlaying={isPlaying}
               />
             </div>
           </div>
@@ -201,6 +221,11 @@ const ClientAssistantProvider: React.FC<Props> = ({
         
         {/* Chat component */}
         <Chat assistantData={{...assistantData, status}} />
+
+        {/* Good mood label */}
+        <div className="absolute bottom-60 left-1/2 transform -translate-x-1/2 bg-green-200 text-green-600 px-3 py-1 rounded-full text-sm z-10">
+          Good mood
+        </div>
       </div>
     </>
   );
