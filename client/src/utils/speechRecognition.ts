@@ -6,7 +6,15 @@ export const isSpeechRecognitionSupported = (): boolean => {
     return !!SpeechRecognition;
   };
   
-  export const getSpeechRecognition = (): SpeechRecognition => {
+  // Extend the SpeechRecognition interface
+  interface ExtendedSpeechRecognition extends SpeechRecognition {
+    onstart: (event: Event) => void;
+    onresult: (event: SpeechRecognitionEvent) => void;
+    onerror: (event: SpeechRecognitionErrorEvent) => void;
+    onend: (event: Event) => void;
+  }
+
+  export const getSpeechRecognition = (): ExtendedSpeechRecognition => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
   
@@ -14,7 +22,7 @@ export const isSpeechRecognitionSupported = (): boolean => {
       throw new Error('Speech Recognition API is not supported in this browser.');
     }
   
-    return new SpeechRecognition();
+    return new SpeechRecognition() as ExtendedSpeechRecognition;
   };
   
-  export type SpeechRecognitionType = SpeechRecognition;
+  export type SpeechRecognitionType = ExtendedSpeechRecognition;

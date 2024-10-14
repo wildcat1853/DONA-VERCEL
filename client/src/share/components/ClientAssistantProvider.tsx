@@ -49,13 +49,17 @@ const ClientAssistantProvider: React.FC<Props> = ({
 
   //  speech recognition
   const [isListening, setIsListening] = useState(false);
+  const [currentTranscript, setCurrentTranscript] = useState('');
 
   const handleTranscript = useCallback((transcript: string) => {
+    console.log('Received transcript in ClientAssistantProvider:', transcript);
     if (transcript.trim()) {
+      setCurrentTranscript(transcript); // Update current transcript
       append({
         role: "user",
         content: transcript,
       });
+      console.log('Appended user message:', transcript);
     }
   }, [append]);
 
@@ -235,18 +239,21 @@ const ClientAssistantProvider: React.FC<Props> = ({
           </div>
         </div>
         
-        {/* Add SpeechRecognition component */}
         <SpeechRecognition
           onTranscript={handleTranscript}
           isListening={isListening}
           setIsListening={setIsListening}
         />
         
-        {/* Add listening indicator */}
+        {/* Update listening indicator */}
         <div className="absolute top-4 right-4 px-4 py-2 rounded-full z-20">
           {isListening ? (
             <div className="bg-blue-500 text-white">
-              Listening...
+              Listening: {currentTranscript}
+            </div>
+          ) : status === "in_progress" ? (
+            <div className="bg-yellow-500 text-white">
+              Processing...
             </div>
           ) : (
             <div className="bg-gray-300 text-gray-700">
@@ -255,8 +262,8 @@ const ClientAssistantProvider: React.FC<Props> = ({
           )}
         </div>
         
-        {/* Keep Chat component as is */}
-        <Chat assistantData={assistantData} />
+        {/* Chat component commented out */}
+        {/* <Chat assistantData={assistantData} /> */}
 
         {/* Good mood label */}
         <div className="absolute bottom-60 left-1/2 transform -translate-x-1/2 bg-green-200 text-green-600 px-3 py-1 rounded-full text-sm z-10">
