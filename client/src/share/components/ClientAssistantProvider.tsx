@@ -45,16 +45,18 @@ const ClientAssistantProvider: React.FC<Props> = ({
 
   const [audioQueue, setAudioQueue] = useState<AudioBuffer[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
-
+  const currentAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   //  speech recognition
   const [isListening, setIsListening] = useState(false);
+  const [isUserTalking, setIsUserTalking] = useState(false); // Add this state
   const [currentTranscript, setCurrentTranscript] = useState('');
+  const [isSystemTalking, setIsSystemTalking] = useState(false);
 
   const handleTranscript = useCallback((transcript: string) => {
     console.log('Received transcript in ClientAssistantProvider:', transcript);
     if (transcript.trim()) {
-      setCurrentTranscript(transcript); // Update current transcript
+      setCurrentTranscript(transcript);
       append({
         role: "user",
         content: transcript,
@@ -99,12 +101,13 @@ const ClientAssistantProvider: React.FC<Props> = ({
       });
     }
     
-    // Add an initial greeting from Dona
-    append({
-      role: "assistant",
-      content: "Hello! I'm Dona, your AI assistant. How can I help you today?",
-    });
+    // Remove the initial greeting from Dona
+    // append({
+    //   role: "assistant",
+    //   content: "Hello! I'm Dona, your AI assistant. How can I help you today?",
+    // });
   }, []);
+
   useEffect(() => {
     const lastMsg = messages.at(-2);
     if (!lastMsg || lastMsg?.role != "data") return;
@@ -192,10 +195,14 @@ const ClientAssistantProvider: React.FC<Props> = ({
         const source = audioContextRef.current.createBufferSource();
         source.buffer = currentBuffer;
         source.connect(audioContextRef.current.destination);
+        
         source.onended = () => {
           setAudioQueue(prevQueue => prevQueue.slice(1));
           setIsPlaying(false);
+          currentAudioSourceRef.current = null;
         };
+
+        currentAudioSourceRef.current = source;
         source.start();
       }
     }
@@ -205,6 +212,14 @@ const ClientAssistantProvider: React.FC<Props> = ({
   useEffect(() => {
     processAudioQueue();
   }, [audioQueue, processAudioQueue]);
+
+  useEffect(() => {
+    if (audioQueue.length > 0) {
+      setIsSystemTalking(true);
+    } else {
+      setIsSystemTalking(false);
+    }
+  }, [audioQueue]);
 
   return (
     <>
@@ -243,31 +258,40 @@ const ClientAssistantProvider: React.FC<Props> = ({
           onTranscript={handleTranscript}
           isListening={isListening}
           setIsListening={setIsListening}
+          isSystemTalking={isSystemTalking}
+          setIsUserTalking={setIsUserTalking} // Pass the new setter
         />
         
-        {/* Update listening indicator */}
-        <div className="absolute top-4 right-4 px-4 py-2 rounded-full z-20">
-          {isListening ? (
-            <div className="bg-blue-500 text-white">
-              Listening: {currentTranscript}
-            </div>
-          ) : status === "in_progress" ? (
-            <div className="bg-yellow-500 text-white">
-              Processing...
-            </div>
-          ) : (
-            <div className="bg-gray-300 text-gray-700">
-              Not listening
+        {/* Listening indicator, User talking indicator, and Good mood label */}
+        <div className="absolute bottom-60 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2 z-10">
+          {/* Listening indicator */}
+          <div className="px-4 py-2 rounded-full text-sm">
+            {isListening ? (
+              <div className="bg-blue-500 text-white px-3 py-1 rounded-full">
+                Listening: {currentTranscript}
+              </div>
+            ) : status === "in_progress" ? (
+              <div className="bg-yellow-500 text-white px-3 py-1 rounded-full">
+                Processing...
+              </div>
+            ) : (
+              <div className="bg-gray-300 text-gray-700 px-3 py-1 rounded-full">
+                Not listening
+              </div>
+            )}
+          </div>
+          
+          {/* User talking indicator */}
+          {isUserTalking && (
+            <div className="bg-purple-500 text-white px-3 py-1 rounded-full text-sm">
+              User is talking
             </div>
           )}
-        </div>
-        
-        {/* Chat component commented out */}
-        {/* <Chat assistantData={assistantData} /> */}
-
-        {/* Good mood label */}
-        <div className="absolute bottom-60 left-1/2 transform -translate-x-1/2 bg-green-200 text-green-600 px-3 py-1 rounded-full text-sm z-10">
-          Good mood
+          
+          {/* Good mood label */}
+          <div className="bg-green-200 text-green-600 px-3 py-1 rounded-full text-sm">
+            Good mood
+          </div>
         </div>
       </div>
     </>

@@ -13,6 +13,8 @@ interface SpeechRecognitionProps {
   onTranscript: (transcript: string) => void;
   isListening: boolean;
   setIsListening: (isListening: boolean) => void;
+  isSystemTalking: boolean;
+  setIsUserTalking: (isUserTalking: boolean) => void; // Add this prop
 }
 
 const PAUSE_THRESHOLD = 1000; // 1 second of silence to trigger end of speech
@@ -22,11 +24,12 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
   onTranscript,
   isListening,
   setIsListening,
+  isSystemTalking,
+  setIsUserTalking, // Add this prop
 }) => {
   const [recognition, setRecognition] = useState<SpeechRecognitionType | null>(null);
   const currentTranscriptRef = useRef<string>('');
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const maxDurationRef = useRef<NodeJS.Timeout | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionType | null>(null);
 
   useEffect(() => {
     console.log('SpeechRecognition component mounted');
@@ -50,16 +53,19 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
         console.log('Current transcript:', transcript);
         currentTranscriptRef.current = transcript;
         onTranscript(transcript);
+        setIsUserTalking(true); // Set user talking to true when we receive results
       };
 
       newRecognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error('Speech recognition error:', event.error);
         setIsListening(false);
+        setIsUserTalking(false); // Set user talking to false on error
       };
 
       newRecognition.onend = () => {
         console.log('Speech recognition ended');
         setIsListening(false);
+        setIsUserTalking(false); // Set user talking to false when recognition ends
         if (currentTranscriptRef.current.trim()) {
           console.log('Sending final transcript:', currentTranscriptRef.current);
           onTranscript(currentTranscriptRef.current);
@@ -81,19 +87,19 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
     }
 
     return () => {
-      if (recognition) {
-        recognition.stop();
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
         console.log('Speech recognition stopped on component unmount');
       }
     };
-  }, [onTranscript, setIsListening]);
+  }, [onTranscript, setIsListening, setIsUserTalking]);
 
   useEffect(() => {
-    if (recognition) {
-      if (isListening) {
+    if (recognitionRef.current) {
+      if (isListening && !isSystemTalking) {
         try {
-          recognition.start();
-          console.log('Speech recognition started due to isListening change');
+          recognitionRef.current.start();
+          console.log('Speech recognition started');
         } catch (error) {
           if (error instanceof DOMException && error.name !== 'InvalidStateError') {
             console.error('Error starting speech recognition:', error);
@@ -101,11 +107,11 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
           }
         }
       } else {
-        recognition.stop();
-        console.log('Speech recognition stopped due to isListening change');
+        recognitionRef.current.stop();
+        console.log('Speech recognition stopped');
       }
     }
-  }, [isListening, recognition, setIsListening]);
+  }, [isListening, isSystemTalking, recognitionRef.current, setIsListening]);
 
   return null;
 };
