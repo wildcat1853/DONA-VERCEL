@@ -1,5 +1,5 @@
 import { useAssistant as _useAssistant, CreateMessage, Message } from "ai/react";
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 function useAssistant({ projectId, projectThreadId }: { projectThreadId: string | undefined, projectId: string }) {
     const [status, setStatus] = useState<'idle' | 'in_progress' | 'complete'>('idle');
@@ -11,7 +11,7 @@ function useAssistant({ projectId, projectThreadId }: { projectThreadId: string 
     });
 
     const _append = ass.append;
-    const append = async (message: Message | CreateMessage, requestOptions?: {
+    const append = useCallback(async (message: Message | CreateMessage, requestOptions?: {
         data?: Record<string, string>;
     }) => {
         setStatus('in_progress');
@@ -23,7 +23,7 @@ function useAssistant({ projectId, projectThreadId }: { projectThreadId: string 
         } finally {
             setStatus('complete');
         }
-    }
+    }, [_append]);
 
     return {
         ...ass,

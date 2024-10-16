@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import {
   isSpeechRecognitionSupported,
   getSpeechRecognition,
@@ -14,27 +14,57 @@ interface SpeechRecognitionProps {
   isListening: boolean;
   setIsListening: (isListening: boolean) => void;
   isSystemTalking: boolean;
-  setIsUserTalking: (isUserTalking: boolean) => void; // Add this prop
+  setIsUserTalking: (isUserTalking: boolean) => void;
 }
 
 const PAUSE_THRESHOLD = 1000; // 1 second of silence to trigger end of speech
-const MAX_SPEECH_DURATION = 10000; // 10 seconds maximum continuous speech
+const MAX_RESTART_ATTEMPTS = 3;
 
 const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
   onTranscript,
   isListening,
   setIsListening,
   isSystemTalking,
-  setIsUserTalking, // Add this prop
+  setIsUserTalking,
 }) => {
-  const [recognition, setRecognition] = useState<SpeechRecognitionType | null>(null);
-  const currentTranscriptRef = useRef<string>('');
   const recognitionRef = useRef<SpeechRecognitionType | null>(null);
+  const currentTranscriptRef = useRef<string>('');
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const restartAttemptsRef = useRef(0);
+
+  const stopRecognition = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      console.log('Speech recognition stopped');
+    }
+    setIsListening(false);
+    setIsUserTalking(false);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    restartAttemptsRef.current = 0;
+  }, [setIsListening, setIsUserTalking]);
+
+  const startRecognition = useCallback(() => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.start();
+        console.log('Speech recognition started');
+        setIsListening(true);
+        restartAttemptsRef.current = 0;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'InvalidStateError') {
+          console.log('Speech recognition is already running');
+        } else {
+          console.error('Error starting speech recognition:', error);
+          stopRecognition();
+        }
+      }
+    }
+  }, [setIsListening, stopRecognition]);
 
   useEffect(() => {
-    console.log('SpeechRecognition component mounted');
     if (isSpeechRecognitionSupported()) {
-      console.log('Speech recognition is supported');
       const newRecognition = getSpeechRecognition();
       newRecognition.continuous = true;
       newRecognition.interimResults = true;
@@ -46,72 +76,64 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
       };
 
       newRecognition.onresult = (event: SpeechRecognitionEvent) => {
-        console.log('Speech recognition result received', event);
         const transcript = Array.from(event.results)
           .map((result) => result[0].transcript)
           .join('');
-        console.log('Current transcript:', transcript);
         currentTranscriptRef.current = transcript;
         onTranscript(transcript);
-        setIsUserTalking(true); // Set user talking to true when we receive results
+        setIsUserTalking(true);
+
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+        timeoutRef.current = setTimeout(() => {
+          stopRecognition();
+        }, PAUSE_THRESHOLD);
       };
 
       newRecognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error('Speech recognition error:', event.error);
-        setIsListening(false);
-        setIsUserTalking(false); // Set user talking to false on error
+        if (event.error === 'no-speech') {
+          if (restartAttemptsRef.current < MAX_RESTART_ATTEMPTS) {
+            console.log('No speech detected, restarting recognition');
+            restartAttemptsRef.current++;
+            startRecognition();
+          } else {
+            console.log('Max restart attempts reached, stopping recognition');
+            stopRecognition();
+          }
+        } else if (event.error !== 'aborted') {
+          stopRecognition();
+        }
       };
 
       newRecognition.onend = () => {
         console.log('Speech recognition ended');
         setIsListening(false);
-        setIsUserTalking(false); // Set user talking to false when recognition ends
+        setIsUserTalking(false);
         if (currentTranscriptRef.current.trim()) {
-          console.log('Sending final transcript:', currentTranscriptRef.current);
           onTranscript(currentTranscriptRef.current);
         }
         currentTranscriptRef.current = '';
       };
 
-      setRecognition(newRecognition);
-
-      // Start recognition immediately
-      try {
-        newRecognition.start();
-        console.log('Speech recognition started initially');
-      } catch (error) {
-        console.error('Error starting speech recognition:', error);
-      }
+      recognitionRef.current = newRecognition;
     } else {
       console.error('Speech recognition not supported in this browser.');
     }
 
     return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-        console.log('Speech recognition stopped on component unmount');
-      }
+      stopRecognition();
     };
-  }, [onTranscript, setIsListening, setIsUserTalking]);
+  }, [onTranscript, setIsListening, setIsUserTalking, stopRecognition, startRecognition]);
 
   useEffect(() => {
-    if (recognitionRef.current) {
-      if (isListening && !isSystemTalking) {
-        try {
-          recognitionRef.current.start();
-          console.log('Speech recognition started');
-        } catch (error) {
-          if (error instanceof DOMException && error.name !== 'InvalidStateError') {
-            console.error('Error starting speech recognition:', error);
-            setIsListening(false);
-          }
-        }
-      } else {
-        recognitionRef.current.stop();
-        console.log('Speech recognition stopped');
-      }
+    if (isListening && !isSystemTalking) {
+      startRecognition();
+    } else {
+      stopRecognition();
     }
-  }, [isListening, isSystemTalking, recognitionRef.current, setIsListening]);
+  }, [isListening, isSystemTalking, startRecognition, stopRecognition]);
 
   return null;
 };

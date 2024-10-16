@@ -28,12 +28,23 @@ export function connectWebSocket(onAudioChunk: (message: AudioChunkMessage) => v
 }
 
 export function disconnectWebSocket() {
+  if (ably && ably.connection.state !== 'closed') {
+    try {
+      ably.connection.close();
+      console.log('Closed the connection to Ably.');
+    } catch (error) {
+      console.error('Error closing Ably connection:', error);
+    }
+  } else {
+    console.log('Ably connection already closed or not initialized.');
+  }
+  
   if (channel) {
     channel.unsubscribe();
   }
-  if (ably) {
-    ably.close();
-  }
+  
+  ably = null;
+  channel = null;
 }
 
 export function sendMessage(message: string) {

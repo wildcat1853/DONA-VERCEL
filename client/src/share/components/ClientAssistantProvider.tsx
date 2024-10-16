@@ -13,7 +13,6 @@ import { useRouter } from "next/navigation";
 import ReadyPlayerMeAvatar from "@/share/components/ReadyPlayerMeAvatar"; // Add this import at the top of the file
 import { connectWebSocket, disconnectWebSocket } from '../../services/websocket'; // Add this import at the top of the file
 import dynamic from 'next/dynamic';
-import SpeechRecognition from './SpeechRecognition'; // Add this import
 
 type Props = {
   projectId: string;
@@ -38,34 +37,32 @@ const ClientAssistantProvider: React.FC<Props> = ({
   const { status, messages, setMessages, append, threadId } = assistantData;
   const router = useRouter();
 
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
-  const audioBufferRef = useRef<AudioBuffer | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  // Consolidated AudioContext creation and management
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !audioContext && !audioContextRef.current) {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const newContext = new AudioCtx();
+      setAudioContext(newContext);
+      audioContextRef.current = newContext;
+      console.log('AudioContext created:', newContext);
+    }
+
+    return () => {
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close().catch((err: Error) => 
+          console.error('Error closing AudioContext:', err)
+        );
+      }
+    };
+  }, [audioContext]);
 
   const [audioQueue, setAudioQueue] = useState<AudioBuffer[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
-  const currentAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
-
-  //  speech recognition
-  const [isListening, setIsListening] = useState(false);
-  const [isUserTalking, setIsUserTalking] = useState(false); // Add this state
-  const [currentTranscript, setCurrentTranscript] = useState('');
   const [isSystemTalking, setIsSystemTalking] = useState(false);
-
-  const handleTranscript = useCallback((transcript: string) => {
-    console.log('Received transcript in ClientAssistantProvider:', transcript);
-    if (transcript.trim()) {
-      setCurrentTranscript(transcript);
-      append({
-        role: "user",
-        content: transcript,
-      });
-      console.log('Appended user message:', transcript);
-    }
-  }, [append]);
-
-  // end of speech recognition
+  const currentAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   useEffect(() => {
     if (!projectThreadId && threadId)
@@ -119,107 +116,90 @@ const ClientAssistantProvider: React.FC<Props> = ({
     }
   }, [messages]);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !audioContext) {
-      const newContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      setAudioContext(newContext);
-      console.log('AudioContext created:', newContext);
-    }
-  }, []);
+  const [isWebSocketConnected, setIsWebSocketConnected] = useState(false);
+  const audioChunksRef = useRef<{ [key: number]: string }>({});
+  const expectedChunksRef = useRef<number>(0);
 
-  useEffect(() => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
+  const handleAudioMessage = useCallback(async (message: any) => {
+    const { data, chunkIndex, totalChunks, isLast, type } = message;
 
-    let audioChunks: string[] = [];
-    let expectedChunks = 0;
+    if (type === 'audio_chunk') {
+      if (!audioContextRef.current) {
+        console.warn("AudioContext is not initialized.");
+        return;
+      }
 
-    const handleAudioMessage = async (message: any) => {
-      const { data, chunkIndex, totalChunks, isLast } = message;
-      console.log(`Received chunk ${chunkIndex + 1} of ${totalChunks}`);
-
-      audioChunks[chunkIndex] = data;
-      expectedChunks = totalChunks;
+      audioChunksRef.current[chunkIndex] = data;
+      expectedChunksRef.current = totalChunks;
 
       if (isLast) {
-        const completeAudioBase64 = audioChunks.join('');
+        const completeAudioBase64 = Object.values(audioChunksRef.current).join('');
         try {
           const audioData = base64ToArrayBuffer(completeAudioBase64);
-          const buffer = await audioContextRef.current!.decodeAudioData(audioData);
+          const buffer = await audioContextRef.current.decodeAudioData(audioData);
           setAudioQueue(prevQueue => [...prevQueue, buffer]);
         } catch (error) {
           console.error('Error decoding audio:', error);
         }
 
-        // Reset for next message
-        audioChunks = [];
-        expectedChunks = 0;
+        // Reset for next audio message
+        audioChunksRef.current = {};
+        expectedChunksRef.current = 0;
       }
-    };
+    } else if (type === 'response_text') {
+      const transcript = message.text;
+      console.log('Received transcript:', transcript);
+      append({
+        role: "assistant",
+        content: transcript,
+      });
+    }
+  }, [append]);
 
-    connectWebSocket(handleAudioMessage);
+  useEffect(() => {
+    if (!audioContextRef.current) {
+      console.warn("AudioContext is not initialized.");
+      return;
+    }
+
+    if (!isWebSocketConnected) {
+      connectWebSocket(handleAudioMessage);
+      setIsWebSocketConnected(true);
+    }
 
     return () => {
-      disconnectWebSocket();
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
+      if (isWebSocketConnected) {
+        disconnectWebSocket();
+        setIsWebSocketConnected(false);
       }
     };
-  }, []);
-
-  const initAudioContext = () => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    // Attempt to resume the context immediately
-    audioContextRef.current!.resume().catch(console.error);
-  };
-
-  // Call initAudioContext on a user interaction, e.g., button click
-  useEffect(() => {
-    const handleInteraction = () => {
-      initAudioContext();
-      document.removeEventListener('click', handleInteraction);
-    };
-    document.addEventListener('click', handleInteraction);
-    return () => document.removeEventListener('click', handleInteraction);
-  }, []);
+  }, [isWebSocketConnected, handleAudioMessage]);
 
   const processAudioQueue = useCallback(() => {
-    if (audioQueue.length > 0 && !isPlaying) {
+    if (audioQueue.length > 0 && !isPlaying && audioContextRef.current) {
       setIsPlaying(true);
+      setIsSystemTalking(true);
       const currentBuffer = audioQueue[0];
       
-      if (audioContextRef.current) {
-        const source = audioContextRef.current.createBufferSource();
-        source.buffer = currentBuffer;
-        source.connect(audioContextRef.current.destination);
-        
-        source.onended = () => {
-          setAudioQueue(prevQueue => prevQueue.slice(1));
-          setIsPlaying(false);
-          currentAudioSourceRef.current = null;
-        };
+      const source = audioContextRef.current.createBufferSource();
+      source.buffer = currentBuffer;
+      source.connect(audioContextRef.current.destination);
+      
+      source.onended = () => {
+        setAudioQueue(prevQueue => prevQueue.slice(1));
+        setIsPlaying(false);
+        setIsSystemTalking(false);
+        currentAudioSourceRef.current = null;
+      };
 
-        currentAudioSourceRef.current = source;
-        source.start();
-      }
+      currentAudioSourceRef.current = source;
+      source.start();
     }
   }, [audioQueue, isPlaying]);
 
-  // Use an effect to trigger audio processing
   useEffect(() => {
     processAudioQueue();
   }, [audioQueue, processAudioQueue]);
-
-  useEffect(() => {
-    if (audioQueue.length > 0) {
-      setIsSystemTalking(true);
-    } else {
-      setIsSystemTalking(false);
-    }
-  }, [audioQueue]);
 
   return (
     <>
@@ -242,53 +222,28 @@ const ClientAssistantProvider: React.FC<Props> = ({
         {/* Background div */}
         <div className="absolute top-0 right-0 w-full h-full bg-F1F2F4">
           {/* Gradient div as background for avatar */}
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-gray-200 via-gray-200 to-transparent">
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#E5F1FC] via-[#FAF0F1] to-[#EDD9FE] animate-gradient-xy">
             {/* Avatar container */}
             <div className="absolute inset-0">
               <AvatarScene 
                 avatarUrl={avatarUrl} 
                 audioBuffer={audioQueue[0] || null}
-                isPlaying={isPlaying}
               />
             </div>
           </div>
         </div>
         
-        <SpeechRecognition
-          onTranscript={handleTranscript}
-          isListening={isListening}
-          setIsListening={setIsListening}
-          isSystemTalking={isSystemTalking}
-          setIsUserTalking={setIsUserTalking} // Pass the new setter
-        />
-        
         {/* Listening indicator, User talking indicator, and Good mood label */}
         <div className="absolute bottom-60 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2 z-10">
-          {/* Listening indicator */}
-          <div className="px-4 py-2 rounded-full text-sm">
-            {isListening ? (
-              <div className="bg-blue-500 text-white px-3 py-1 rounded-full">
-                Listening: {currentTranscript}
-              </div>
-            ) : status === "in_progress" ? (
-              <div className="bg-yellow-500 text-white px-3 py-1 rounded-full">
-                Processing...
-              </div>
-            ) : (
-              <div className="bg-gray-300 text-gray-700 px-3 py-1 rounded-full">
-                Not listening
-              </div>
-            )}
-          </div>
-          
-          {/* User talking indicator */}
-          {isUserTalking && (
-            <div className="bg-purple-500 text-white px-3 py-1 rounded-full text-sm">
-              User is talking
+          {isSystemTalking ? (
+            <div className="bg-yellow-500 text-white px-3 py-1 rounded-full">
+              Assistant is speaking...
+            </div>
+          ) : (
+            <div className="bg-gray-300 text-gray-700 px-3 py-1 rounded-full">
+              Ready to listen
             </div>
           )}
-          
-          {/* Good mood label */}
           <div className="bg-green-200 text-green-600 px-3 py-1 rounded-full text-sm">
             Good mood
           </div>
