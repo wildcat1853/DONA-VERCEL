@@ -8,6 +8,7 @@ import { AlarmCheck } from "lucide-react";
 import { toggleTaskStatus } from "@/app/actions/task";
 import { AssistantStatus } from "ai";
 import { createEventURL } from "@/app/actions/calendar";
+import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 
 type Props = {
   name: string;
@@ -20,8 +21,22 @@ type Props = {
   | { status: "in progress"; onCheckBoxCLick: () => void }
 );
 
+function formatDeadline(date: Date): string {
+  if (isToday(date)) {
+    return `Today at ${format(date, 'h:mm a')}`;
+  } else if (isTomorrow(date)) {
+    return `Tomorrow at ${format(date, 'h:mm a')}`;
+  } else if (isYesterday(date)) {
+    return `Yesterday at ${format(date, 'h:mm a')}`;
+  } else {
+    return format(date, 'MMM d, h:mm a');
+  }
+}
+
 function TaskCard(props: Props) {
   const { description, name, id, status, deadline, assistantStatus } = props;
+  const formattedDeadline = formatDeadline(new Date(deadline));
+
   return (
     <Card className="px-5 py-3 bg-gray-100 flex items-start gap-4">
       <Checkbox
@@ -40,8 +55,8 @@ function TaskCard(props: Props) {
         <div className="w-full flex items-center justify-between mt-6">
           {status == "in progress" ? (
             <Badge className="bg-[#F9D4E8] text-[#323232]  ">
-              <AlarmCheck className="size-4" />
-              {new Date(deadline).toLocaleString()}
+              <AlarmCheck className="size-4 mr-1" />
+              {formattedDeadline}
             </Badge>
           ) : (
             <Badge className="bg-[#59E7B3] text-[#323232]">Done</Badge>

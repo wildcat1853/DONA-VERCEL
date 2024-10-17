@@ -3,129 +3,140 @@
 'use client';
 
 import React, { useEffect, useRef, useCallback } from 'react';
-import {
-  isSpeechRecognitionSupported,
-  getSpeechRecognition,
-  SpeechRecognitionType,
-} from '../../utils/speechRecognition';
+import { sendAudioChunk, commitAudioBuffer, createResponse } from '../../services/websocket';
 
 interface SpeechRecognitionProps {
-  onTranscript: (transcript: string) => void;
   isListening: boolean;
   setIsListening: (isListening: boolean) => void;
   isSystemTalking: boolean;
   setIsUserTalking: (isUserTalking: boolean) => void;
 }
 
-const PAUSE_THRESHOLD = 1000; // 1 second of silence to trigger end of speech
-const MAX_RESTART_ATTEMPTS = 3;
-
 const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
-  onTranscript,
   isListening,
   setIsListening,
   isSystemTalking,
   setIsUserTalking,
 }) => {
-  const recognitionRef = useRef<SpeechRecognitionType | null>(null);
-  const currentTranscriptRef = useRef<string>('');
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const restartAttemptsRef = useRef(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const audioChunksRef = useRef<Float32Array[]>([]);
+  const silenceStartRef = useRef<number>(0);
+  const silenceThreshold = 1000; // 1 second of silence
 
-  const stopRecognition = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      console.log('Speech recognition stopped');
-    }
-    setIsListening(false);
-    setIsUserTalking(false);
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    restartAttemptsRef.current = 0;
-  }, [setIsListening, setIsUserTalking]);
+  const startRecognition = useCallback(async () => {
+    if (audioContextRef.current) return; // Already started
 
-  const startRecognition = useCallback(() => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.start();
-        console.log('Speech recognition started');
-        setIsListening(true);
-        restartAttemptsRef.current = 0;
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'InvalidStateError') {
-          console.log('Speech recognition is already running');
-        } else {
-          console.error('Error starting speech recognition:', error);
-          stopRecognition();
-        }
-      }
-    }
-  }, [setIsListening, stopRecognition]);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
 
-  useEffect(() => {
-    if (isSpeechRecognitionSupported()) {
-      const newRecognition = getSpeechRecognition();
-      newRecognition.continuous = true;
-      newRecognition.interimResults = true;
-      newRecognition.lang = 'en-US';
+      const source = audioContextRef.current.createMediaStreamSource(stream);
+      processorRef.current = audioContextRef.current.createScriptProcessor(4096, 1, 1);
 
-      newRecognition.onstart = () => {
-        console.log('Speech recognition started');
-        setIsListening(true);
-      };
+      source.connect(processorRef.current);
+      processorRef.current.connect(audioContextRef.current.destination);
 
-      newRecognition.onresult = (event: SpeechRecognitionEvent) => {
-        const transcript = Array.from(event.results)
-          .map((result) => result[0].transcript)
-          .join('');
-        currentTranscriptRef.current = transcript;
-        onTranscript(transcript);
+      processorRef.current.onaudioprocess = (event) => {
+        if (isSystemTalking) return; // Don't capture while system is talking
+
+        const inputData = event.inputBuffer.getChannelData(0);
+        const inputDataCopy = new Float32Array(inputData);
+        audioChunksRef.current.push(inputDataCopy);
         setIsUserTalking(true);
 
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
-        timeoutRef.current = setTimeout(() => {
-          stopRecognition();
-        }, PAUSE_THRESHOLD);
-      };
-
-      newRecognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error('Speech recognition error:', event.error);
-        if (event.error === 'no-speech') {
-          if (restartAttemptsRef.current < MAX_RESTART_ATTEMPTS) {
-            console.log('No speech detected, restarting recognition');
-            restartAttemptsRef.current++;
-            startRecognition();
-          } else {
-            console.log('Max restart attempts reached, stopping recognition');
+        // Detect silence
+        const isSilent = inputData.every((sample) => Math.abs(sample) < 0.01);
+        if (isSilent) {
+          if (!silenceStartRef.current) {
+            silenceStartRef.current = Date.now();
+          } else if (Date.now() - silenceStartRef.current > silenceThreshold) {
+            // Stop recording after silence threshold
             stopRecognition();
           }
-        } else if (event.error !== 'aborted') {
-          stopRecognition();
+        } else {
+          silenceStartRef.current = 0;
         }
       };
 
-      newRecognition.onend = () => {
-        console.log('Speech recognition ended');
-        setIsListening(false);
-        setIsUserTalking(false);
-        if (currentTranscriptRef.current.trim()) {
-          onTranscript(currentTranscriptRef.current);
-        }
-        currentTranscriptRef.current = '';
-      };
+      setIsListening(true);
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      setIsListening(false);
+    }
+  }, [isSystemTalking, setIsListening, setIsUserTalking]);
 
-      recognitionRef.current = newRecognition;
-    } else {
-      console.error('Speech recognition not supported in this browser.');
+  const stopRecognition = useCallback(() => {
+    if (processorRef.current) {
+      processorRef.current.disconnect();
+      processorRef.current = null;
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
     }
 
-    return () => {
-      stopRecognition();
-    };
-  }, [onTranscript, setIsListening, setIsUserTalking, stopRecognition, startRecognition]);
+    setIsListening(false);
+    setIsUserTalking(false);
+
+    // Process and send audio data
+    if (audioChunksRef.current.length > 0) {
+      const audioBuffer = flattenAudioChunks(audioChunksRef.current);
+      sendAudioData(audioBuffer);
+      audioChunksRef.current = [];
+    }
+  }, [setIsListening, setIsUserTalking]);
+
+  const flattenAudioChunks = (chunks: Float32Array[]) => {
+    const length = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+    const result = new Float32Array(length);
+    let offset = 0;
+    for (const chunk of chunks) {
+      result.set(chunk, offset);
+      offset += chunk.length;
+    }
+    return result;
+  };
+
+  const sendAudioData = (audioData: Float32Array) => {
+    // Convert Float32Array to 16-bit PCM
+    const pcmData = float32ToInt16(audioData);
+
+    // Convert to Base64
+    const base64Audio = btoa(
+      String.fromCharCode(...Array.from(new Uint8Array(pcmData.buffer)))
+    );
+
+    // Send audio data via Ably
+    sendAudioChunk({
+      data: base64Audio,
+      chunkIndex: 0,
+      totalChunks: 1,
+      isLast: true,
+      type: 'audio_chunk',
+    });
+
+    // Commit the audio buffer and request a response
+    commitAudioBuffer();
+    createResponse();
+  };
+
+  const float32ToInt16 = (buffer: Float32Array) => {
+    const l = buffer.length;
+    const buf = new Int16Array(l);
+
+    for (let i = 0; i < l; i++) {
+      let s = Math.max(-1, Math.min(1, buffer[i]));
+      buf[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+    }
+    return buf;
+  };
 
   useEffect(() => {
     if (isListening && !isSystemTalking) {
@@ -133,6 +144,10 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
     } else {
       stopRecognition();
     }
+    // Clean up on unmount
+    return () => {
+      stopRecognition();
+    };
   }, [isListening, isSystemTalking, startRecognition, stopRecognition]);
 
   return null;
