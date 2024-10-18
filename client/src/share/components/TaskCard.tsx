@@ -40,7 +40,7 @@ function TaskCard(props: Props) {
   return (
     <Card className="px-5 py-3 bg-gray-100 flex items-start gap-4">
       <Checkbox
-        className="mt-2"
+        className="mt-2 w-6 h-6"
         disabled={assistantStatus != "awaiting_message"}
         checked={status == "done"}
         onClick={() => {

@@ -1,15 +1,31 @@
-// pages/api/conversation/openai-realtime.ts
+// api/realtime/route.ts
 
 import { NextResponse } from 'next/server';
-import WebSocket from 'ws';
-import { getAblyChannel } from '../../../utils/ably';
+import { WebSocket } from 'ws';
+import { RoomServiceClient, DataPacket_Kind } from 'livekit-server-sdk';
 
 export async function POST() {
   console.log('openai-realtime API route called');
 
   try {
-    // Ensure that the Ably channel is initialized with backend API key
-    const channel = getAblyChannel('audio-channel', false);
+    // Initialize LiveKit Room Service Client
+    const liveKitHost = process.env.NEXT_PUBLIC_LIVEKIT_URL || process.env.LIVEKIT_URL;
+    const liveKitApiKey = process.env.LIVEKIT_API_KEY;
+    const liveKitApiSecret = process.env.LIVEKIT_API_SECRET;
+    const roomName = 'your-room'; // Replace with your actual room name
+
+    // Check that all required environment variables are set
+    if (!liveKitHost) {
+      throw new Error('LIVEKIT_URL or NEXT_PUBLIC_LIVEKIT_URL environment variable is not set.');
+    }
+    if (!liveKitApiKey || !liveKitApiSecret) {
+      throw new Error('LIVEKIT_API_KEY and LIVEKIT_API_SECRET environment variables must be set.');
+    }
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY environment variable is not set.');
+    }
+
+    const roomService = new RoomServiceClient(liveKitHost, liveKitApiKey, liveKitApiSecret);
 
     // Establish WebSocket connection to OpenAI Realtime API
     const openAIWs = new WebSocket(
@@ -37,37 +53,36 @@ export async function POST() {
       );
     });
 
-    openAIWs.on('message', (data) => {
+    openAIWs.on('message', async (data) => {
       console.log('Raw message from OpenAI:', data);
       try {
         const parsedData = JSON.parse(data.toString());
         console.log('Parsed message from OpenAI:', parsedData);
-        
+
         switch (parsedData.type) {
           case 'response.audio.delta':
             if (parsedData.delta) {
               const audioBase64 = parsedData.delta;
-              const chunkSize = 32000; // 32KB chunks
-              const chunks = [];
-              for (let i = 0; i < audioBase64.length; i += chunkSize) {
-                chunks.push(audioBase64.slice(i, i + chunkSize));
-              }
 
-              chunks.forEach((chunk, index) => {
-                channel.publish('audio_chunk', {
-                  data: chunk,
-                  chunkIndex: index,
-                  totalChunks: chunks.length,
-                  isLast: index === chunks.length - 1,
-                  type: 'audio_chunk',
-                });
-              });
+              // Send audio data to LiveKit room
+              await roomService.sendData(
+                roomName,
+                Buffer.from(audioBase64, 'base64'),
+                DataPacket_Kind.RELIABLE
+              );
             }
             break;
           case 'response.text.delta':
             if (parsedData.delta) {
               console.log('Received text response:', parsedData.delta);
-              channel.publish('response_text', { text: parsedData.delta, type: 'response_text' });
+              // Send text response via LiveKit data channel
+              await roomService.sendData(
+                roomName,
+                Buffer.from(
+                  JSON.stringify({ type: 'response_text', text: parsedData.delta })
+                ),
+                DataPacket_Kind.RELIABLE
+              );
             }
             break;
           default:
@@ -86,27 +101,7 @@ export async function POST() {
       console.log(`WebSocket closed with code ${code}. Reason: ${reason}`);
     });
 
-    // Handle incoming audio from the client
-    channel.subscribe('input_audio_buffer.append', (message) => {
-      console.log('Received audio chunk:', message.data);
-      const audioChunk = message.data;
-      openAIWs.send(
-        JSON.stringify({
-          type: 'input_audio_buffer.append',
-          audio: audioChunk.data,
-        })
-      );
-    });
-
-    channel.subscribe('input_audio_buffer.commit', () => {
-      console.log('Committing audio buffer');
-      openAIWs.send(JSON.stringify({ type: 'input_audio_buffer.commit' }));
-    });
-
-    channel.subscribe('response.create', () => {
-      console.log('Requesting response from Realtime API');
-      openAIWs.send(JSON.stringify({ type: 'response.create' }));
-    });
+    // Handle incoming audio from the client (if needed)
 
     return NextResponse.json({ message: 'WebSocket connection established' });
   } catch (error) {

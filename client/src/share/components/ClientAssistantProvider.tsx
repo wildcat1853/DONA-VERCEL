@@ -9,13 +9,10 @@ import Image from 'next/image';
 import start from '@/../public/stars.svg';
 import dynamic from 'next/dynamic';
 import SpeechRecognition from './SpeechRecognition';
-import useAssistant from '@/hooks/useAssistant';  
-import {
-  connectWebSocket,
-  disconnectWebSocket,
-  commitAudioBuffer,
-  createResponse,
-} from '../../services/websocket';
+import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react';
+import '@livekit/components-styles';
+import useAssistant from '@/hooks/useAssistant';
+
 import { Task } from '@/../.../../../../define';
 
 type Props = {
@@ -48,6 +45,23 @@ const ClientAssistantProvider: React.FC<Props> = ({
   const [isListening, setIsListening] = useState(false);
   const [isUserTalking, setIsUserTalking] = useState(false);
   const [isAudioContextReady, setIsAudioContextReady] = useState(false);
+
+  const [token, setToken] = useState('');
+  const room = 'your-room-name'; // Replace with your actual room name
+  const name = 'your-username'; // Replace with the user's name or a generated name
+
+  useEffect(() => {
+    const fetchToken = async () => {
+      try {
+        const response = await fetch(`/api/get-participant-token?room=${room}&username=${name}`);
+        const data = await response.json();
+        setToken(data.token);
+      } catch (error) {
+        console.error('Error fetching LiveKit token:', error);
+      }
+    };
+    fetchToken();
+  }, []);
 
   const initializeAudioContext = useCallback(() => {
     if (audioContextRef.current) {
@@ -96,6 +110,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
             console.error('Error creating AudioBuffer from PCM data:', error);
           }
 
+          // Reset for next audio message
           audioChunksRef.current = {};
           expectedChunksRef.current = 0;
         }
@@ -123,28 +138,28 @@ const ClientAssistantProvider: React.FC<Props> = ({
     }
   }, []);
 
-  useEffect(() => {
-    if (isAudioContextReady && !isWebSocketConnected) {
-      connectWebSocket(handleAudioMessage)
-        .then(() => {
-          setIsWebSocketConnected(true);
-          console.log('WebSocket connected successfully');
-          setIsListening(true);
-          initializeBackend();
-        })
-        .catch((error) => {
-          console.error('Failed to connect WebSocket:', error);
-        });
-    }
+  // useEffect(() => {
+  //   if (isAudioContextReady && !isWebSocketConnected) {
+  //     connectWebSocket(handleAudioMessage)
+  //       .then(() => {
+  //         setIsWebSocketConnected(true);
+  //         console.log('WebSocket connected successfully');
+  //         setIsListening(true);
+  //         initializeBackend();
+  //       })
+  //       .catch((error) => {
+  //         console.error('Failed to connect WebSocket:', error);
+  //       });
+  //   }
 
-    return () => {
-      if (isWebSocketConnected) {
-        disconnectWebSocket();
-        setIsWebSocketConnected(false);
-        setIsListening(false);
-      }
-    };
-  }, [isAudioContextReady, isWebSocketConnected, handleAudioMessage, initializeBackend]);
+  //   return () => {
+  //     if (isWebSocketConnected) {
+  //       disconnectWebSocket();
+  //       setIsWebSocketConnected(false);
+  //       setIsListening(false);
+  //     }
+  //   };
+  // }, [isAudioContextReady, isWebSocketConnected, handleAudioMessage, initializeBackend]);
 
   const processAudioQueue = useCallback(() => {
     if (audioQueue.length > 0 && !isPlaying && audioContextRef.current) {
@@ -174,8 +189,9 @@ const ClientAssistantProvider: React.FC<Props> = ({
 
   useEffect(() => {
     if (!isUserTalking && isListening) {
-      commitAudioBuffer();
-      createResponse();
+      // User has stopped talking, commit the audio buffer and request a response
+      // commitAudioBuffer();
+      // createResponse();
     }
   }, [isUserTalking, isListening]);
 
@@ -193,52 +209,65 @@ const ClientAssistantProvider: React.FC<Props> = ({
       ) : (
         <>
           <div className="w-7/12 flex justify-center max-h-screen overflow-auto">
-            <div className="w-2/3 flex flex-col  gap-9 mt-32">
+            <div className="w-2/3 flex flex-col gap-9 mt-32">
               <div>
                 <div className="flex gap-4">
                   <Image src={start} alt="stars" />
                   <p className="font-semibold text-5xl tracking-tight">Project name</p>
                 </div>
-                {/* <p className="text-base mt-5">Project description</p> */}
               </div>
               <Separator className="bg-gray-200" />
               <TaskTabs tasks={tasks} assistantData={assistantData} />
             </div>
           </div>
-          <div className="w-5/12 relative h-screen">
-            {/* Background div */}
-            <div className="absolute top-0 right-0 w-full h-full bg-F1F2F4">
-              {/* Gradient div as background for avatar */}
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE] animate-gradient-xy">
-                {/* Avatar container */}
-                <div className="absolute inset-0">
-                  <AvatarScene avatarUrl={avatarUrl} audioBuffer={audioQueue[0] || null} />
-                </div>
-              </div>
-            </div>
 
-            {/* Listening indicator, User talking indicator, and Good mood label */}
-            <div className="absolute bottom-60 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2 z-10">
-              {isSystemTalking ? (
-                <div className="bg-yellow-500 text-white px-3 py-1 rounded-full">
-                  Assistant is speaking...
+          <div className="w-5/12 relative h-screen">
+            {token ? (
+              <LiveKitRoom
+                token={token}
+                serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
+                connect={true}
+                audio={true}
+                video={false}
+                data-lk-theme="default"
+              >
+                <div className="absolute top-0 right-0 w-full h-full bg-F1F2F4">
+                  <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE] animate-gradient-xy">
+                    <div className="absolute inset-0">
+                      <AvatarScene avatarUrl={avatarUrl} audioBuffer={audioQueue[0] || null} />
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <div className="bg-gray-300 text-gray-700 px-3 py-1 rounded-full">
-                  Ready to listen
+
+                <div className="absolute bottom-60 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2 z-10">
+                  {isSystemTalking ? (
+                    <div className="bg-yellow-500 text-white px-3 py-1 rounded-full">
+                      Assistant is speaking...
+                    </div>
+                  ) : (
+                    <div className="bg-gray-300 text-gray-700 px-3 py-1 rounded-full">
+                      Ready to listen
+                    </div>
+                  )}
+                  <div className="bg-green-200 text-green-600 px-3 py-1 rounded-full text-sm">
+                    Good mood
+                  </div>
                 </div>
-              )}
-              <div className="bg-green-200 text-green-600 px-3 py-1 rounded-full text-sm">
-                Good mood
-              </div>
-            </div>
+
+                <RoomAudioRenderer />
+
+                {/* Uncomment if you need SpeechRecognition
+                <SpeechRecognition
+                  isListening={isListening}
+                  setIsListening={setIsListening}
+                  isSystemTalking={isSystemTalking}
+                  setIsUserTalking={setIsUserTalking}
+                /> */}
+              </LiveKitRoom>
+            ) : (
+              <div>Loading LiveKit...</div>
+            )}
           </div>
-          <SpeechRecognition
-            isListening={isListening}
-            setIsListening={setIsListening}
-            isSystemTalking={isSystemTalking}
-            setIsUserTalking={setIsUserTalking}
-          />
         </>
       )}
     </>

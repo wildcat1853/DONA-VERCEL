@@ -3,13 +3,13 @@
 'use client';
 
 import React, { useEffect, useRef, useCallback } from 'react';
-import { sendAudioChunk, commitAudioBuffer, createResponse } from '../../services/websocket';
 
 interface SpeechRecognitionProps {
   isListening: boolean;
   setIsListening: (isListening: boolean) => void;
   isSystemTalking: boolean;
   setIsUserTalking: (isUserTalking: boolean) => void;
+  onAudioCapture: (audioData: ArrayBuffer) => void;
 }
 
 const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
@@ -17,6 +17,7 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
   setIsListening,
   isSystemTalking,
   setIsUserTalking,
+  onAudioCapture,
 }) => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -24,9 +25,15 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
   const audioChunksRef = useRef<Float32Array[]>([]);
   const silenceStartRef = useRef<number>(0);
   const silenceThreshold = 1000; // 1 second of silence
+  const openAIWsRef = useRef<WebSocket | null>(null);
 
   const startRecognition = useCallback(async () => {
     if (audioContextRef.current) return; // Already started
+
+    if (!openAIWsRef.current || openAIWsRef.current.readyState !== WebSocket.OPEN) {
+      console.warn('WebSocket is not connected yet');
+      return;
+    }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -105,26 +112,11 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
   };
 
   const sendAudioData = (audioData: Float32Array) => {
-    // Convert Float32Array to 16-bit PCM
-    const pcmData = float32ToInt16(audioData);
+    // Convert Float32Array to ArrayBuffer
+    const audioArrayBuffer = audioData.buffer;
 
-    // Convert to Base64
-    const base64Audio = btoa(
-      String.fromCharCode(...Array.from(new Uint8Array(pcmData.buffer)))
-    );
-
-    // Send audio data via Ably
-    sendAudioChunk({
-      data: base64Audio,
-      chunkIndex: 0,
-      totalChunks: 1,
-      isLast: true,
-      type: 'audio_chunk',
-    });
-
-    // Commit the audio buffer and request a response
-    commitAudioBuffer();
-    createResponse();
+    // Use the onAudioCapture callback to send audio data
+    onAudioCapture(audioArrayBuffer);
   };
 
   const float32ToInt16 = (buffer: Float32Array) => {
@@ -137,6 +129,67 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
     }
     return buf;
   };
+
+  useEffect(() => {
+    // Establish WebSocket connection to OpenAI Realtime API
+    const ws = new WebSocket(
+      'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01',
+      []
+    );
+
+    ws.onopen = () => {
+      console.log('Connected to OpenAI Realtime API');
+
+      // Send initial configuration
+      ws.send(
+        JSON.stringify({
+          type: 'session.update',
+          session: {
+            modalities: ['audio', 'text'],
+            voice: 'alloy',
+          },
+        })
+      );
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log('Message from OpenAI:', data);
+
+      // Handle audio and text responses
+      switch (data.type) {
+        case 'response.audio.delta':
+          if (data.delta) {
+            const audioBase64 = data.delta;
+            // Process the audio data (e.g., play it or pass it to your avatar)
+            // You might need to implement a function to handle audio playback
+          }
+          break;
+        case 'response.text.delta':
+          if (data.delta) {
+            console.log('Received text response:', data.delta);
+            // Handle the text response
+          }
+          break;
+        default:
+          console.log('Received other type of message:', data);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+    };
+
+    openAIWsRef.current = ws;
+
+    return () => {
+      ws.close();
+    };
+  }, []);
 
   useEffect(() => {
     if (isListening && !isSystemTalking) {
