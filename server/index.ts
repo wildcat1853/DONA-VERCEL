@@ -1,5 +1,5 @@
 import { Resend } from 'resend';
-import Component from './unfinished-task-notification';
+import Component from './unfinished-task-notification.js';
 import { eq } from 'drizzle-orm';
 import { db, task } from '../db.js';
 import { project, user } from '../schemas.js';

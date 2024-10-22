@@ -12,6 +12,8 @@
     "@ai-sdk/openai": "^0.0.40",
     "@google-cloud/text-to-speech": "^5.4.0",
     "@hookform/resolvers": "^3.9.0",
+    "@livekit/agents": "^0.3.3",
+    "@livekit/agents-plugin-openai": "^0.3.3",
     "@livekit/components-react": "^2.6.5",
     "@livekit/components-styles": "^1.1.4",
     "@nanostores/react": "github:ai/react",

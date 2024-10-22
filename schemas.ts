@@ -1,4 +1,3 @@
-
 import { nanoid } from "nanoid";
 import {
   text,
@@ -7,7 +6,7 @@ import {
   pgEnum,
   json,
 } from "drizzle-orm/pg-core";
-import { Task } from "./define";
+import { Task } from "./define.js";
 
 
 export type User = typeof user.$inferSelect;

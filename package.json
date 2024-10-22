@@ -2,6 +2,7 @@
   "name": "dona",
   "version": "1.0.0",
   "scripts": {
+    "start": "ts-node --esm agent.ts",
     "start:server": "ts-node-esm server/websocket-server.ts"
   },
   "keywords": [],
