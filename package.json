@@ -9,26 +9,34 @@
   "type": "module",
   "author": "myha",
   "license": "ISC",
-  "description": "",
   "dependencies": {
+    "@livekit/agents": "^0.3.4",
+    "@livekit/agents-plugin-openai": "^0.3.4",
+    "@livekit/rtc-node": "^0.10.4",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.33.0",
     "drizzle-zod": "^0.5.1",
     "nanoid": "^5.0.7",
-    "pg": "^8.12.0",
+    "pg": "^8.13.0",
     "postgres": "^3.4.4",
-    "zod": "^3.23.8",
-    "ws": "^8.13.0"
+    "uuid": "^10.0.0",
+    "ws": "^8.13.0",
+    "zod": "^3.23.8"
   },
   "workspaces": [
     "client",
     "server"
   ],
   "devDependencies": {
-    "@types/node": "^22.5.4",
+    "@types/node": "^22.7.9",
     "@types/pg": "^8.11.8",
+    "@types/ws": "^8.5.5",
     "drizzle-kit": "^0.24.2",
     "eslint": "^9.10.0",
-    "@types/ws": "^8.5.5"
-  }
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.6.3"
+  },
+  "main": "index.js",
+  "description": ""
 }
