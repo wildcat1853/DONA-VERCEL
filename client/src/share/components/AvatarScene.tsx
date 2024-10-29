@@ -12,7 +12,9 @@ interface AvatarSceneProps {
 
 const AvatarScene: React.FC<AvatarSceneProps> = ({ avatarUrl }) => {
   const controlsRef = useRef<any>(null);
-  const { audioData, isPlaying } = useAudio();
+  const { analyser, isPlaying } = useAudio();
+
+  console.log('ReadyPlayerMeAvatar component mounted');
 
   return (
     <Canvas
@@ -32,7 +34,7 @@ const AvatarScene: React.FC<AvatarSceneProps> = ({ avatarUrl }) => {
       <React.Suspense fallback={null}>
         <ReadyPlayerMeAvatar 
           avatarUrl={avatarUrl} 
-          audioData={audioData} 
+          analyser={analyser}
           position={[0, -0.9, 0]}  // Move the avatar down
           isPlaying={isPlaying}
         />
