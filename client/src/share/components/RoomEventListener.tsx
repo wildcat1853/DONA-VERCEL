@@ -1,51 +1,86 @@
-import React, { useEffect } from 'react';
-import { useParticipantTracks } from '@livekit/components-react';
-import { Track } from 'livekit-client';
+import React, { useEffect, useState } from 'react';
+import { useParticipantTracks, useParticipants } from '@livekit/components-react';
+import { Track, Participant } from 'livekit-client';
 import { useAudio } from '../context/AudioContext';
 
 const RoomEventListener: React.FC = () => {
   const { setAudioTrack } = useAudio();
+  const participants = useParticipants();
+  const [aiAgentIdentity, setAiAgentIdentity] = useState<string | null>(null);
+
+  // Detect AI agent participant
+  useEffect(() => {
+    console.log('All participants:', participants.map(p => ({
+      identity: p.identity,
+      metadata: p.metadata,
+      isLocal: p.isLocal
+    })));
+
+    // Find the non-local participant (should be the AI agent)
+    const aiParticipant = participants.find(p => !p.isLocal);
+    if (aiParticipant) {
+      console.log('AI Agent detected:', aiParticipant.identity);
+      setAiAgentIdentity(aiParticipant.identity);
+    }
+  }, [participants]);
+
   const tracks = useParticipantTracks(
     [Track.Source.Microphone],
-    "AI-Agent"
+    aiAgentIdentity || undefined
   );
 
   useEffect(() => {
-    if (!tracks.length) return;
+    if (!aiAgentIdentity) {
+      console.log('No AI agent identity yet');
+      return;
+    }
+
+    if (!tracks.length) {
+      console.log(`No tracks found for AI agent: ${aiAgentIdentity}`);
+      return;
+    }
 
     const track = tracks[0];
     const audioTrack = track.publication.track;
     
-    if (!audioTrack || track.participant.identity !== "AI-Agent") return;
+    console.log('Track detected:', {
+      participantIdentity: track.participant.identity,
+      isAIAgent: track.participant.identity === aiAgentIdentity,
+      trackSource: track.publication.source,
+      isMuted: audioTrack?.isMuted,
+    });
+    
+    if (!audioTrack || track.participant.identity !== aiAgentIdentity) {
+      console.log('Skipping track - not AI agent or no audio track');
+      return;
+    }
 
-    // Set up track event listeners
     const handleMuted = () => {
-      console.log('Track muted - clearing audio track');
+      console.log('AI agent track muted');
       setAudioTrack(null);
     };
 
     const handleUnmuted = () => {
-      console.log('Track unmuted - setting audio track');
+      console.log('AI agent track unmuted');
       if (audioTrack.mediaStreamTrack) {
         setAudioTrack(audioTrack);
       }
     };
 
-    // Initial state
     if (!audioTrack.isMuted && audioTrack.mediaStreamTrack) {
-      console.log('Initial track setup - setting audio track');
+      console.log('Setting up initial AI agent audio track');
       setAudioTrack(audioTrack);
     }
 
-    // Add listeners
     audioTrack.on('muted', handleMuted);
     audioTrack.on('unmuted', handleUnmuted);
 
     return () => {
+      console.log('Cleaning up AI agent track listeners');
       audioTrack.off('muted', handleMuted);
       audioTrack.off('unmuted', handleUnmuted);
     };
-  }, [tracks, setAudioTrack]);
+  }, [tracks, setAudioTrack, aiAgentIdentity]);
 
   return null;
 };

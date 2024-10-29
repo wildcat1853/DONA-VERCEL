@@ -63,7 +63,7 @@ export async function POST(request: Request) {
 
     // Create an access token
     const at = new AccessToken(apiKey, apiSecret, {
-      identity: "AI-Agent", // Change as per your requirement
+      identity: "User", // Change as per your requirement
       metadata: JSON.stringify({
         instructions: instructions,
         modalities: modalities,
