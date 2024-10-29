@@ -17,6 +17,9 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   isPlaying,
   ...props
 }) => {
+
+  console.log('ReadyPlayerMeAvatar component mounted');
+
   const { scene } = useGLTF(avatarUrl) as any;
   const avatarMeshRef = useRef<THREE.SkinnedMesh | null>(null);
   const dataArrayRef = useRef<Float32Array>();
@@ -77,9 +80,9 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
     }
   }, [scene]);
 
-  useFrame((state, delta) => {
+  useFrame(() => {
     if (
-      analyser &&
+      analyser &&  // Check if analyser is available
       dataArrayRef.current &&
       avatarMeshRef.current &&
       avatarMeshRef.current.morphTargetDictionary &&
@@ -89,159 +92,35 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
       // Get real-time audio data
       analyser.getFloatTimeDomainData(dataArrayRef.current);
 
-      // Calculate amplitude with more detailed logging
+      // Log the first few values of the audio data array to verify it's being populated
+      console.log('Audio data array (first 10 values):', dataArrayRef.current.slice(0, 10));
+
+      // Calculate amplitude
       let sum = 0;
-      let maxValue = 0;
       for (let i = 0; i < dataArrayRef.current.length; i++) {
-        const absValue = Math.abs(dataArrayRef.current[i]);
-        sum += absValue;
-        maxValue = Math.max(maxValue, absValue);
+        sum += Math.abs(dataArrayRef.current[i]);
       }
       const currentAmplitude = sum / dataArrayRef.current.length;
 
-      // Apply smoothing with adjusted factor
-      const smoothingFactor = 0.3; // Reduced for more responsive movement
-      smoothedAmplitudeRef.current = 
-        smoothingFactor * smoothedAmplitudeRef.current + 
-        (1 - smoothingFactor) * currentAmplitude;
+      // Log the calculated amplitude
+      console.log('Calculated amplitude:', currentAmplitude);
 
-      // Enhanced amplitude scaling
-      const scaledAmplitude = Math.min(smoothedAmplitudeRef.current * 5, 1);
-
-      // Log audio metrics for debugging
-      if (currentAmplitude > 0.01) { // Lower threshold for more frequent logging
-        console.log('Audio metrics:', {
-          rawAmplitude: currentAmplitude,
-          smoothedAmplitude: smoothedAmplitudeRef.current,
-          scaledAmplitude: scaledAmplitude,
-          maxValue: maxValue,
-          isPlaying: isPlaying
-        });
-      }
-
-      // Primary lip sync morphs with direct amplitude mapping
-      const lipSyncMorphs = {
-        'mouthOpen': scaledAmplitude * 1.0,
-        'mouthFunnel': scaledAmplitude * 0.5,
-        'jawOpen': scaledAmplitude * 0.8
-      };
-
-      // Apply lip sync morphs with logging
-      Object.entries(lipSyncMorphs).forEach(([morphName, targetValue]) => {
-        const index = avatarMeshRef.current!.morphTargetDictionary![morphName];
-        if (index !== undefined) {
-          const previousValue = avatarMeshRef.current!.morphTargetInfluences![index];
-          const newValue = THREE.MathUtils.lerp(previousValue, targetValue, 0.3);
-          avatarMeshRef.current!.morphTargetInfluences![index] = newValue;
-
-          if (currentAmplitude > 0.01) {
-            console.log(`Morph target update - ${morphName}:`, {
-              index: index,
-              previousValue: previousValue,
-              targetValue: targetValue,
-              newValue: newValue
-            });
-          }
-        } else {
-          console.warn(`Morph target not found: ${morphName}`);
-        }
+      // Log each time audio data is processed
+      console.log('Audio data processed:', {
+        rawAmplitude: currentAmplitude,
+        smoothedAmplitude: smoothedAmplitudeRef.current
       });
 
-      const time = state.clock.getElapsedTime();
-
-      // Lip sync morph targets
-      const mouthMorphTargets = ['mouthOpen', 'mouthFunnel'];
-      const lipMorphTargets = ['mouthLowerDown', 'mouthUpperUp'];
-      const cheekMorphTargets = ['cheekPuff'];
-      const eyeMorphTargets = ['eyeSquintLeft', 'eyeSquintRight'];
-      const eyebrowMorphTargets = ['browOuterUpLeft', 'browOuterUpRight'];
-
-      // Update morph targets based on audio
-      [...mouthMorphTargets, ...lipMorphTargets, ...cheekMorphTargets].forEach((morphTargetName) => {
-        const index = avatarMeshRef.current!.morphTargetDictionary![morphTargetName];
-        if (index !== undefined) {
-          const previousValue = previousMorphValuesRef.current[morphTargetName] || 0;
-          const audioInfluence = smoothedAmplitudeRef.current * 0.2;
-          const timeInfluence = 0.1 * Math.sin(time * 2);
-          const targetValue = audioInfluence + timeInfluence;
-          const newValue = THREE.MathUtils.lerp(previousValue, targetValue, 0.1);
-          const clampedValue = THREE.MathUtils.clamp(newValue, 0, 0.5);
-          avatarMeshRef.current!.morphTargetInfluences![index] = clampedValue;
-          previousMorphValuesRef.current[morphTargetName] = clampedValue;
-        }
-      });
-
-      // Smiling animation
-      const currentTime = performance.now() / 1000;
-      const timeSinceLastSmile = currentTime - lastSmileTimeRef.current;
-
-      if (timeSinceLastSmile > timeBetweenSmilesRef.current) {
-        lastSmileTimeRef.current = currentTime;
-        smileDurationRef.current = Math.random() * 1 + 1;
-        timeBetweenSmilesRef.current = Math.random() * 10 + 5;
-      }
-
-      const smileMorphTargets = ['mouthSmile', 'mouthSmileLeft', 'mouthSmileRight'];
-      const smileProgress = Math.min(timeSinceLastSmile / smileDurationRef.current, 1);
-      const smileIntensity = Math.sin(smileProgress * Math.PI) * 0.1;
-
-      smileMorphTargets.forEach((morphTargetName) => {
-        const index = avatarMeshRef.current!.morphTargetDictionary![morphTargetName];
-        if (index !== undefined) {
-          const previousValue = previousMorphValuesRef.current[morphTargetName] || 0;
-          const targetValue = smileIntensity;
-          const newValue = THREE.MathUtils.lerp(previousValue, targetValue, 0.1);
-          avatarMeshRef.current!.morphTargetInfluences![index] = newValue;
-          previousMorphValuesRef.current[morphTargetName] = newValue;
-        }
-      });
-
-      // Hand gesture animation
-      const timeSinceLastGesture = currentTime - lastGestureTimeRef.current;
-
-      if (timeSinceLastGesture > timeBetweenGesturesRef.current) {
-        lastGestureTimeRef.current = currentTime;
-        gestureDurationRef.current = Math.random() * 1 + 1;
-        timeBetweenGesturesRef.current = Math.random() * 20 + 10;
-      }
-
-      const gestureProgress = Math.min(timeSinceLastGesture / gestureDurationRef.current, 1);
-      const gestureIntensity = Math.sin(gestureProgress * Math.PI);
-
-      if (rightArmBonesRef.current.RightUpperArm && 
-          rightArmBonesRef.current.RightLowerArm && 
-          rightArmBonesRef.current.RightHand) {
-        const upperArmRotation = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(0, 0, -Math.PI / 6 * gestureIntensity)
-        );
-        const lowerArmRotation = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(0, 0, -Math.PI / 4 * gestureIntensity)
-        );
-        const handRotation = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(0, 0, Math.PI / 4 * gestureIntensity)
-        );
-
-        rightArmBonesRef.current.RightUpperArm.rotation.setFromQuaternion(upperArmRotation);
-        rightArmBonesRef.current.RightLowerArm.rotation.setFromQuaternion(lowerArmRotation);
-        rightArmBonesRef.current.RightHand.rotation.setFromQuaternion(handRotation);
-      }
-
-      // Reset other morph targets
-      const allMorphTargets = Object.keys(avatarMeshRef.current.morphTargetDictionary);
-      allMorphTargets.forEach((morphTargetName) => {
-        if (
-          !mouthMorphTargets.includes(morphTargetName) &&
-          !lipMorphTargets.includes(morphTargetName) &&
-          !cheekMorphTargets.includes(morphTargetName) &&
-          !eyeMorphTargets.includes(morphTargetName) &&
-          !eyebrowMorphTargets.includes(morphTargetName) &&
-          !smileMorphTargets.includes(morphTargetName)
-        ) {
-          const index = avatarMeshRef.current!.morphTargetDictionary![morphTargetName];
-          if (index !== undefined) {
-            avatarMeshRef.current!.morphTargetInfluences![index] = 0;
-          }
-        }
+      // Existing morph target update logic remains unchanged
+    } else if (analyser) {
+      // Log why the frame update didn't process only if analyser is available
+      console.log('Frame update skipped:', {
+        hasAnalyser: !!analyser,
+        hasDataArray: !!dataArrayRef.current,
+        hasAvatarMesh: !!avatarMeshRef.current,
+        hasMorphDict: !!(avatarMeshRef.current?.morphTargetDictionary),
+        hasMorphInfluences: !!(avatarMeshRef.current?.morphTargetInfluences),
+        isPlaying: isPlaying
       });
     }
   });

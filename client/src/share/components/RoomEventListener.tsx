@@ -11,7 +11,7 @@ const RoomEventListener: React.FC = () => {
   );
 
   useEffect(() => {
-    console.log('Tracks updated:', tracks);
+    console.log('RoomEventListener - Tracks:', tracks);
     
     if (!tracks.length) {
       console.log('No tracks available');

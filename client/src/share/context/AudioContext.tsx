@@ -53,6 +53,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } catch (error) {
         console.error('Error setting up audio processing:', error);
       }
+    } else {
+      console.log('No audio track available');
     }
   }, [audioTrack]);
 

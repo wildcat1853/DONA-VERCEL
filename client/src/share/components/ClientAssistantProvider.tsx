@@ -8,7 +8,7 @@ import TaskTabs from './TaskTabs';
 import Image from 'next/image';
 import start from '@/../public/stars.svg';
 import dynamic from 'next/dynamic';
-import AudioContextStarter from './AudioContextStarter';
+
 
 import {
   ControlBar,
@@ -23,7 +23,8 @@ import {
   VoiceAssistantControlBar,
   TrackReference,
   useStartAudio,
-  ConnectionState
+  ConnectionState,
+  ConnectionStateToast
 } from '@livekit/components-react';
 
 import '@livekit/components-styles';
@@ -127,7 +128,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
         </div>
       </div>
 
-      <div className="w-5/12 relative h-screen">
+      <div className="w-5/12 fixed right-0 top-0 h-screen">
         <LiveKitRoom
           token={token}
           serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
@@ -137,6 +138,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
           data-lk-theme="default"
           onError={(error) => console.error('LiveKit connection error:', error)}
         >
+          <ConnectionStateToast />
           <AudioProvider>
             <RoomAudioRenderer />
             <RoomEventListener />
@@ -148,7 +150,14 @@ const ClientAssistantProvider: React.FC<Props> = ({
                 </div>
               </div>
             </div>
-            <VoiceAssistantControlBar />
+    
+            <div className="absolute bottom-14 w-full z-10">
+              <VoiceAssistantControlBar />
+              <ConnectionStateToast />
+              <div className="text-center text-sm font-medium text-gray-600 mt-2"> 
+                <ConnectionState />
+              </div>
+            </div>
           </AudioProvider>
         </LiveKitRoom>
       </div>

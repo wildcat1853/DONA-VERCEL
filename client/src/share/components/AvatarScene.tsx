@@ -14,7 +14,7 @@ const AvatarScene: React.FC<AvatarSceneProps> = ({ avatarUrl }) => {
   const controlsRef = useRef<any>(null);
   const { analyser, isPlaying } = useAudio();
 
-  console.log('ReadyPlayerMeAvatar component mounted');
+  console.log('AvatarScene component mounted');
 
   return (
     <Canvas
