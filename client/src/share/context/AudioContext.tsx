@@ -21,29 +21,35 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
   useEffect(() => {
-    if (audioTrack) {
-      console.log('Audio track received:', audioTrack.sid);
+    console.log('AudioContext useEffect triggered with track:', {
+      hasTrack: !!audioTrack,
+      trackSid: audioTrack?.sid,
+      hasMediaStreamTrack: !!audioTrack?.mediaStreamTrack
+    });
+
+    if (audioTrack?.mediaStreamTrack) {
+      console.log('Setting up audio processing...');
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      console.log('AudioContext created');
+      
       const analyserNode = audioContext.createAnalyser();
-      analyserNode.fftSize = 2048;
+      console.log('AnalyserNode created');
 
       try {
         const mediaStream = new MediaStream([audioTrack.mediaStreamTrack]);
-        console.log('Created MediaStream:', {
-          id: mediaStream.id,
-          active: mediaStream.active
-        });
+        console.log('MediaStream created:', mediaStream.id);
 
         const source = audioContext.createMediaStreamSource(mediaStream);
+        console.log('MediaStreamSource created');
+        
         source.connect(analyserNode);
+        console.log('Source connected to analyser');
         
         setAnalyser(analyserNode);
         setIsPlaying(true);
         
-        console.log('Audio processing setup complete');
-
         return () => {
-          console.log('Cleaning up audio processing');
+          console.log('Cleanup triggered');
           source.disconnect();
           analyserNode.disconnect();
           audioContext.close();
@@ -51,10 +57,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setIsPlaying(false);
         };
       } catch (error) {
-        console.error('Error setting up audio processing:', error);
+        console.error('Error in audio setup:', error);
       }
-    } else {
-      console.log('No audio track available');
     }
   }, [audioTrack]);
 

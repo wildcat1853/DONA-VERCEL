@@ -93,7 +93,7 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
       analyser.getFloatTimeDomainData(dataArrayRef.current);
 
       // Log the first few values of the audio data array to verify it's being populated
-      console.log('Audio data array (first 10 values):', dataArrayRef.current.slice(0, 10));
+      // console.log('Audio data array (first 10 values):', dataArrayRef.current.slice(0, 10));
 
       // Calculate amplitude
       let sum = 0;
@@ -103,13 +103,13 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
       const currentAmplitude = sum / dataArrayRef.current.length;
 
       // Log the calculated amplitude
-      console.log('Calculated amplitude:', currentAmplitude);
+      // console.log('Calculated amplitude:', currentAmplitude);
 
       // Log each time audio data is processed
-      console.log('Audio data processed:', {
-        rawAmplitude: currentAmplitude,
-        smoothedAmplitude: smoothedAmplitudeRef.current
-      });
+      // console.log('Audio data processed:', {
+      //   rawAmplitude: currentAmplitude,
+      //   smoothedAmplitude: smoothedAmplitudeRef.current
+      // });
 
       // Existing morph target update logic remains unchanged
     } else if (analyser) {

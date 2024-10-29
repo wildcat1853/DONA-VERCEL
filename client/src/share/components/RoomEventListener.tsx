@@ -11,28 +11,40 @@ const RoomEventListener: React.FC = () => {
   );
 
   useEffect(() => {
-    console.log('RoomEventListener - Tracks:', tracks);
-    
-    if (!tracks.length) {
-      console.log('No tracks available');
-      return;
-    }
+    if (!tracks.length) return;
 
     const track = tracks[0];
     const audioTrack = track.publication.track;
     
-    console.log('Track received:', {
-      isLocal: track.participant.isLocal,
-      participantIdentity: track.participant.identity,
-      audioTrack: audioTrack?.sid,
-    });
-    
-    if (audioTrack && 
-        !track.participant.isLocal && 
-        track.participant.identity === "AI-Agent") {
+    if (!audioTrack || track.participant.identity !== "AI-Agent") return;
+
+    // Set up track event listeners
+    const handleMuted = () => {
+      console.log('Track muted - clearing audio track');
+      setAudioTrack(null);
+    };
+
+    const handleUnmuted = () => {
+      console.log('Track unmuted - setting audio track');
+      if (audioTrack.mediaStreamTrack) {
+        setAudioTrack(audioTrack);
+      }
+    };
+
+    // Initial state
+    if (!audioTrack.isMuted && audioTrack.mediaStreamTrack) {
+      console.log('Initial track setup - setting audio track');
       setAudioTrack(audioTrack);
-      console.log('Audio track passed to context:', audioTrack.sid);
     }
+
+    // Add listeners
+    audioTrack.on('muted', handleMuted);
+    audioTrack.on('unmuted', handleUnmuted);
+
+    return () => {
+      audioTrack.off('muted', handleMuted);
+      audioTrack.off('unmuted', handleUnmuted);
+    };
   }, [tracks, setAudioTrack]);
 
   return null;

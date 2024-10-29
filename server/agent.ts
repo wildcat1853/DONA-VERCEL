@@ -136,6 +136,7 @@ async function runMultimodalAgent(ctx: JobContext) {
     };
 
     let session: openai.realtime.RealtimeSession;
+    let isReconnecting = false;
 
     const initSession = async () => {
       const model = new openai.realtime.RealtimeModel({
@@ -148,30 +149,54 @@ async function runMultimodalAgent(ctx: JobContext) {
     };
 
     const restartSession = async () => {
+      if (isReconnecting) return; // Prevent multiple simultaneous reconnection attempts
+      
+      isReconnecting = true;
       console.log('Restarting OpenAI Realtime session');
+      
       try {
-        await session?.close();
+        await session?.close().catch(e => console.log('Error closing session:', e));
         session = await initSession();
+        
+        // Reinitialize the conversation
+        session.conversation.item.create({
+          type: "message",
+          role: "user",
+          content: [
+            {
+              type: "input_text",
+              text: "Session restarted. Please continue our conversation.",
+            },
+          ],
+        });
+        session.response.create();
+        
         console.log('Session restarted successfully');
       } catch (error) {
         console.error('Error restarting session:', error);
+      } finally {
+        isReconnecting = false;
       }
     };
 
     session = await initSession();
 
+    // Handle session close events
     session.on('close', async (code: number, reason: string) => {
       console.error(`OpenAI Realtime connection closed: [${code}] ${reason}`);
       await restartSession();
     });
 
+    // Handle session errors
     session.on('error', async (error: any) => {
       console.error('Session error:', error);
-      if (error.code === 'session_expired') {
+      if (error.code === 'session_expired' || 
+          (error.type === 'invalid_request_error' && error.code === 'session_expired')) {
         await restartSession();
       }
     });
 
+    // Initial conversation start
     session.conversation.item.create({
       type: "message",
       role: "user",
