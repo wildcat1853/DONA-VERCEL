@@ -28,7 +28,8 @@ import {
   StartMediaButton,
   StartAudio,
   useEnsureParticipant,
-  useIsSpeaking
+  useIsSpeaking,
+  useParticipants
 } from '@livekit/components-react';
 
 import '@livekit/components-styles';
@@ -62,7 +63,25 @@ const ClientAssistantProvider: React.FC<Props> = ({
   const name = 'User';
   
   
- 
+  const [audioAllowed, setAudioAllowed] = useState(false);
+
+  useEffect(() => {
+    const requestMediaPermissions = async () => {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        setAudioAllowed(true);
+      } catch (error: any) {
+        console.error('Error requesting media permissions:', error);
+        if (error.name === 'NotFoundError') {
+          alert('No microphone found. Please connect a microphone and try again.');
+        } else {
+          alert('Unable to access the microphone. Please check your browser settings.');
+        }
+      }
+    };
+  
+    requestMediaPermissions();
+  }, []);
 
   useEffect(() => {
     const fetchToken = async () => {
@@ -106,6 +125,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
 
         const data = await response.json();
         setToken(data.accessToken);
+        console.log('Token fetched:', data.accessToken); 
       } catch (error) {
         console.error('Error fetching LiveKit token:', error);
       }
@@ -133,6 +153,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
       </div>
 
       <div className="w-5/12 fixed right-0 top-0 h-screen">
+      {token ? ( // Add this conditional rendering
         <LiveKitRoom
           token={token}
           serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
@@ -141,8 +162,10 @@ const ClientAssistantProvider: React.FC<Props> = ({
           video={false}
           data-lk-theme="default"
           onError={(error) => console.error('LiveKit connection error:', error)}
+          onConnected={() => console.log('LiveKit connected')}
+          onDisconnected={() => console.log('LiveKit disconnected')}
         > 
-          <AgentPresenceLogger />
+          <ParticipantLogger />
           <StartMediaButton label="Click to allow media playback" />
           <ConnectionStateToast />
           <AudioProvider>
@@ -160,6 +183,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
             <div className="absolute bottom-14 w-full z-10">
               <VoiceAssistantControlBar />
               <StartAudio label="Click to allow audio playback" />
+             
               <ConnectionStateToast />
               <div className="text-center text-sm font-medium text-gray-600 mt-2"> 
                 <ConnectionState />
@@ -167,6 +191,9 @@ const ClientAssistantProvider: React.FC<Props> = ({
             </div>
           </AudioProvider>
         </LiveKitRoom>
+        ) : (
+          <p>Loading...</p> // Optional: show a loading message while fetching the token
+        )}
       </div>
     </>
   );
@@ -187,25 +214,10 @@ function AudioVisualizer({ trackRef }: { trackRef: TrackReference }) {
 
 const AvatarScene = dynamic(() => import('./AvatarScene'), { ssr: false });
 
-const AgentPresenceLogger = () => {
-  try {
-    const agentParticipant = useEnsureParticipant();
-    const isSpeaking = useIsSpeaking(agentParticipant);
-    
-    console.log('AI Agent status:', {
-      identity: agentParticipant.identity,
-      metadata: agentParticipant.metadata,
-      isSpeaking,
-      timestamp: new Date().toISOString()
-    });
-    return null;
-  } catch (error: any) {
-    console.log('AI Agent not present:', {
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-    return null;
-  }
+const ParticipantLogger = () => {
+  const participants = useParticipants();
+  console.log('Connected participants:', participants.map(p => p.identity));
+  return null;
 };
 
 export default ClientAssistantProvider;
