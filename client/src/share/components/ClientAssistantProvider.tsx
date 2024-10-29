@@ -24,7 +24,11 @@ import {
   TrackReference,
   useStartAudio,
   ConnectionState,
-  ConnectionStateToast
+  ConnectionStateToast,
+  StartMediaButton,
+  StartAudio,
+  useEnsureParticipant,
+  useIsSpeaking
 } from '@livekit/components-react';
 
 import '@livekit/components-styles';
@@ -137,7 +141,9 @@ const ClientAssistantProvider: React.FC<Props> = ({
           video={false}
           data-lk-theme="default"
           onError={(error) => console.error('LiveKit connection error:', error)}
-        >
+        > 
+          <AgentPresenceLogger />
+          <StartMediaButton label="Click to allow media playback" />
           <ConnectionStateToast />
           <AudioProvider>
             <RoomAudioRenderer />
@@ -153,6 +159,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
     
             <div className="absolute bottom-14 w-full z-10">
               <VoiceAssistantControlBar />
+              <StartAudio label="Click to allow audio playback" />
               <ConnectionStateToast />
               <div className="text-center text-sm font-medium text-gray-600 mt-2"> 
                 <ConnectionState />
@@ -180,5 +187,25 @@ function AudioVisualizer({ trackRef }: { trackRef: TrackReference }) {
 
 const AvatarScene = dynamic(() => import('./AvatarScene'), { ssr: false });
 
+const AgentPresenceLogger = () => {
+  try {
+    const agentParticipant = useEnsureParticipant();
+    const isSpeaking = useIsSpeaking(agentParticipant);
+    
+    console.log('AI Agent status:', {
+      identity: agentParticipant.identity,
+      metadata: agentParticipant.metadata,
+      isSpeaking,
+      timestamp: new Date().toISOString()
+    });
+    return null;
+  } catch (error: any) {
+    console.log('AI Agent not present:', {
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+    return null;
+  }
+};
 
 export default ClientAssistantProvider;

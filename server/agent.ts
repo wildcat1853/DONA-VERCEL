@@ -47,7 +47,7 @@ if (!LIVEKIT_URL || !LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
 
 
 // Import necessary modules after loading env variables
-import { WorkerOptions, cli, defineAgent, multimodal } from "@livekit/agents";
+import { WorkerOptions, cli, defineAgent, multimodal, JobContext } from "@livekit/agents";
 import * as openai from "@livekit/agents-plugin-openai";
 import type {
   LocalParticipant,
@@ -55,7 +55,7 @@ import type {
   TrackPublication,
 } from "@livekit/rtc-node";
 import { RemoteParticipant, TrackSource } from "@livekit/rtc-node";
-import { fileURLToPath } from "node:url";
+
 import { v4 as uuidv4 } from "uuid";
 
 function safeLogConfig(config: SessionConfig): string {
@@ -147,7 +147,7 @@ async function runMultimodalAgent(
       temperature: config.temperature,
       maxResponseOutputTokens: config.maxOutputTokens,
       modalities: config.modalities as ["text", "audio"] | ["text"],
-      turnDetection: config.turnDetection,
+      turnDetection: config.turnDetection || undefined,
     });
 
     const agent = new multimodal.MultimodalAgent({ model });
@@ -221,7 +221,7 @@ async function runMultimodalAgent(
     session.on("response_done", (response: openai.realtime.RealtimeResponse) => {
       let message: string | undefined;
       if (response.status === "incomplete") {
-        if (response.statusDetails?.reason) {
+        if (response.statusDetails?.type === "incomplete" && response.statusDetails?.reason) {
           const reason = response.statusDetails.reason;
           switch (reason) {
             case "max_output_tokens":
@@ -238,7 +238,7 @@ async function runMultimodalAgent(
           message = "🚫 Response incomplete";
         }
       } else if (response.status === "failed") {
-        if (response.statusDetails?.error) {
+        if (response.statusDetails?.type === "failed" && response.statusDetails?.error) {
           switch (response.statusDetails.error.code) {
             case "server_error":
               message = `⚠️ Server error`;
