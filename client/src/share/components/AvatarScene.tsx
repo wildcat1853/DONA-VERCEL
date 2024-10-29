@@ -4,14 +4,15 @@ import React, { useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import ReadyPlayerMeAvatar from './ReadyPlayerMeAvatar';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
+import { useAudio } from '../context/AudioContext';
 
 interface AvatarSceneProps {
   avatarUrl: string;
-  audioBuffer?: AudioBuffer | null;
 }
 
-const AvatarScene: React.FC<AvatarSceneProps> = ({ avatarUrl, audioBuffer }) => {
+const AvatarScene: React.FC<AvatarSceneProps> = ({ avatarUrl }) => {
   const controlsRef = useRef<any>(null);
+  const { audioData, isPlaying } = useAudio();
 
   return (
     <Canvas
@@ -31,9 +32,9 @@ const AvatarScene: React.FC<AvatarSceneProps> = ({ avatarUrl, audioBuffer }) => 
       <React.Suspense fallback={null}>
         <ReadyPlayerMeAvatar 
           avatarUrl={avatarUrl} 
-          audioBuffer={audioBuffer} 
+          audioData={audioData} 
           position={[0, -0.9, 0]}  // Move the avatar down
-          isPlaying={true}  // Added isPlaying prop
+          isPlaying={isPlaying}
         />
       </React.Suspense>
     </Canvas>

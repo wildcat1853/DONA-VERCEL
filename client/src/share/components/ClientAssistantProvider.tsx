@@ -32,6 +32,7 @@ import useAssistant from '@/hooks/useAssistant';
 
 import { Task } from '@/../.../../../../define';
 import RoomEventListener from './RoomEventListener';
+import { AudioProvider } from '../context/AudioContext';
 
 
 type Props = {
@@ -136,21 +137,19 @@ const ClientAssistantProvider: React.FC<Props> = ({
           data-lk-theme="default"
           onError={(error) => console.error('LiveKit connection error:', error)}
         >
-          <RoomAudioRenderer />
-          <RoomEventListener />
-          <div className="absolute top-0 right-0 w-full h-full bg-F1F2F4">
-            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE] animate-gradient-xy">
-              <div className="absolute inset-0 flex flex-col justify-end">
-                {/* <AudioVisualizer trackRef={TrackReference} /> */}
-                <AvatarScene avatarUrl={avatarUrl} audioBuffer={null} />
-                <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+          <AudioProvider>
+            <RoomAudioRenderer />
+            <RoomEventListener />
+            <div className="absolute top-0 right-0 w-full h-full bg-F1F2F4">
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE] animate-gradient-xy">
+                <div className="absolute inset-0 flex flex-col justify-end">
+                  <AvatarScene avatarUrl={avatarUrl} />
+                  <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+                </div>
               </div>
             </div>
-          </div>
-          
-         
-          {/* <AudioContextStarter /> */}
-          <VoiceAssistantControlBar />
+            <VoiceAssistantControlBar />
+          </AudioProvider>
         </LiveKitRoom>
       </div>
     </>

@@ -7,14 +7,14 @@ import * as THREE from 'three';
 
 interface ReadyPlayerMeAvatarProps extends GroupProps {
   avatarUrl: string;
-  audioBuffer?: AudioBuffer | null;
-  isPlaying: boolean; // Add this prop
+  audioData?: Float32Array | null;
+  isPlaying: boolean;
 }
 
 const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   avatarUrl,
-  audioBuffer,
-  isPlaying, // Add this prop
+  audioData,
+  isPlaying,
   ...props
 }) => {
   const { scene } = useGLTF(avatarUrl) as any;
@@ -67,48 +67,28 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
     }
   }, [scene]);
 
-  useEffect(() => {
-    if (audioBuffer) {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
-
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 2048;
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-      analyserRef.current = analyser;
-      dataArrayRef.current = dataArray;
-
-      source.connect(analyser);
-      analyser.connect(audioContext.destination);
-      source.start();
-
-      return () => {
-        source.stop();
-        source.disconnect();
-        analyser.disconnect();
-        audioContext.close();
-      };
-    }
-  }, [audioBuffer]);
-
   useFrame((state, delta) => {
     if (
-      analyserRef.current &&
-      dataArrayRef.current &&
+      audioData &&
       avatarMeshRef.current &&
       avatarMeshRef.current.morphTargetDictionary &&
-      avatarMeshRef.current.morphTargetInfluences
+      avatarMeshRef.current.morphTargetInfluences &&
+      isPlaying
     ) {
-      analyserRef.current.getByteFrequencyData(dataArrayRef.current);
-
+      // Calculate amplitude from audio data
       let sum = 0;
-      for (let i = 0; i < dataArrayRef.current.length; i++) {
-        sum += dataArrayRef.current[i];
+      for (let i = 0; i < audioData.length; i++) {
+        sum += Math.abs(audioData[i]);
       }
-      const average = sum / dataArrayRef.current.length;
-      const currentAmplitude = average / 256;
+      const currentAmplitude = sum / audioData.length;
+
+      // Log significant audio
+      if (currentAmplitude > 0.1) {
+        console.log('Audio frame:', {
+          amplitude: currentAmplitude,
+          smoothedAmplitude: smoothedAmplitudeRef.current
+        });
+      }
 
       // Apply exponential smoothing
       smoothedAmplitudeRef.current =
