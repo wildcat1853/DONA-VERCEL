@@ -8,6 +8,7 @@ import TaskTabs from './TaskTabs';
 import Image from 'next/image';
 import start from '@/../public/stars.svg';
 import dynamic from 'next/dynamic';
+import AudioContextStarter from './AudioContextStarter';
 
 import {
   ControlBar,
@@ -53,7 +54,8 @@ const ClientAssistantProvider: React.FC<Props> = ({
   const [audioEnabled, setAudioEnabled] = useState(false);
   const roomName = 'Dona-Room';
   const name = 'User';
-
+  
+  
  
 
   useEffect(() => {
@@ -105,29 +107,9 @@ const ClientAssistantProvider: React.FC<Props> = ({
 
     // Fetch token on component mount
     fetchToken();
-  }, []); // Removed openaiAPIKey from dependency array as it's no longer needed
+  }, []); 
 
 
-
-  // useEffect(() => {
-  //   if (!room) return;
-
-  //   const handleTrackSubscribed = (track: Track, publication: TrackPublication, participant: Participant) => {
-  //     if (
-  //       track.kind === Track.Kind.Audio &&
-  //       participant.identity === 'agent-identity'
-  //     ) {
-  //       const audioElement = track.attach();
-  //       console.log('Agent Audio Track Subscribed:', track);
-  //       console.log('audioElement', audioElement);
-  //     }
-  //   };
-
-  //   room.on(RoomEvent.TrackSubscribed, handleTrackSubscribed);
-  //   return () => {
-  //     room.off(RoomEvent.TrackSubscribed, handleTrackSubscribed);
-  //   };
-  // }, [room]);
 
   return (
     <>
@@ -159,7 +141,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
           <div className="absolute top-0 right-0 w-full h-full bg-F1F2F4">
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE] animate-gradient-xy">
               <div className="absolute inset-0 flex flex-col justify-end">
-                {/* <AudioVisualizer trackRef={audioTrack} /> */}
+                {/* <AudioVisualizer trackRef={TrackReference} /> */}
                 <AvatarScene avatarUrl={avatarUrl} audioBuffer={null} />
                 <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
               </div>
@@ -167,6 +149,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
           </div>
           
          
+          {/* <AudioContextStarter /> */}
           <VoiceAssistantControlBar />
         </LiveKitRoom>
       </div>
@@ -186,21 +169,6 @@ function AudioVisualizer({ trackRef }: { trackRef: TrackReference }) {
   );
 }
 
-// function handleAudioTrack(room: Room) {
-//   const handleTrackSubscribed = (
-//     track: Track,
-//     publication: TrackPublication,
-//     participant: Participant
-//   ) => {
-//     if (track.kind === Track.Kind.Audio) {
-//       const audioElement = track.attach();
-//       console.log('Audio Element:', audioElement);
-//     }
-//   };
-
-//   room.on(RoomEvent.TrackSubscribed, handleTrackSubscribed);
-//   return () => room.off(RoomEvent.TrackSubscribed, handleTrackSubscribed);
-// }
 
 const AvatarScene = dynamic(() => import('./AvatarScene'), { ssr: false });
 
