@@ -24,8 +24,11 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   const avatarMeshRef = useRef<THREE.SkinnedMesh | null>(null);
   const dataArrayRef = useRef<Float32Array>();
   
+  // Adjust these values at the top of the component
+  const smoothingFactor = 0.3; // Reduced from 0.7 for less smoothing/delay
+  const audioThreshold = 0.01; // Add threshold to detect silence
+
   // For smoothing audio amplitude
-  const smoothingFactor = 0.5;
   const smoothedAmplitudeRef = useRef(0);
 
   // For interpolating morph target values
@@ -85,11 +88,10 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
         avatarMeshRef.current.morphTargetDictionary && 
         avatarMeshRef.current.morphTargetInfluences && 
         isPlaying) {
+      const time = state.clock.getElapsedTime();
+      
       // Get real-time audio data
       analyser.getFloatTimeDomainData(dataArrayRef.current);
-
-      // Log the first few values of the audio data array to verify it's being populated
-      // console.log('Audio data array (first 10 values):', dataArrayRef.current.slice(0, 10));
 
       // Calculate amplitude
       let sum = 0;
@@ -98,40 +100,67 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
       }
       const currentAmplitude = sum / dataArrayRef.current.length;
 
-      // Log the calculated amplitude
-      // console.log('Calculated amplitude:', currentAmplitude);
+      // Quick reset when audio is below threshold
+      if (currentAmplitude < audioThreshold) {
+        smoothedAmplitudeRef.current *= 0.8; // Quick fadeout
+      } else {
+        // Less smoothing for more immediate response
+        smoothedAmplitudeRef.current = 
+          smoothingFactor * smoothedAmplitudeRef.current + 
+          (1 - smoothingFactor) * currentAmplitude;
+      }
 
-      // Log each time audio data is processed
-      // console.log('Audio data processed:', {
-      //   rawAmplitude: currentAmplitude,
-      //   smoothedAmplitude: smoothedAmplitudeRef.current
-      // });
+      // Enhanced morph target groups
+      const mouthMorphTargets = ['mouthOpen', 'mouthFunnel', 'jawOpen'];  // Added jawOpen
+      const lipMorphTargets = ['mouthLowerDown', 'mouthUpperUp', 'mouthPucker'];
+      const cheekMorphTargets = ['cheekPuff', 'cheekSquintLeft', 'cheekSquintRight'];
+      const eyeMorphTargets = ['eyeSquintLeft', 'eyeSquintRight', 'eyeWideLeft', 'eyeWideRight'];
+      const eyebrowMorphTargets = ['browOuterUpLeft', 'browOuterUpRight', 'browInnerUp'];
 
-      // Existing morph target update logic remains unchanged
-
-      // Apply smoothing
-      smoothedAmplitudeRef.current = 
-        smoothingFactor * smoothedAmplitudeRef.current + 
-        (1 - smoothingFactor) * currentAmplitude;
-
-      const time = state.clock.getElapsedTime();
-
-      // Lip sync morph targets
-      const mouthMorphTargets = ['mouthOpen', 'mouthFunnel'];
-      const lipMorphTargets = ['mouthLowerDown', 'mouthUpperUp'];
-      const cheekMorphTargets = ['cheekPuff'];
-      const eyeMorphTargets = ['eyeSquintLeft', 'eyeSquintRight'];
-      const eyebrowMorphTargets = ['browOuterUpLeft', 'browOuterUpRight'];
-
-      // Update morph targets based on audio
+      // Update morph targets based on audio with enhanced movements
       [...mouthMorphTargets, ...lipMorphTargets, ...cheekMorphTargets].forEach((morphTargetName) => {
         const index = avatarMeshRef.current!.morphTargetDictionary![morphTargetName];
         if (index !== undefined) {
           const previousValue = previousMorphValuesRef.current[morphTargetName] || 0;
-          const audioInfluence = smoothedAmplitudeRef.current * 0.2;
-          const timeInfluence = 0.1 * Math.sin(time * 2);
-          const targetValue = audioInfluence + timeInfluence;
-          const newValue = THREE.MathUtils.lerp(previousValue, targetValue, 0.1);
+          
+          let audioInfluence = smoothedAmplitudeRef.current;
+          let maxValue = 0.5;
+          let lerpSpeed = 0.5; // Increased for faster response
+
+          if (morphTargetName === 'jawOpen') {
+            audioInfluence *= 0.8;
+            maxValue = 0.7;
+            lerpSpeed = 0.6;
+          }
+
+          const targetValue = currentAmplitude < audioThreshold ? 0 : audioInfluence;
+          const newValue = THREE.MathUtils.lerp(previousValue, targetValue, lerpSpeed);
+          const clampedValue = THREE.MathUtils.clamp(newValue, 0, maxValue);
+          avatarMeshRef.current!.morphTargetInfluences![index] = clampedValue;
+          previousMorphValuesRef.current[morphTargetName] = clampedValue;
+        }
+      });
+
+      // Faster eye and eyebrow movements
+      [...eyeMorphTargets, ...eyebrowMorphTargets].forEach((morphTargetName) => {
+        const index = avatarMeshRef.current!.morphTargetDictionary![morphTargetName];
+        if (index !== undefined) {
+          const previousValue = previousMorphValuesRef.current[morphTargetName] || 0;
+          
+          const blinkFrequency = Math.sin(time * 1.5) > 0.95;
+          const randomMovement = Math.sin(time * 1.2 + Math.cos(time * 0.8)) * 0.1;
+          
+          let targetValue = randomMovement;
+          
+          if (morphTargetName.includes('eyeSquint') && blinkFrequency) {
+            targetValue += 0.8;
+          }
+          
+          if (morphTargetName.includes('brow')) {
+            targetValue += smoothedAmplitudeRef.current * 0.15;
+          }
+
+          const newValue = THREE.MathUtils.lerp(previousValue, targetValue, 0.25);
           const clampedValue = THREE.MathUtils.clamp(newValue, 0, 0.5);
           avatarMeshRef.current!.morphTargetInfluences![index] = clampedValue;
           previousMorphValuesRef.current[morphTargetName] = clampedValue;
