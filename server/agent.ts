@@ -1,11 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-
-
-
-
-
-
 // Load environment variables from .env.local
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
@@ -24,17 +18,6 @@ const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// Log environment file path
-console.log('Environment file path:', process.env.NODE_ENV ? `${process.env.PWD}/.env.${process.env.NODE_ENV}` : `${process.env.PWD}/.env`);
-console.log('Current working directory:', process.cwd());
-
-// Debug environment variables
-console.log('Environment Variables:');
-console.log('- LIVEKIT_URL:', LIVEKIT_URL || 'not set');
-console.log('- LIVEKIT_API_KEY:', LIVEKIT_API_KEY ? '[REDACTED]' : 'not set');
-console.log('- LIVEKIT_API_SECRET:', LIVEKIT_API_SECRET ? '[REDACTED]' : 'not set');
-console.log('- OPENAI_API_KEY:', OPENAI_API_KEY ? '[REDACTED]' : 'not set');
-
 // Validate required LiveKit environment variables
 if (!LIVEKIT_URL || !LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
   console.error("Error: Missing required LiveKit environment variables:");
@@ -44,10 +27,9 @@ if (!LIVEKIT_URL || !LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
   process.exit(1);
 }
 
-
-
 // Import necessary modules after loading env variables
 import { WorkerOptions, cli, defineAgent, multimodal, JobContext } from "@livekit/agents";
+import { RoomEvent } from "@livekit/rtc-node";
 import * as openai from "@livekit/agents-plugin-openai";
 import type {
   LocalParticipant,
@@ -55,7 +37,6 @@ import type {
   TrackPublication,
 } from "@livekit/rtc-node";
 import { RemoteParticipant, TrackSource } from "@livekit/rtc-node";
-
 import { v4 as uuidv4 } from "uuid";
 
 function safeLogConfig(config: SessionConfig): string {
@@ -65,9 +46,19 @@ function safeLogConfig(config: SessionConfig): string {
 
 export default defineAgent({
   entry: async (ctx: JobContext) => {
+    console.log('Agent is starting and attempting to connect to LiveKit server.');
+
     await ctx.connect();
 
-    await runMultimodalAgent(ctx);
+    console.log('Agent connected to LiveKit server.');
+
+    console.log('Waiting for a participant to join the room...');
+
+    const participant = await ctx.waitForParticipant();
+
+    console.log(`Participant connected: ${participant.identity}`);
+
+    await runMultimodalAgent(ctx, participant);
   },
 });
 
@@ -84,7 +75,7 @@ interface SessionConfig {
   voice: string;
   temperature: number;
   maxOutputTokens?: number;
-  modalities: string[];
+  modalities: ["text", "audio"] | ["text"];
   turnDetection: TurnDetectionType | null;
 }
 
@@ -113,87 +104,76 @@ function modalitiesFromString(
   return modalitiesMap[modalities] || ["text", "audio"];
 }
 
-function getMicrophoneTrackSid(participant: Participant): string | undefined {
-  return Array.from(participant.trackPublications.values()).find(
-    (track: TrackPublication) => track.source === TrackSource.SOURCE_MICROPHONE,
-  )?.sid;
-}
-
-async function runMultimodalAgent(ctx: JobContext) {
+async function runMultimodalAgent(ctx: JobContext, participant: Participant) {
   try {
-    const config = {
-      instructions: "Your knowledge cutoff is 2023-10. You are a helpful, witty, and friendly AI. Act like a human, but remember that you aren't a human and that you can't do human things in the real world. Your voice and personality should be warm and engaging, with a lively and playful tone.",
-      voice: "alloy",
-      temperature: 0.8,
-      maxOutputTokens: Infinity,
-      modalities: ["text", "audio"] as ["text", "audio"],
-      turnDetection: {
-        type: "server_vad" as const,
-        threshold: 0.5,
-        silence_duration_ms: 200,
-        prefix_padding_ms: 300
+    const metadata = JSON.parse(participant.metadata || '{}');
+    const config = parseSessionConfig(metadata);
+    console.log(`Starting multimodal agent with config: ${safeLogConfig(config)}`);
+
+    const model = new openai.realtime.RealtimeModel({
+      apiKey: config.openaiApiKey,
+      instructions: config.instructions,
+      voice: config.voice,
+      temperature: config.temperature,
+      maxResponseOutputTokens: config.maxOutputTokens,
+      modalities: config.modalities,
+      turnDetection: config.turnDetection || undefined,
+    });
+
+    const agent = new multimodal.MultimodalAgent({ model });
+    let session = (await agent.start(ctx.room)) as openai.realtime.RealtimeSession;
+
+    // Handle participant disconnection
+    ctx.room.on(RoomEvent.ParticipantDisconnected, (disconnectedParticipant: Participant) => {
+      if (disconnectedParticipant.identity === participant.identity) {
+        console.log(`Participant ${participant.identity} disconnected.`);
+        // Close the session and clean up
+        session.close();
+        // Optionally exit or wait for reconnection
       }
-    };
+    });
 
-    let session: openai.realtime.RealtimeSession;
-    let isReconnecting = false;
+    // Handle participant attribute changes
+    ctx.room.on(
+      "participantAttributesChanged",
+      (
+        changedAttributes: Record<string, string>,
+        changedParticipant: Participant,
+      ) => {
+        if (changedParticipant.identity !== participant.identity) {
+          return;
+        }
 
-    const initSession = async () => {
-      const model = new openai.realtime.RealtimeModel({
-        apiKey: process.env.OPENAI_API_KEY!,
-        ...config
-      });
+        // Parse the metadata into an object
+        const participantMetadata = JSON.parse(changedParticipant.metadata || '{}');
 
-      const agent = new multimodal.MultimodalAgent({ model });
-      return (await agent.start(ctx.room)) as openai.realtime.RealtimeSession;
-    };
-
-    const restartSession = async () => {
-      if (isReconnecting) return; // Prevent multiple simultaneous reconnection attempts
-      
-      isReconnecting = true;
-      console.log('Restarting OpenAI Realtime session');
-      
-      try {
-        await session?.close().catch(e => console.log('Error closing session:', e));
-        session = await initSession();
-        
-        // Reinitialize the conversation
-        session.conversation.item.create({
-          type: "message",
-          role: "user",
-          content: [
-            {
-              type: "input_text",
-              text: "Session restarted. Please continue our conversation.",
-            },
-          ],
+        const newConfig = parseSessionConfig({
+          ...participantMetadata,
+          ...changedAttributes,
         });
-        session.response.create();
-        
-        console.log('Session restarted successfully');
-      } catch (error) {
-        console.error('Error restarting session:', error);
-      } finally {
-        isReconnecting = false;
-      }
-    };
 
-    session = await initSession();
+        session.sessionUpdate({
+          instructions: newConfig.instructions,
+          temperature: newConfig.temperature,
+          maxResponseOutputTokens: newConfig.maxOutputTokens,
+          modalities: newConfig.modalities,
+          turnDetection: newConfig.turnDetection,
+        });
+      },
+    );
 
     // Handle session close events
     session.on('close', async (code: number, reason: string) => {
       console.error(`OpenAI Realtime connection closed: [${code}] ${reason}`);
-      await restartSession();
+      // Decide whether to restart the session or perform cleanup
+      // For now, we'll exit the agent
+      process.exit(0);
     });
 
     // Handle session errors
     session.on('error', async (error: any) => {
       console.error('Session error:', error);
-      if (error.code === 'session_expired' || 
-          (error.type === 'invalid_request_error' && error.code === 'session_expired')) {
-        await restartSession();
-      }
+      // Handle errors, possibly restart the session
     });
 
     // Initial conversation start
@@ -214,11 +194,6 @@ async function runMultimodalAgent(ctx: JobContext) {
   }
 }
 
-cli.runApp(new WorkerOptions({ 
-  agent: fileURLToPath(import.meta.url)// Add this line
+cli.runApp(new WorkerOptions({
+  agent: fileURLToPath(import.meta.url)
 }));
-
-
-
-
-
