@@ -21,7 +21,7 @@ function TaskTabs({ tasks, assistantData }: Props) {
             Done
           </TabsTrigger>
         </TabsList>
-        <Button
+        {/* <Button
           variant={"secondary"}
           disabled={status != "awaiting_message"}
           onClick={() => {
@@ -34,7 +34,16 @@ function TaskTabs({ tasks, assistantData }: Props) {
         >
           Add task
           <Plus />
-        </Button>
+        </Button> */}
+         <Button
+          variant={"secondary"}
+          disabled={status != "awaiting_message"}
+          
+        >
+          Add task
+          <Plus />
+        </Button> 
+        
       </div>
       <TabsContent
         value="to do"
