@@ -58,8 +58,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
 }) => {
   const assistantData = useAssistant({ projectId, projectThreadId });
   const [token, setToken] = useState('');
-  const [audioEnabled, setAudioEnabled] = useState(false);
-  const roomName = 'Dona-Room';
+  const [roomName, setRoomName] = useState('');
   const name = 'User';
   
   
@@ -86,17 +85,19 @@ const ClientAssistantProvider: React.FC<Props> = ({
   useEffect(() => {
     const fetchToken = async () => {
       try {
+        const generatedRoomName = `room-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        console.log('🚀 Frontend: Generated room name:', generatedRoomName);
+        
         const response = await fetch('/api/get-participant-token', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            room: roomName,
+            room: generatedRoomName,
             username: name,
-            // Removed openaiAPIKey from the payload
             sessionConfig: {
-              model: process.env.OPENAI_ASSISTANT_ID,
+              model: "gpt-4o-realtime-preview-2024-10-01",
               transcriptionModel: "whisper1",
               turnDetection: "server_vad",
               modalities: "text_and_audio",
@@ -111,30 +112,30 @@ const ClientAssistantProvider: React.FC<Props> = ({
         });
 
         if (!response.ok) {
-          // Attempt to parse error message from response
           let errorMsg = 'Failed to fetch token';
           try {
             const errorData = await response.json();
             errorMsg = errorData.error || errorMsg;
           } catch (e) {
-            // If parsing fails, retain the default error message
           }
           throw new Error(errorMsg);
         }
 
         const data = await response.json();
         setToken(data.accessToken);
-        console.log('Token fetched:', data.accessToken); 
+        setRoomName(generatedRoomName);
+        console.log('✅ Frontend: Room setup complete:', {
+          roomName: generatedRoomName,
+          tokenReceived: !!data.accessToken,
+          serverUrl: process.env.NEXT_PUBLIC_LIVEKIT_URL
+        });
       } catch (error) {
-        console.error('Error fetching LiveKit token:', error);
+        console.error('❌ Frontend: Error in room setup:', error);
       }
     };
 
-    // Fetch token on component mount
     fetchToken();
-  }, []); 
-
-
+  }, []);
 
   return (
     <>
@@ -191,7 +192,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
           </AudioProvider>
         </LiveKitRoom>
         ) : (
-          <p>Loading...</p> // Optional: show a loading message while fetching the token
+          <p>Loading...</p>
         )}
       </div>
     </>

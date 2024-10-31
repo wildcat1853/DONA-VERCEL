@@ -17,7 +17,7 @@ const LIVEKIT_URL = process.env.LIVEKIT_URL;
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OPENAI_ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID; // Add this line
+const OPENAI_ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID;
 
 // Validate required LiveKit environment variables
 if (!LIVEKIT_URL || !LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
@@ -32,30 +32,59 @@ if (!LIVEKIT_URL || !LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
 import { WorkerOptions, cli, defineAgent, multimodal, JobContext } from "@livekit/agents";
 import { RoomEvent } from "@livekit/rtc-node";
 import * as openai from "@livekit/agents-plugin-openai";
-import type {
-  Participant,
-} from "@livekit/rtc-node";
+import type { Participant } from "@livekit/rtc-node";
+
+import { Room, RoomServiceClient } from 'livekit-server-sdk';
+
+// Initialize RoomServiceClient
+const livekitHost = LIVEKIT_URL;
+const roomService = new RoomServiceClient(livekitHost, LIVEKIT_API_KEY!, LIVEKIT_API_SECRET!);
 
 function safeLogConfig(config: SessionConfig): string {
   const safeConfig = { ...config, openaiApiKey: "[REDACTED]", model: "[REDACTED]" };
   return JSON.stringify(safeConfig);
 }
 
+// Define shutdown hook
+async function shutdownHook(roomName: string) {
+  try {
+    await roomService.deleteRoom(roomName);
+    console.log(`Room '${roomName}' has been deleted successfully.`);
+  } catch (error) {
+    console.error(`Failed to delete room '${roomName}':`, error);
+  }
+}
+
 export default defineAgent({
   entry: async (ctx: JobContext) => {
-    console.log('Agent is starting and attempting to connect to LiveKit server.');
+    console.log('🤖 Backend: Agent is starting...');
 
-    await ctx.connect();
+    try {
+      await ctx.connect();
+      console.log('🔗 Backend: Agent connected to LiveKit server');
+      console.log('🏠 Backend: Current room:', ctx.room.name);
+      
+      console.log('⏳ Backend: Waiting for participant...');
+      const participant = await ctx.waitForParticipant();
+      
+      console.log('👤 Backend: Participant connected:', {
+        identity: participant.identity,
+        metadata: participant.metadata // Log the full metadata
+      });
 
-    console.log('Agent connected to LiveKit server.');
+      // Extract room name from participant metadata
+      const metadata = JSON.parse(participant.metadata || '{}');
+      const roomName: string = metadata.roomName || "default-room";
 
-    console.log('Waiting for a participant to join the room...');
+      console.log('🎯 Backend: Extracted room name from metadata:', roomName);
 
-    const participant = await ctx.waitForParticipant();
+      // Register the shutdown hook with the room name
+      ctx.addShutdownCallback(() => shutdownHook(roomName));
 
-    console.log(`Participant connected: ${participant.identity}`);
-
-    await runMultimodalAgent(ctx, participant);
+      await runMultimodalAgent(ctx, participant, roomName);
+    } catch (error) {
+      console.error('💥 Backend: Error in agent:', error);
+    }
   },
 });
 
@@ -76,11 +105,10 @@ interface SessionConfig {
   turnDetection?: TurnDetectionType;
 }
 
-
 function parseSessionConfig(data: any): SessionConfig {
   return {
-    openaiApiKey: process.env.OPENAI_API_KEY || "",
-    model: data.model || process.env.OPENAI_ASSISTANT_ID || "",
+    openaiApiKey: OPENAI_API_KEY || "",
+    model: data.model || "gpt-4o-realtime-preview-2024-10-01", // Updated default model
     voice: data.voice || "",
     temperature: parseFloat(data.temperature || "0.8"),
     maxOutputTokens:
@@ -92,7 +120,6 @@ function parseSessionConfig(data: any): SessionConfig {
   };
 }
 
-
 function modalitiesFromString(
   modalities: string,
 ): ["text", "audio"] | ["text"] {
@@ -103,15 +130,20 @@ function modalitiesFromString(
   return modalitiesMap[modalities] || ["text", "audio"];
 }
 
-async function runMultimodalAgent(ctx: JobContext, participant: Participant) {
+async function runMultimodalAgent(ctx: JobContext, participant: Participant, roomName: string) {
   try {
     const metadata = JSON.parse(participant.metadata || '{}');
     const config = parseSessionConfig(metadata);
-    console.log(`Starting multimodal agent with config: ${safeLogConfig(config)}`);
+    console.log('🔧 Backend: Agent configuration:', {
+      roomName: roomName,
+      model: config.model,
+      voice: config.voice,
+      modalities: config.modalities
+    });
 
     const model = new openai.realtime.RealtimeModel({
       apiKey: config.openaiApiKey,
-      model: config.model,
+      model: "gpt-4o-realtime-preview-2024-10-01", // Updated model
       voice: config.voice,
       temperature: config.temperature,
       maxResponseOutputTokens: config.maxOutputTokens,
