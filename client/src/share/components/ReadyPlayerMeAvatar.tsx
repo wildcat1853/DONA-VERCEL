@@ -64,6 +64,10 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
     // Add more as needed
   ];
 
+  // Smile animation parameters
+  const smileAmplitude = 0.4; // Increased for visibility
+  const smileFrequency = 0.5; // Oscillations per second
+
   // Initialize dataArray
   useEffect(() => {
     if (analyser) {
@@ -158,6 +162,29 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
     animate();
   };
 
+  // Function to animate idle smile smoothly
+  const animateIdleSmile = (elapsedTime: number) => {
+    if (!avatarMeshRef.current) return;
+
+    const smileLeftIndex = avatarMeshRef.current.morphTargetDictionary!['mouthSmileLeft'];
+    const smileRightIndex = avatarMeshRef.current.morphTargetDictionary!['mouthSmileRight'];
+
+    if (smileLeftIndex === undefined || smileRightIndex === undefined) {
+      console.warn('Smile morph targets not found.');
+      return;
+    }
+
+    // Calculate new influence using sine wave, offset to oscillate between 0 and smileAmplitude
+    const smileValue = smileAmplitude * (Math.sin(2 * Math.PI * smileFrequency * elapsedTime) + 1) / 2;
+
+    // Apply to morph targets
+    avatarMeshRef.current.morphTargetInfluences![smileLeftIndex] = THREE.MathUtils.clamp(smileValue, 0, 1);
+    avatarMeshRef.current.morphTargetInfluences![smileRightIndex] = THREE.MathUtils.clamp(smileValue, 0, 1);
+
+    // Optional: Log the smile values for debugging
+    console.log(`Idle smile value: ${smileValue.toFixed(2)}`);
+  };
+
   // Animation frame update
   useFrame((state, delta) => {
     if (
@@ -199,7 +226,7 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
         // Update eye and eyebrow morphs
         [...eyeMorphTargets, ...eyebrowMorphTargets].forEach((morphName) => 
           updateEyeMorphTarget(morphName, time));
-
+        
         // Reset unused morph targets (excluding idle morph targets)
         resetUnusedMorphTargets([
           ...mouthMorphTargets,
@@ -208,8 +235,10 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
           ...eyeMorphTargets,
           ...eyebrowMorphTargets
         ]);
+      } else {
+        // Handle idle state: Animate smile smoothly
+        animateIdleSmile(state.clock.getElapsedTime());
       }
-      // No else block to prevent interfering with idle gestures
     } else {
       // Log why the frame update didn't process
       console.log('Frame update skipped:', {
