@@ -11,6 +11,8 @@ interface ReadyPlayerMeAvatarProps extends GroupProps {
   isPlaying: boolean;
 }
 
+// before handgestures
+
 const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   avatarUrl,
   analyser,
