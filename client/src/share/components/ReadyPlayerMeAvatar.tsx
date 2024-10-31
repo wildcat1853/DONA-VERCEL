@@ -113,7 +113,7 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
 
   // Function to get a random blink interval between 2 to 5 seconds
   const getRandomBlinkInterval = () => {
-    return THREE.MathUtils.randFloat(2, 5);
+    return THREE.MathUtils.randFloat(0.3, 2);
   };
 
   // Function to trigger an idle gesture
