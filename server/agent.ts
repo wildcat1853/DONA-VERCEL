@@ -17,6 +17,7 @@ const LIVEKIT_URL = process.env.LIVEKIT_URL;
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID; // Add this line
 
 // Validate required LiveKit environment variables
 if (!LIVEKIT_URL || !LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
@@ -32,15 +33,11 @@ import { WorkerOptions, cli, defineAgent, multimodal, JobContext } from "@liveki
 import { RoomEvent } from "@livekit/rtc-node";
 import * as openai from "@livekit/agents-plugin-openai";
 import type {
-  LocalParticipant,
   Participant,
-  TrackPublication,
 } from "@livekit/rtc-node";
-import { RemoteParticipant, TrackSource } from "@livekit/rtc-node";
-import { v4 as uuidv4 } from "uuid";
 
 function safeLogConfig(config: SessionConfig): string {
-  const safeConfig = { ...config, openaiApiKey: "[REDACTED]" };
+  const safeConfig = { ...config, openaiApiKey: "[REDACTED]", model: "[REDACTED]" };
   return JSON.stringify(safeConfig);
 }
 
@@ -71,18 +68,19 @@ type TurnDetectionType = {
 
 interface SessionConfig {
   openaiApiKey: string;
-  instructions: string;
+  model: string;
   voice: string;
   temperature: number;
   maxOutputTokens?: number;
   modalities: ["text", "audio"] | ["text"];
-  turnDetection: TurnDetectionType | null;
+  turnDetection?: TurnDetectionType;
 }
+
 
 function parseSessionConfig(data: any): SessionConfig {
   return {
     openaiApiKey: process.env.OPENAI_API_KEY || "",
-    instructions: data.instructions || "",
+    model: data.model || process.env.OPENAI_ASSISTANT_ID || "",
     voice: data.voice || "",
     temperature: parseFloat(data.temperature || "0.8"),
     maxOutputTokens:
@@ -90,9 +88,10 @@ function parseSessionConfig(data: any): SessionConfig {
         ? Infinity
         : parseInt(data.max_output_tokens) || undefined,
     modalities: modalitiesFromString(data.modalities || "text_and_audio"),
-    turnDetection: data.turn_detection ? JSON.parse(data.turn_detection) : null,
+    turnDetection: data.turn_detection ? JSON.parse(data.turn_detection) : undefined,
   };
 }
+
 
 function modalitiesFromString(
   modalities: string,
@@ -112,12 +111,12 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant) {
 
     const model = new openai.realtime.RealtimeModel({
       apiKey: config.openaiApiKey,
-      instructions: config.instructions,
+      model: config.model,
       voice: config.voice,
       temperature: config.temperature,
       maxResponseOutputTokens: config.maxOutputTokens,
       modalities: config.modalities,
-      turnDetection: config.turnDetection || undefined,
+      turnDetection: config.turnDetection,
     });
 
     const agent = new multimodal.MultimodalAgent({ model });
@@ -153,7 +152,6 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant) {
         });
 
         session.sessionUpdate({
-          instructions: newConfig.instructions,
           temperature: newConfig.temperature,
           maxResponseOutputTokens: newConfig.maxOutputTokens,
           modalities: newConfig.modalities,
@@ -176,18 +174,7 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant) {
       // Handle errors, possibly restart the session
     });
 
-    // Initial conversation start
-    session.conversation.item.create({
-      type: "message",
-      role: "user",
-      content: [
-        {
-          type: "input_text",
-          text: "Please begin the interaction with the user in a manner consistent with your instructions.",
-        },
-      ],
-    });
-    session.response.create();
+    // Since you're using a predefined assistant, you might not need to send an initial message
 
   } catch (error) {
     console.error("Error in runMultimodalAgent:", error);

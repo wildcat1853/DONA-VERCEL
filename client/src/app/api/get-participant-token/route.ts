@@ -8,6 +8,7 @@ import { PlaygroundState } from "@/data/playground-state";
 interface TokenRequestBody {
   instructions: string;
   sessionConfig: {
+    model: string;
     turnDetection: string;
     modalities: string;
     voice: string;
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
     const {
       instructions,
       sessionConfig: {
+        model,
         turnDetection,
         modalities,
         voice,
@@ -65,6 +67,7 @@ export async function POST(request: Request) {
     const at = new AccessToken(apiKey, apiSecret, {
       identity: "User", // Change as per your requirement
       metadata: JSON.stringify({
+        model: model,
         instructions: instructions,
         modalities: modalities,
         voice: voice,
