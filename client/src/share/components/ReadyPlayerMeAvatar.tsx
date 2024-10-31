@@ -20,11 +20,11 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   const { scene } = useGLTF(avatarUrl) as any;
   const avatarMeshRef = useRef<THREE.SkinnedMesh | null>(null);
   const dataArrayRef = useRef<Float32Array>();
-  
+
   // Constants for audio processing
   const smoothingFactor = 0.3;
   const audioThreshold = 0.01;
-  
+
   // Refs for animation
   const smoothedAmplitudeRef = useRef(0);
   const previousMorphValuesRef = useRef<{ [key: string]: number }>({});
@@ -33,6 +33,12 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   const idleTimerRef = useRef<number>(0);
   const idleIntervalRef = useRef<number>(0);
   const isIdleAnimatingRef = useRef<boolean>(false);
+
+  // Blink state
+  const isBlinkingRef = useRef<boolean>(false);
+  const blinkStartTimeRef = useRef<number>(0);
+  const nextBlinkTimeRef = useRef<number>(0);
+  const blinkDuration = 0.2; // seconds
 
   // Define types for morph targets if necessary
   type MorphTargetNames = 
@@ -66,7 +72,7 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
 
   // Smile animation parameters
   const smileAmplitude = 0.4; // Increased for visibility
-  const smileFrequency = 0.5; // Oscillations per second
+  const smileFrequency = 0.9; // Oscillations per second
 
   // Initialize dataArray
   useEffect(() => {
@@ -85,8 +91,6 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
             morphTargets: Object.keys(child.morphTargetDictionary || {})
           });
         }
-        // If using bone animations for gestures
-        // Initialize references to bones if necessary
       });
 
       // Initialize idle animation parameters
@@ -97,12 +101,20 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
         }
       }, 10000); // Check every 10 seconds
 
+      // Initialize first blink time
+      nextBlinkTimeRef.current = performance.now() / 1000 + getRandomBlinkInterval();
+
       // Cleanup on unmount
       return () => {
         clearInterval(idleIntervalRef.current);
       };
     }
   }, [scene, isPlaying]);
+
+  // Function to get a random blink interval between 2 to 5 seconds
+  const getRandomBlinkInterval = () => {
+    return THREE.MathUtils.randFloat(2, 5);
+  };
 
   // Function to trigger an idle gesture
   const triggerIdleGesture = () => {
@@ -177,16 +189,94 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
     // Calculate new influence using sine wave, offset to oscillate between 0 and smileAmplitude
     const smileValue = smileAmplitude * (Math.sin(2 * Math.PI * smileFrequency * elapsedTime) + 1) / 2;
 
-    // Apply to morph targets
-    avatarMeshRef.current.morphTargetInfluences![smileLeftIndex] = THREE.MathUtils.clamp(smileValue, 0, 1);
-    avatarMeshRef.current.morphTargetInfluences![smileRightIndex] = THREE.MathUtils.clamp(smileValue, 0, 1);
+    // Apply to morph targets with smooth transition
+    avatarMeshRef.current.morphTargetInfluences![smileLeftIndex] = THREE.MathUtils.lerp(
+      avatarMeshRef.current.morphTargetInfluences![smileLeftIndex],
+      smileValue,
+      0.05 // Smoother transition
+    );
+    avatarMeshRef.current.morphTargetInfluences![smileRightIndex] = THREE.MathUtils.lerp(
+      avatarMeshRef.current.morphTargetInfluences![smileRightIndex],
+      smileValue,
+      0.05 // Smoother transition
+    );
 
     // Optional: Log the smile values for debugging
     console.log(`Idle smile value: ${smileValue.toFixed(2)}`);
   };
 
+  // Function to animate idle eyebrows smoothly
+  const animateIdleEyebrows = (elapsedTime: number) => {
+    if (!avatarMeshRef.current) return;
+
+    const eyebrowMorphs = ['browOuterUpLeft', 'browOuterUpRight', 'browInnerUp'];
+
+    eyebrowMorphs.forEach((morphName) => {
+      const index = avatarMeshRef.current!.morphTargetDictionary![morphName];
+      if (index === undefined) return;
+
+      // Calculate new influence using sine wave for subtle eyebrow movements
+      const eyebrowValue = 0.1 * (Math.sin(elapsedTime * 0.5 + index) + 1) / 2; // Adjust frequency and amplitude as needed
+
+      // Apply to morph targets with smooth transition
+      avatarMeshRef.current!.morphTargetInfluences![index] = THREE.MathUtils.lerp(
+        avatarMeshRef.current!.morphTargetInfluences![index],
+        eyebrowValue,
+        0.05 // Smooth transition
+      );
+
+      // Optional: Log the eyebrow values for debugging
+      console.log(`Idle eyebrow '${morphName}' value: ${eyebrowValue.toFixed(2)}`);
+    });
+  };
+
+  // Function to initiate a blink
+  const initiateBlink = () => {
+    if (!avatarMeshRef.current) return;
+
+    const blinkLeftIndex = avatarMeshRef.current.morphTargetDictionary!['eyeBlinkLeft'];
+    const blinkRightIndex = avatarMeshRef.current.morphTargetDictionary!['eyeBlinkRight'];
+
+    if (blinkLeftIndex === undefined || blinkRightIndex === undefined) {
+      console.warn('Blink morph targets not found.');
+      return;
+    }
+
+    isBlinkingRef.current = true;
+    blinkStartTimeRef.current = performance.now() / 1000;
+  };
+
   // Animation frame update
   useFrame((state, delta) => {
+    const currentTime = state.clock.getElapsedTime();
+
+    // Handle blinking
+    if (avatarMeshRef.current) {
+      if (!isBlinkingRef.current && currentTime >= nextBlinkTimeRef.current) {
+        initiateBlink();
+      }
+
+      if (isBlinkingRef.current) {
+        const elapsed = currentTime - blinkStartTimeRef.current;
+        if (elapsed <= blinkDuration / 2) {
+          // Closing eyes
+          const blinkProgress = elapsed / (blinkDuration / 2);
+          const blinkValue = THREE.MathUtils.lerp(0, 1, blinkProgress);
+          setBlinkMorphs(blinkValue);
+        } else if (elapsed <= blinkDuration) {
+          // Opening eyes
+          const blinkProgress = (elapsed - blinkDuration / 2) / (blinkDuration / 2);
+          const blinkValue = THREE.MathUtils.lerp(1, 0, blinkProgress);
+          setBlinkMorphs(blinkValue);
+        } else {
+          // Blink completed
+          setBlinkMorphs(0);
+          isBlinkingRef.current = false;
+          nextBlinkTimeRef.current = currentTime + getRandomBlinkInterval();
+        }
+      }
+    }
+
     if (
       analyser &&
       dataArrayRef.current &&
@@ -195,8 +285,6 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
       avatarMeshRef.current.morphTargetInfluences
     ) {
       if (isPlaying) {
-        const time = state.clock.getElapsedTime();
-        
         // Get real-time audio data
         analyser.getFloatTimeDomainData(dataArrayRef.current);
 
@@ -223,11 +311,13 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
         // Update mouth and lip morphs
         [...mouthMorphTargets, ...lipMorphTargets, ...cheekMorphTargets].forEach(updateMorphTarget);
 
-        // Update eye and eyebrow morphs
-        [...eyeMorphTargets, ...eyebrowMorphTargets].forEach((morphName) => 
-          updateEyeMorphTarget(morphName, time));
-        
-        // Reset unused morph targets (excluding idle morph targets)
+        // Update eye morphs
+        eyeMorphTargets.forEach(morphName => updateEyeMorphTarget(morphName, currentTime));
+
+        // Update eyebrow morphs
+        eyebrowMorphTargets.forEach(morphName => updateEyebrowMorphTarget(morphName, currentTime));
+
+        // Reset unused morph targets (excluding used morphs)
         resetUnusedMorphTargets([
           ...mouthMorphTargets,
           ...lipMorphTargets,
@@ -236,8 +326,9 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
           ...eyebrowMorphTargets
         ]);
       } else {
-        // Handle idle state: Animate smile smoothly
-        animateIdleSmile(state.clock.getElapsedTime());
+        // Handle idle state: Animate smile and eyebrows smoothly
+        animateIdleSmile(currentTime);
+        animateIdleEyebrows(currentTime);
       }
     } else {
       // Log why the frame update didn't process
@@ -278,24 +369,37 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
     console.log(`Updated morph '${morphName}':`, clampedValue);
   };
 
-  // Helper function to update eye-related morph targets
+  // Helper function to update eye morph targets
   const updateEyeMorphTarget = (morphName: string, time: number) => {
     const index = avatarMeshRef.current!.morphTargetDictionary![morphName];
     if (index === undefined) return;
 
     const previousValue = previousMorphValuesRef.current[morphName] || 0;
-    const blinkFrequency = Math.sin(time * 1.5) > 0.95;
-    const randomMovement = Math.sin(time * 1.2 + Math.cos(time * 0.8)) * 0.1;
-    
-    let targetValue = randomMovement;
-    
-    if (morphName.includes('eyeSquint') && blinkFrequency) {
-      targetValue += 0.8;
+    let targetValue = 0;
+
+    if (morphName.includes('eyeSquint')) {
+      const blink = Math.sin(time * 1.5) > 0.95;
+      targetValue = blink ? 0.3 : 0; // Adjust blink intensity as needed
+    } else if (morphName.includes('eyeWide')) {
+      targetValue = Math.abs(Math.sin(time * 2)) * 0.2; // Widen eyes periodically
     }
-    
-    if (morphName.includes('brow')) {
-      targetValue += smoothedAmplitudeRef.current * 0.15;
-    }
+
+    const newValue = THREE.MathUtils.lerp(previousValue, targetValue, 0.25);
+    const clampedValue = THREE.MathUtils.clamp(newValue, 0, 0.5); // Limit to prevent over-influence
+
+    avatarMeshRef.current!.morphTargetInfluences![index] = clampedValue;
+    previousMorphValuesRef.current[morphName] = clampedValue;
+
+    console.log(`Updated eye morph '${morphName}':`, clampedValue);
+  };
+
+  // Helper function to update eyebrow morph targets
+  const updateEyebrowMorphTarget = (morphName: string, time: number) => {
+    const index = avatarMeshRef.current!.morphTargetDictionary![morphName];
+    if (index === undefined) return;
+
+    const previousValue = previousMorphValuesRef.current[morphName] || 0;
+    let targetValue = smoothedAmplitudeRef.current * 0.15 + Math.sin(time * 1.2) * 0.05; // Audio-driven + subtle movement
 
     const newValue = THREE.MathUtils.lerp(previousValue, targetValue, 0.25);
     const clampedValue = THREE.MathUtils.clamp(newValue, 0, 0.5);
@@ -303,7 +407,23 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
     avatarMeshRef.current!.morphTargetInfluences![index] = clampedValue;
     previousMorphValuesRef.current[morphName] = clampedValue;
 
-    console.log(`Updated eye morph '${morphName}':`, clampedValue);
+    console.log(`Updated eyebrow morph '${morphName}':`, clampedValue);
+  };
+
+  // Helper function to set blink morphs
+  const setBlinkMorphs = (value: number) => {
+    if (!avatarMeshRef.current) return;
+
+    const blinkLeftIndex = avatarMeshRef.current.morphTargetDictionary!['eyeBlinkLeft'];
+    const blinkRightIndex = avatarMeshRef.current.morphTargetDictionary!['eyeBlinkRight'];
+
+    if (blinkLeftIndex === undefined || blinkRightIndex === undefined) {
+      console.warn('Blink morph targets not found.');
+      return;
+    }
+
+    avatarMeshRef.current.morphTargetInfluences![blinkLeftIndex] = THREE.MathUtils.clamp(value, 0, 1);
+    avatarMeshRef.current.morphTargetInfluences![blinkRightIndex] = THREE.MathUtils.clamp(value, 0, 1);
   };
 
   // Helper function to reset unused morph targets
@@ -314,6 +434,7 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
         const index = avatarMeshRef.current!.morphTargetDictionary![morphName];
         if (index !== undefined) {
           avatarMeshRef.current!.morphTargetInfluences![index] = 0;
+          console.log(`Reset morph '${morphName}' to 0`);
         }
       }
     });
