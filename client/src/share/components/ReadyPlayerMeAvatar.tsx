@@ -11,182 +11,207 @@ interface ReadyPlayerMeAvatarProps extends GroupProps {
   isPlaying: boolean;
 }
 
-// before handgestures
-
 const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   avatarUrl,
   analyser,
   isPlaying,
   ...props
 }) => {
-
-  console.log('ReadyPlayerMeAvatar component mounted');
-
   const { scene } = useGLTF(avatarUrl) as any;
   const avatarMeshRef = useRef<THREE.SkinnedMesh | null>(null);
   const dataArrayRef = useRef<Float32Array>();
   
-  // Adjust these values at the top of the component
-  const smoothingFactor = 0.3; // Reduced from 0.7 for less smoothing/delay
-  const audioThreshold = 0.01; // Add threshold to detect silence
-
-  // For smoothing audio amplitude
+  // Constants for audio processing
+  const smoothingFactor = 0.3;
+  const audioThreshold = 0.01;
+  
+  // Refs for animation
   const smoothedAmplitudeRef = useRef(0);
-
-  // For interpolating morph target values
   const previousMorphValuesRef = useRef<{ [key: string]: number }>({});
 
-  // For smiling animation
-  const lastSmileTimeRef = useRef(0);
-  const smileDurationRef = useRef(0);
-  const timeBetweenSmilesRef = useRef(0);
+  // Idle animation state
+  const idleTimerRef = useRef<number>(0);
+  const idleIntervalRef = useRef<number>(0);
+  const isIdleAnimatingRef = useRef<boolean>(false);
 
-  // For hand gesture animation
-  const lastGestureTimeRef = useRef(0);
-  const gestureDurationRef = useRef(0);
-  const timeBetweenGesturesRef = useRef(0);
-  const rightArmBonesRef = useRef<{[key: string]: THREE.Bone}>({});
+  // Define types for morph targets if necessary
+  type MorphTargetNames = 
+    | 'eyeBlinkLeft'
+    | 'eyeBlinkRight'
+    | 'mouthSmileLeft'
+    | 'mouthSmileRight'
+    | 'cheekPuff'
+    | 'browInnerUp'
+    | 'browOuterUpLeft'
+    | 'browOuterUpRight'
+    | 'mouthPucker'
+    | 'mouthFunnel'
+    | 'tongueOut';
 
-  // Initialize dataArray once
+  // Add any additional morph targets for idle gestures
+  const idleMorphTargets: MorphTargetNames[] = [
+    'eyeBlinkLeft',
+    'eyeBlinkRight',
+    'mouthSmileLeft',
+    'mouthSmileRight',
+    'cheekPuff',
+    'browInnerUp',
+    'browOuterUpLeft',
+    'browOuterUpRight',
+    'mouthPucker',
+    'mouthFunnel',
+    'tongueOut',
+    // Add more as needed
+  ];
+
+  // Initialize dataArray
   useEffect(() => {
     if (analyser) {
       dataArrayRef.current = new Float32Array(analyser.frequencyBinCount);
     }
   }, [analyser]);
 
+  // Initialize avatar mesh and set up idle gesture interval
   useEffect(() => {
     if (scene) {
       scene.traverse((child: any) => {
         if (child.isSkinnedMesh && child.name === 'Wolf3D_Head') {
           avatarMeshRef.current = child;
-          console.log('Avatar mesh details:', {
-            name: child.name,
-            morphTargets: child.morphTargetDictionary,
-            morphInfluences: child.morphTargetInfluences,
-            availableMorphs: Object.keys(child.morphTargetDictionary || {})
+          console.log('Avatar mesh initialized:', {
+            morphTargets: Object.keys(child.morphTargetDictionary || {})
           });
         }
-        if (child.isBone) {
-          if (['RightHand', 'RightLowerArm', 'RightUpperArm'].includes(child.name)) {
-            rightArmBonesRef.current[child.name] = child;
-          }
-        }
+        // If using bone animations for gestures
+        // Initialize references to bones if necessary
       });
 
-      // Initialize smiling animation parameters
-      lastSmileTimeRef.current = performance.now() / 1000;
-      smileDurationRef.current = 2;
-      timeBetweenSmilesRef.current = Math.random() * 10 + 5;
+      // Initialize idle animation parameters
+      idleTimerRef.current = performance.now();
+      idleIntervalRef.current = window.setInterval(() => {
+        if (!isPlaying && !isIdleAnimatingRef.current && avatarMeshRef.current) {
+          triggerIdleGesture();
+        }
+      }, 10000); // Check every 10 seconds
 
-      // Initialize hand gesture animation parameters
-      lastGestureTimeRef.current = performance.now() / 1000;
-      gestureDurationRef.current = 2;
-      timeBetweenGesturesRef.current = Math.random() * 20 + 10;
+      // Cleanup on unmount
+      return () => {
+        clearInterval(idleIntervalRef.current);
+      };
     }
-  }, [scene]);
+  }, [scene, isPlaying]);
 
+  // Function to trigger an idle gesture
+  const triggerIdleGesture = () => {
+    if (!avatarMeshRef.current) return;
+
+    console.log('Triggering idle gesture');
+
+    isIdleAnimatingRef.current = true;
+
+    // Randomly select an idle gesture
+    const gesture = idleMorphTargets[Math.floor(Math.random() * idleMorphTargets.length)];
+
+    const morphIndex = avatarMeshRef.current?.morphTargetDictionary?.[gesture];
+    if (morphIndex === undefined) {
+      console.warn(`Morph target '${gesture}' not found on the avatar.`);
+      isIdleAnimatingRef.current = false;
+      return;
+    }
+
+    // Animate the morph target to a random value and back
+    const duration = 2; // seconds
+    const targetValue = THREE.MathUtils.randFloat(0.1, 0.3); // Adjust based on gesture
+
+    // Tweening using simple linear interpolation
+    const startTime = performance.now() / 1000;
+    const animate = () => {
+      const currentTime = performance.now() / 1000;
+      const elapsed = currentTime - startTime;
+      if (elapsed > duration) {
+        // Reset morph target
+        avatarMeshRef.current!.morphTargetInfluences![morphIndex] = 0;
+        previousMorphValuesRef.current[gesture] = 0;
+        isIdleAnimatingRef.current = false;
+        console.log(`Idle gesture '${gesture}' animation completed and reset.`);
+        return;
+      }
+
+      // Simple easing function (easeInOutQuad)
+      const t = elapsed / duration;
+      const easedT = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+
+      // Apply morph target influence
+      const previousValue = previousMorphValuesRef.current[gesture] || 0;
+      const lerpedValue = THREE.MathUtils.lerp(
+        previousValue,
+        targetValue * easedT,
+        0.1
+      );
+      const clampedValue = THREE.MathUtils.clamp(lerpedValue, 0, 1);
+
+      avatarMeshRef.current!.morphTargetInfluences![morphIndex] = clampedValue;
+      previousMorphValuesRef.current[gesture] = clampedValue;
+
+      requestAnimationFrame(animate);
+    };
+
+    animate();
+  };
+
+  // Animation frame update
   useFrame((state, delta) => {
-    if (analyser && dataArrayRef.current && avatarMeshRef.current && 
-        avatarMeshRef.current.morphTargetDictionary && 
-        avatarMeshRef.current.morphTargetInfluences && 
-        isPlaying) {
-      const time = state.clock.getElapsedTime();
-      
-      // Get real-time audio data
-      analyser.getFloatTimeDomainData(dataArrayRef.current);
+    if (
+      analyser &&
+      dataArrayRef.current &&
+      avatarMeshRef.current &&
+      avatarMeshRef.current.morphTargetDictionary &&
+      avatarMeshRef.current.morphTargetInfluences
+    ) {
+      if (isPlaying) {
+        const time = state.clock.getElapsedTime();
+        
+        // Get real-time audio data
+        analyser.getFloatTimeDomainData(dataArrayRef.current);
 
-      // Calculate amplitude
-      let sum = 0;
-      for (let i = 0; i < dataArrayRef.current.length; i++) {
-        sum += Math.abs(dataArrayRef.current[i]);
+        // Calculate amplitude
+        const currentAmplitude = Array.from(dataArrayRef.current)
+          .reduce((sum, val) => sum + Math.abs(val), 0) / dataArrayRef.current.length;
+
+        // Update smoothed amplitude
+        if (currentAmplitude < audioThreshold) {
+          smoothedAmplitudeRef.current *= 0.8;
+        } else {
+          smoothedAmplitudeRef.current = 
+            smoothingFactor * smoothedAmplitudeRef.current + 
+            (1 - smoothingFactor) * currentAmplitude;
+        }
+
+        // Define morph target groups
+        const mouthMorphTargets = ['mouthOpen', 'mouthFunnel', 'jawOpen'];
+        const lipMorphTargets = ['mouthLowerDown', 'mouthUpperUp', 'mouthPucker'];
+        const cheekMorphTargets = ['cheekPuff', 'cheekSquintLeft', 'cheekSquintRight'];
+        const eyeMorphTargets = ['eyeSquintLeft', 'eyeSquintRight', 'eyeWideLeft', 'eyeWideRight'];
+        const eyebrowMorphTargets = ['browOuterUpLeft', 'browOuterUpRight', 'browInnerUp'];
+
+        // Update mouth and lip morphs
+        [...mouthMorphTargets, ...lipMorphTargets, ...cheekMorphTargets].forEach(updateMorphTarget);
+
+        // Update eye and eyebrow morphs
+        [...eyeMorphTargets, ...eyebrowMorphTargets].forEach((morphName) => 
+          updateEyeMorphTarget(morphName, time));
+
+        // Reset unused morph targets (excluding idle morph targets)
+        resetUnusedMorphTargets([
+          ...mouthMorphTargets,
+          ...lipMorphTargets,
+          ...cheekMorphTargets,
+          ...eyeMorphTargets,
+          ...eyebrowMorphTargets
+        ]);
       }
-      const currentAmplitude = sum / dataArrayRef.current.length;
-
-      // Quick reset when audio is below threshold
-      if (currentAmplitude < audioThreshold) {
-        smoothedAmplitudeRef.current *= 0.8; // Quick fadeout
-      } else {
-        // Less smoothing for more immediate response
-        smoothedAmplitudeRef.current = 
-          smoothingFactor * smoothedAmplitudeRef.current + 
-          (1 - smoothingFactor) * currentAmplitude;
-      }
-
-      // Enhanced morph target groups
-      const mouthMorphTargets = ['mouthOpen', 'mouthFunnel', 'jawOpen'];  // Added jawOpen
-      const lipMorphTargets = ['mouthLowerDown', 'mouthUpperUp', 'mouthPucker'];
-      const cheekMorphTargets = ['cheekPuff', 'cheekSquintLeft', 'cheekSquintRight'];
-      const eyeMorphTargets = ['eyeSquintLeft', 'eyeSquintRight', 'eyeWideLeft', 'eyeWideRight'];
-      const eyebrowMorphTargets = ['browOuterUpLeft', 'browOuterUpRight', 'browInnerUp'];
-
-      // Update morph targets based on audio with enhanced movements
-      [...mouthMorphTargets, ...lipMorphTargets, ...cheekMorphTargets].forEach((morphTargetName) => {
-        const index = avatarMeshRef.current!.morphTargetDictionary![morphTargetName];
-        if (index !== undefined) {
-          const previousValue = previousMorphValuesRef.current[morphTargetName] || 0;
-          
-          let audioInfluence = smoothedAmplitudeRef.current;
-          let maxValue = 0.5;
-          let lerpSpeed = 0.5; // Increased for faster response
-
-          if (morphTargetName === 'jawOpen') {
-            audioInfluence *= 0.8;
-            maxValue = 0.7;
-            lerpSpeed = 0.6;
-          }
-
-          const targetValue = currentAmplitude < audioThreshold ? 0 : audioInfluence;
-          const newValue = THREE.MathUtils.lerp(previousValue, targetValue, lerpSpeed);
-          const clampedValue = THREE.MathUtils.clamp(newValue, 0, maxValue);
-          avatarMeshRef.current!.morphTargetInfluences![index] = clampedValue;
-          previousMorphValuesRef.current[morphTargetName] = clampedValue;
-        }
-      });
-
-      // Faster eye and eyebrow movements
-      [...eyeMorphTargets, ...eyebrowMorphTargets].forEach((morphTargetName) => {
-        const index = avatarMeshRef.current!.morphTargetDictionary![morphTargetName];
-        if (index !== undefined) {
-          const previousValue = previousMorphValuesRef.current[morphTargetName] || 0;
-          
-          const blinkFrequency = Math.sin(time * 1.5) > 0.95;
-          const randomMovement = Math.sin(time * 1.2 + Math.cos(time * 0.8)) * 0.1;
-          
-          let targetValue = randomMovement;
-          
-          if (morphTargetName.includes('eyeSquint') && blinkFrequency) {
-            targetValue += 0.8;
-          }
-          
-          if (morphTargetName.includes('brow')) {
-            targetValue += smoothedAmplitudeRef.current * 0.15;
-          }
-
-          const newValue = THREE.MathUtils.lerp(previousValue, targetValue, 0.25);
-          const clampedValue = THREE.MathUtils.clamp(newValue, 0, 0.5);
-          avatarMeshRef.current!.morphTargetInfluences![index] = clampedValue;
-          previousMorphValuesRef.current[morphTargetName] = clampedValue;
-        }
-      });
-
-      // Reset other morph targets
-      const allMorphTargets = Object.keys(avatarMeshRef.current.morphTargetDictionary);
-      allMorphTargets.forEach((morphTargetName) => {
-        if (
-          !mouthMorphTargets.includes(morphTargetName) &&
-          !lipMorphTargets.includes(morphTargetName) &&
-          !cheekMorphTargets.includes(morphTargetName) &&
-          !eyeMorphTargets.includes(morphTargetName) &&
-          !eyebrowMorphTargets.includes(morphTargetName)
-        ) {
-          const index = avatarMeshRef.current!.morphTargetDictionary![morphTargetName];
-          if (index !== undefined) {
-            avatarMeshRef.current!.morphTargetInfluences![index] = 0;
-          }
-        }
-      });
-    } else if (analyser) {
-      // Log why the frame update didn't process only if analyser is available
+      // No else block to prevent interfering with idle gestures
+    } else {
+      // Log why the frame update didn't process
       console.log('Frame update skipped:', {
         hasAnalyser: !!analyser,
         hasDataArray: !!dataArrayRef.current,
@@ -197,6 +222,73 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
       });
     }
   });
+
+  // Helper function to update mouth-related morph targets
+  const updateMorphTarget = (morphName: string) => {
+    const index = avatarMeshRef.current!.morphTargetDictionary![morphName];
+    if (index === undefined) return;
+
+    const previousValue = previousMorphValuesRef.current[morphName] || 0;
+    let audioInfluence = smoothedAmplitudeRef.current;
+    let maxValue = 0.5;
+    let lerpSpeed = 0.5;
+
+    if (morphName === 'jawOpen') {
+      audioInfluence *= 0.8;
+      maxValue = 0.7;
+      lerpSpeed = 0.6;
+    }
+
+    const targetValue = smoothedAmplitudeRef.current < audioThreshold ? 0 : audioInfluence;
+    const newValue = THREE.MathUtils.lerp(previousValue, targetValue, lerpSpeed);
+    const clampedValue = THREE.MathUtils.clamp(newValue, 0, maxValue);
+    
+    avatarMeshRef.current!.morphTargetInfluences![index] = clampedValue;
+    previousMorphValuesRef.current[morphName] = clampedValue;
+
+    console.log(`Updated morph '${morphName}':`, clampedValue);
+  };
+
+  // Helper function to update eye-related morph targets
+  const updateEyeMorphTarget = (morphName: string, time: number) => {
+    const index = avatarMeshRef.current!.morphTargetDictionary![morphName];
+    if (index === undefined) return;
+
+    const previousValue = previousMorphValuesRef.current[morphName] || 0;
+    const blinkFrequency = Math.sin(time * 1.5) > 0.95;
+    const randomMovement = Math.sin(time * 1.2 + Math.cos(time * 0.8)) * 0.1;
+    
+    let targetValue = randomMovement;
+    
+    if (morphName.includes('eyeSquint') && blinkFrequency) {
+      targetValue += 0.8;
+    }
+    
+    if (morphName.includes('brow')) {
+      targetValue += smoothedAmplitudeRef.current * 0.15;
+    }
+
+    const newValue = THREE.MathUtils.lerp(previousValue, targetValue, 0.25);
+    const clampedValue = THREE.MathUtils.clamp(newValue, 0, 0.5);
+    
+    avatarMeshRef.current!.morphTargetInfluences![index] = clampedValue;
+    previousMorphValuesRef.current[morphName] = clampedValue;
+
+    console.log(`Updated eye morph '${morphName}':`, clampedValue);
+  };
+
+  // Helper function to reset unused morph targets
+  const resetUnusedMorphTargets = (usedMorphs: string[]) => {
+    const allMorphs = Object.keys(avatarMeshRef.current!.morphTargetDictionary!);
+    allMorphs.forEach(morphName => {
+      if (!usedMorphs.includes(morphName)) {
+        const index = avatarMeshRef.current!.morphTargetDictionary![morphName];
+        if (index !== undefined) {
+          avatarMeshRef.current!.morphTargetInfluences![index] = 0;
+        }
+      }
+    });
+  };
 
   return <primitive object={scene} dispose={null} {...props} />;
 };
