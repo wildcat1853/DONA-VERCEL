@@ -74,6 +74,11 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   const smileAmplitude = 0.4; // Increased for visibility
   const smileFrequency = 0.9; // Oscillations per second
 
+  // Add these new refs for body animations
+  const rightArmRef = useRef<THREE.Bone | null>(null);
+  const leftArmRef = useRef<THREE.Bone | null>(null);
+  const spineRef = useRef<THREE.Bone | null>(null);
+
   // Initialize dataArray
   useEffect(() => {
     if (analyser) {
@@ -87,9 +92,20 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
       scene.traverse((child: any) => {
         if (child.isSkinnedMesh && child.name === 'Wolf3D_Head') {
           avatarMeshRef.current = child;
-          console.log('Avatar mesh initialized:', {
-            morphTargets: Object.keys(child.morphTargetDictionary || {})
+          console.log('Available morph targets:', {
+            dictionary: Object.keys(child.morphTargetDictionary || {}),
+            influences: child.morphTargetInfluences?.length
           });
+        }
+        
+        // Add body bone references
+        if (child.isBone) {
+          console.log('Found bone:', child.name);
+          switch (child.name) {
+            case 'RightArm': rightArmRef.current = child; console.log('Set RightArm bone ref'); break;
+            case 'LeftArm': leftArmRef.current = child; console.log('Set LeftArm bone ref'); break;
+            case 'Spine': spineRef.current = child; console.log('Set Spine bone ref'); break;
+          }
         }
       });
 
@@ -246,100 +262,51 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
     blinkStartTimeRef.current = performance.now() / 1000;
   };
 
+  // Add new function for idle body animations with doubled movement
+  const animateIdleBody = (elapsedTime: number) => {
+    if (!isPlaying && !isIdleAnimatingRef.current) {  
+      // Only keep very subtle arm movement
+      if (rightArmRef.current && leftArmRef.current) {
+        
+      }
+    }
+  };
+
   // Animation frame update
   useFrame((state, delta) => {
     const currentTime = state.clock.getElapsedTime();
 
-    // Handle blinking
-    if (avatarMeshRef.current) {
-      if (!isBlinkingRef.current && currentTime >= nextBlinkTimeRef.current) {
+    if (!isPlaying) {
+      // Check for blink
+      const currentTimeSeconds = performance.now() / 1000;
+      if (!isBlinkingRef.current && currentTimeSeconds >= nextBlinkTimeRef.current) {
         initiateBlink();
       }
 
+      // Handle blink animation if in progress
       if (isBlinkingRef.current) {
-        const elapsed = currentTime - blinkStartTimeRef.current;
-        if (elapsed <= blinkDuration / 2) {
-          // Closing eyes
-          const blinkProgress = elapsed / (blinkDuration / 2);
-          const blinkValue = THREE.MathUtils.lerp(0, 1, blinkProgress);
-          setBlinkMorphs(blinkValue);
-        } else if (elapsed <= blinkDuration) {
-          // Opening eyes
-          const blinkProgress = (elapsed - blinkDuration / 2) / (blinkDuration / 2);
-          const blinkValue = THREE.MathUtils.lerp(1, 0, blinkProgress);
+        const blinkElapsed = currentTimeSeconds - blinkStartTimeRef.current;
+        if (blinkElapsed <= blinkDuration) {
+          // Blink animation in progress
+          const t = blinkElapsed / blinkDuration;
+          const blinkValue = Math.sin(t * Math.PI);
           setBlinkMorphs(blinkValue);
         } else {
-          // Blink completed
+          // Blink animation complete
           setBlinkMorphs(0);
           isBlinkingRef.current = false;
-          nextBlinkTimeRef.current = currentTime + getRandomBlinkInterval();
+          nextBlinkTimeRef.current = currentTimeSeconds + getRandomBlinkInterval();
         }
       }
-    }
 
-    if (
-      analyser &&
-      dataArrayRef.current &&
-      avatarMeshRef.current &&
-      avatarMeshRef.current.morphTargetDictionary &&
-      avatarMeshRef.current.morphTargetInfluences
-    ) {
-      if (isPlaying) {
-        // Get real-time audio data
-        analyser.getFloatTimeDomainData(dataArrayRef.current);
-
-        // Calculate amplitude
-        const currentAmplitude = Array.from(dataArrayRef.current)
-          .reduce((sum, val) => sum + Math.abs(val), 0) / dataArrayRef.current.length;
-
-        // Update smoothed amplitude
-        if (currentAmplitude < audioThreshold) {
-          smoothedAmplitudeRef.current *= 0.8;
-        } else {
-          smoothedAmplitudeRef.current = 
-            smoothingFactor * smoothedAmplitudeRef.current + 
-            (1 - smoothingFactor) * currentAmplitude;
-        }
-
-        // Define morph target groups
-        const mouthMorphTargets = ['mouthOpen', 'mouthFunnel', 'jawOpen'];
-        const lipMorphTargets = ['mouthLowerDown', 'mouthUpperUp', 'mouthPucker'];
-        const cheekMorphTargets = ['cheekPuff', 'cheekSquintLeft', 'cheekSquintRight'];
-        const eyeMorphTargets = ['eyeSquintLeft', 'eyeSquintRight', 'eyeWideLeft', 'eyeWideRight'];
-        const eyebrowMorphTargets = ['browOuterUpLeft', 'browOuterUpRight', 'browInnerUp'];
-
-        // Update mouth and lip morphs
-        [...mouthMorphTargets, ...lipMorphTargets, ...cheekMorphTargets].forEach(updateMorphTarget);
-
-        // Update eye morphs
-        eyeMorphTargets.forEach(morphName => updateEyeMorphTarget(morphName, currentTime));
-
-        // Update eyebrow morphs
-        eyebrowMorphTargets.forEach(morphName => updateEyebrowMorphTarget(morphName, currentTime));
-
-        // Reset unused morph targets (excluding used morphs)
-        resetUnusedMorphTargets([
-          ...mouthMorphTargets,
-          ...lipMorphTargets,
-          ...cheekMorphTargets,
-          ...eyeMorphTargets,
-          ...eyebrowMorphTargets
-        ]);
-      } else {
-        // Handle idle state: Animate smile and eyebrows smoothly
-        animateIdleSmile(currentTime);
-        animateIdleEyebrows(currentTime);
+      // Idle animations
+      animateIdleSmile(currentTime);
+      animateIdleEyebrows(currentTime);
+      
+      // Body animations - only when not blinking or performing other gestures
+      if (!isIdleAnimatingRef.current) {
+        animateIdleBody(currentTime);
       }
-    } else {
-      // Log why the frame update didn't process
-      console.log('Frame update skipped:', {
-        hasAnalyser: !!analyser,
-        hasDataArray: !!dataArrayRef.current,
-        hasAvatarMesh: !!avatarMeshRef.current,
-        hasMorphDict: !!(avatarMeshRef.current?.morphTargetDictionary),
-        hasMorphInfluences: !!(avatarMeshRef.current?.morphTargetInfluences),
-        isPlaying: isPlaying
-      });
     }
   });
 
@@ -439,6 +406,29 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
       }
     });
   };
+
+  // Add this helper function to verify bone references
+  const logBoneHierarchy = (bone: THREE.Bone, level = 0) => {
+    const indent = '  '.repeat(level);
+    console.log(`${indent}${bone.name}`);
+    bone.children.forEach(child => {
+      if (child instanceof THREE.Bone) {
+        logBoneHierarchy(child, level + 1);
+      }
+    });
+  };
+
+  // Use it in your useEffect
+  useEffect(() => {
+    if (scene) {
+      scene.traverse((child: any) => {
+        if (child.isBone && child.name === 'Hips') {
+          console.log('Full bone hierarchy:');
+          logBoneHierarchy(child);
+        }
+      });
+    }
+  }, [scene]);
 
   return <primitive object={scene} dispose={null} {...props} />;
 };
