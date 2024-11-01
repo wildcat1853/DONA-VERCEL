@@ -72,12 +72,14 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
 
   // Smile animation parameters
   const smileAmplitude = 0.4; // Increased for visibility
-  const smileFrequency = 0.9; // Oscillations per second
+  const smileFrequency = 0.09; // Oscillations per second
 
   // Add these new refs for body animations
   const rightArmRef = useRef<THREE.Bone | null>(null);
   const leftArmRef = useRef<THREE.Bone | null>(null);
   const spineRef = useRef<THREE.Bone | null>(null);
+  const rightHandRef = useRef<THREE.Bone | null>(null);
+  const leftHandRef = useRef<THREE.Bone | null>(null);
 
   // Initialize dataArray
   useEffect(() => {
@@ -105,6 +107,8 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
             case 'RightArm': rightArmRef.current = child; console.log('Set RightArm bone ref'); break;
             case 'LeftArm': leftArmRef.current = child; console.log('Set LeftArm bone ref'); break;
             case 'Spine': spineRef.current = child; console.log('Set Spine bone ref'); break;
+            case 'RightHand': rightHandRef.current = child; console.log('Set RightHand bone ref'); break;
+            case 'LeftHand': leftHandRef.current = child; console.log('Set LeftHand bone ref'); break;
           }
         }
       });
@@ -129,7 +133,7 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
 
   // Function to get a random blink interval between 2 to 5 seconds
   const getRandomBlinkInterval = () => {
-    return THREE.MathUtils.randFloat(0.3, 2);
+    return THREE.MathUtils.randFloat(0.3, 4);
   };
 
   // Function to trigger an idle gesture
@@ -265,47 +269,72 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   // Add new function for idle body animations with doubled movement
   const animateIdleBody = (elapsedTime: number) => {
     if (!isPlaying && !isIdleAnimatingRef.current) {  
-      // Only keep very subtle arm movement
-      if (rightArmRef.current && leftArmRef.current) {
+      // Breathing animation for spine
+      if (spineRef.current) {
+        const breathingSpeed = 0.5; // Slower breathing rate
+        const breathingDepth = 0.03; // Increased breathing movement
         
+        // Forward/back breathing motion
+        const breathing = Math.sin(elapsedTime * breathingSpeed) * breathingDepth;
+        spineRef.current.rotation.x = breathing;
+      }
+
+      // Arm movement
+      if (rightArmRef.current && leftArmRef.current) {
+        // Default positions
+        const armForwardTilt = 1;  // Brings arms closer to body on X axis
+        
+        // Set base position
+        rightArmRef.current.rotation.x = armForwardTilt;
+        leftArmRef.current.rotation.x = armForwardTilt;
+
+        // Add subtle sway on Z axis
+        const armSway = Math.sin(elapsedTime * 0.1) * 0.002;
+        rightArmRef.current.rotation.z = armSway;
+        leftArmRef.current.rotation.z = -armSway;
+      }
+
+      // Extremely subtle hand movement
+      if (rightHandRef.current && leftHandRef.current) {
+        const handSway = Math.sin(elapsedTime * 0.1) * 0.001;
+        rightHandRef.current.rotation.z = handSway;
+        leftHandRef.current.rotation.z = -handSway;
       }
     }
   };
 
   // Animation frame update
-  useFrame((state, delta) => {
+  useFrame((state) => {
     const currentTime = state.clock.getElapsedTime();
 
-    if (!isPlaying) {
-      // Check for blink
-      const currentTimeSeconds = performance.now() / 1000;
-      if (!isBlinkingRef.current && currentTimeSeconds >= nextBlinkTimeRef.current) {
-        initiateBlink();
-      }
+    // Always run body animations
+    animateIdleBody(currentTime);
 
-      // Handle blink animation if in progress
-      if (isBlinkingRef.current) {
-        const blinkElapsed = currentTimeSeconds - blinkStartTimeRef.current;
-        if (blinkElapsed <= blinkDuration) {
-          // Blink animation in progress
-          const t = blinkElapsed / blinkDuration;
-          const blinkValue = Math.sin(t * Math.PI);
-          setBlinkMorphs(blinkValue);
-        } else {
-          // Blink animation complete
-          setBlinkMorphs(0);
-          isBlinkingRef.current = false;
-          nextBlinkTimeRef.current = currentTimeSeconds + getRandomBlinkInterval();
-        }
-      }
-
-      // Idle animations
+    if (isPlaying) {
+      // Update mouth movements based on audio input for lip-sync
+      updateMouthMorphsForSpeech();
+    } else {
+      // Run idle facial animations only when not speaking
       animateIdleSmile(currentTime);
       animateIdleEyebrows(currentTime);
-      
-      // Body animations - only when not blinking or performing other gestures
-      if (!isIdleAnimatingRef.current) {
-        animateIdleBody(currentTime);
+    }
+
+    // Always handle blinking
+    const currentTimeSeconds = performance.now() / 1000;
+    if (!isBlinkingRef.current && currentTimeSeconds >= nextBlinkTimeRef.current) {
+      initiateBlink();
+    }
+
+    if (isBlinkingRef.current) {
+      const blinkElapsed = currentTimeSeconds - blinkStartTimeRef.current;
+      if (blinkElapsed <= blinkDuration) {
+        const t = blinkElapsed / blinkDuration;
+        const blinkValue = Math.sin(t * Math.PI);
+        setBlinkMorphs(blinkValue);
+      } else {
+        setBlinkMorphs(0);
+        isBlinkingRef.current = false;
+        nextBlinkTimeRef.current = currentTimeSeconds + getRandomBlinkInterval();
       }
     }
   });
@@ -429,6 +458,34 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
       });
     }
   }, [scene]);
+
+  const updateMouthMorphsForSpeech = () => {
+    if (!analyser || !dataArrayRef.current || !avatarMeshRef.current) return;
+
+    // Get audio data
+    analyser.getFloatTimeDomainData(dataArrayRef.current);
+    const currentAmplitude = Array.from(dataArrayRef.current)
+      .reduce((sum, val) => sum + Math.abs(val), 0) / dataArrayRef.current.length;
+
+    // Smooth the amplitude
+    smoothedAmplitudeRef.current = 
+      smoothingFactor * smoothedAmplitudeRef.current + (1 - smoothingFactor) * currentAmplitude;
+
+    // Update mouth-related morph targets
+    const mouthMorphTargets = ['mouthOpen', 'mouthFunnel', 'jawOpen'];
+    mouthMorphTargets.forEach((morphName) => {
+      const index = avatarMeshRef.current!.morphTargetDictionary![morphName];
+      if (index === undefined) return;
+
+      const previousValue = previousMorphValuesRef.current[morphName] || 0;
+      const targetValue = smoothedAmplitudeRef.current < audioThreshold ? 0 : smoothedAmplitudeRef.current;
+      const newValue = THREE.MathUtils.lerp(previousValue, targetValue, 0.5);
+      const clampedValue = THREE.MathUtils.clamp(newValue, 0, 0.8);
+
+      avatarMeshRef.current!.morphTargetInfluences![index] = clampedValue;
+      previousMorphValuesRef.current[morphName] = clampedValue;
+    });
+  };
 
   return <primitive object={scene} dispose={null} {...props} />;
 };
