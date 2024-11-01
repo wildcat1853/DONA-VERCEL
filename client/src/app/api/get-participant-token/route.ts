@@ -5,7 +5,6 @@ import { NextResponse } from "next/server";
 
 // Define the structure of the expected request body
 interface TokenRequestBody {
-  instructions?: string; // Make it optional
   room: string; // Add room to the interface
   sessionConfig: {
     model: string;
@@ -25,24 +24,7 @@ export async function POST(request: Request) {
     // Parse the JSON body
     const body: TokenRequestBody = await request.json();
 
-    const {
-      instructions,
-      room, // Extract room name
-      sessionConfig: {
-        model,
-        turnDetection,
-        modalities,
-        voice,
-        temperature,
-        maxOutputTokens,
-        vadThreshold,
-        vadSilenceDurationMs,
-        vadPrefixPaddingMs,
-      },
-    } = body;
-
-    // Use the provided room name
-    const roomName = room;
+    const { room, sessionConfig } = body;
 
     // Retrieve environment variables
     const apiKey = process.env.LIVEKIT_API_KEY;
@@ -66,28 +48,25 @@ export async function POST(request: Request) {
 
     // Create an access token
     const at = new AccessToken(apiKey, apiSecret, {
-      identity: "User", // Change as per your requirement
+      identity: "User",
       metadata: JSON.stringify({
-        roomName: roomName, // Include the room name
-        model: "gpt-4", // Changed to GPT-4
-        instructions: instructions || "",
-        modalities: modalities,
-        voice: voice,
-        temperature: temperature,
-        max_output_tokens: maxOutputTokens,
-        openai_api_key: openaiAPIKey, // Server-side OpenAI API key
+        roomName: room,
+        model: "gpt-4",
+        modalities: sessionConfig.modalities,
+        voice: sessionConfig.voice,
+        openai_api_key: openaiAPIKey,
         turn_detection: JSON.stringify({
-          type: turnDetection,
-          threshold: vadThreshold,
-          silence_duration_ms: vadSilenceDurationMs,
-          prefix_padding_ms: vadPrefixPaddingMs,
+          type: sessionConfig.turnDetection,
+          threshold: sessionConfig.vadThreshold,
+          silence_duration_ms: sessionConfig.vadSilenceDurationMs,
+          prefix_padding_ms: sessionConfig.vadPrefixPaddingMs,
         }),
       }),
     });
 
     // Add grants to the token
     at.addGrant({
-      room: roomName,
+      room: room,
       roomJoin: true,
       canPublish: true,
       canPublishData: true,
