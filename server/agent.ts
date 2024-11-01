@@ -143,12 +143,13 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
 
     const model = new openai.realtime.RealtimeModel({
       apiKey: config.openaiApiKey,
-      model: "gpt-4o-realtime-preview-2024-10-01", // Updated model
+      model: "gpt-4o-realtime-preview-2024-10-01",
       voice: config.voice,
       temperature: config.temperature,
       maxResponseOutputTokens: config.maxOutputTokens,
       modalities: config.modalities,
       turnDetection: config.turnDetection,
+      instructions: metadata.instructions || [],
     });
 
     const agent = new multimodal.MultimodalAgent({ model });

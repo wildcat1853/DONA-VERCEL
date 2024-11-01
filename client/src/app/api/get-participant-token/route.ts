@@ -11,8 +11,9 @@ interface TokenRequestBody {
     turnDetection: string;
     modalities: string;
     voice: string;
-    temperature: number;
-    maxOutputTokens: number | null;
+    instructions: string[];
+    temperature?: number;
+    maxOutputTokens?: number | null;
     vadThreshold: number;
     vadSilenceDurationMs: number;
     vadPrefixPaddingMs: number;
@@ -51,10 +52,11 @@ export async function POST(request: Request) {
       identity: "User",
       metadata: JSON.stringify({
         roomName: room,
-        model: "gpt-4",
+        model: "gpt-4o-realtime-preview-2024-10-01",
         modalities: sessionConfig.modalities,
         voice: sessionConfig.voice,
         openai_api_key: openaiAPIKey,
+        instructions: sessionConfig.instructions,
         turn_detection: JSON.stringify({
           type: sessionConfig.turnDetection,
           threshold: sessionConfig.vadThreshold,
