@@ -1,6 +1,6 @@
 // components/ReadyPlayerMeAvatar.tsx
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { useGLTF } from '@react-three/drei';
 import { useFrame, GroupProps } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -81,6 +81,9 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   const rightHandRef = useRef<THREE.Bone | null>(null);
   const leftHandRef = useRef<THREE.Bone | null>(null);
 
+  // Add a new ref to track if mesh is ready
+  const isMeshReadyRef = useRef<boolean>(false);
+
   // Initialize dataArray
   useEffect(() => {
     if (analyser) {
@@ -94,6 +97,13 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
       scene.traverse((child: any) => {
         if (child.isSkinnedMesh && child.name === 'Wolf3D_Head') {
           avatarMeshRef.current = child;
+          isMeshReadyRef.current = true; // Mark mesh as ready
+          
+          // Initialize morph target values to 0
+          if (child.morphTargetInfluences) {
+            child.morphTargetInfluences.fill(0);
+          }
+          
           console.log('Available morph targets:', {
             dictionary: Object.keys(child.morphTargetDictionary || {}),
             influences: child.morphTargetInfluences?.length
@@ -310,11 +320,19 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
     // Always run body animations
     animateIdleBody(currentTime);
 
-    if (isPlaying) {
-      // Update mouth movements based on audio input for lip-sync
+    if (isPlaying && analyser) {
       updateMouthMorphsForSpeech();
     } else {
-      // Run idle facial animations only when not speaking
+      // Reset mouth morphs when not speaking
+      if (avatarMeshRef.current && isMeshReadyRef.current) {
+        ['mouthOpen', 'mouthFunnel', 'jawOpen'].forEach(morphName => {
+          const index = avatarMeshRef.current!.morphTargetDictionary?.[morphName];
+          if (index !== undefined && avatarMeshRef.current!.morphTargetInfluences) {
+            avatarMeshRef.current!.morphTargetInfluences[index] = 0;
+          }
+        });
+      }
+      // Run idle animations
       animateIdleSmile(currentTime);
       animateIdleEyebrows(currentTime);
     }
@@ -459,33 +477,50 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
     }
   }, [scene]);
 
-  const updateMouthMorphsForSpeech = () => {
-    if (!analyser || !dataArrayRef.current || !avatarMeshRef.current) return;
+  const updateMouthMorphsForSpeech = useCallback(() => {
+    if (!analyser || !dataArrayRef.current || !avatarMeshRef.current || !isMeshReadyRef.current) {
+      console.log('Skipping lip sync - dependencies not ready:', {
+        hasAnalyser: !!analyser,
+        hasDataArray: !!dataArrayRef.current,
+        hasAvatarMesh: !!avatarMeshRef.current,
+        isMeshReady: isMeshReadyRef.current
+      });
+      return;
+    }
 
-    // Get audio data
-    analyser.getFloatTimeDomainData(dataArrayRef.current);
-    const currentAmplitude = Array.from(dataArrayRef.current)
-      .reduce((sum, val) => sum + Math.abs(val), 0) / dataArrayRef.current.length;
+    try {
+      // Get audio data
+      analyser.getFloatTimeDomainData(dataArrayRef.current);
+      const currentAmplitude = Array.from(dataArrayRef.current)
+        .reduce((sum, val) => sum + Math.abs(val), 0) / dataArrayRef.current.length;
 
-    // Smooth the amplitude
-    smoothedAmplitudeRef.current = 
-      smoothingFactor * smoothedAmplitudeRef.current + (1 - smoothingFactor) * currentAmplitude;
+      // Smooth the amplitude
+      smoothedAmplitudeRef.current = 
+        smoothingFactor * (smoothedAmplitudeRef.current || 0) + (1 - smoothingFactor) * currentAmplitude;
 
-    // Update mouth-related morph targets
-    const mouthMorphTargets = ['mouthOpen', 'mouthFunnel', 'jawOpen'];
-    mouthMorphTargets.forEach((morphName) => {
-      const index = avatarMeshRef.current!.morphTargetDictionary![morphName];
-      if (index === undefined) return;
+      // Update mouth-related morph targets
+      const mouthMorphTargets = ['mouthOpen', 'mouthFunnel', 'jawOpen'];
+      mouthMorphTargets.forEach((morphName) => {
+        const index = avatarMeshRef.current!.morphTargetDictionary?.[morphName];
+        if (index === undefined) {
+          console.warn(`Morph target ${morphName} not found`);
+          return;
+        }
 
-      const previousValue = previousMorphValuesRef.current[morphName] || 0;
-      const targetValue = smoothedAmplitudeRef.current < audioThreshold ? 0 : smoothedAmplitudeRef.current;
-      const newValue = THREE.MathUtils.lerp(previousValue, targetValue, 0.5);
-      const clampedValue = THREE.MathUtils.clamp(newValue, 0, 0.8);
+        const previousValue = previousMorphValuesRef.current[morphName] || 0;
+        const targetValue = smoothedAmplitudeRef.current < audioThreshold ? 0 : smoothedAmplitudeRef.current;
+        const newValue = THREE.MathUtils.lerp(previousValue, targetValue, 0.5);
+        const clampedValue = THREE.MathUtils.clamp(newValue, 0, 0.8);
 
-      avatarMeshRef.current!.morphTargetInfluences![index] = clampedValue;
-      previousMorphValuesRef.current[morphName] = clampedValue;
-    });
-  };
+        if (avatarMeshRef.current!.morphTargetInfluences) {
+          avatarMeshRef.current!.morphTargetInfluences[index] = clampedValue;
+          previousMorphValuesRef.current[morphName] = clampedValue;
+        }
+      });
+    } catch (error) {
+      console.error('Error in lip sync:', error);
+    }
+  }, [analyser, audioThreshold, smoothingFactor]);
 
   return <primitive object={scene} dispose={null} {...props} />;
 };
