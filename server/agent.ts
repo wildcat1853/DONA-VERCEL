@@ -155,6 +155,19 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
     const agent = new multimodal.MultimodalAgent({ model });
     let session = (await agent.start(ctx.room)) as openai.realtime.RealtimeSession;
 
+    // Add initial greeting using the correct API
+    await session.conversation.item.create({
+      type: "message",
+      role: "user",
+      content: [
+        {
+          type: "input_text",
+          text: "Please introduce yourself, your name, your purpose, and ask the user what they're working on.",
+        },
+      ],
+    });
+    await session.response.create();
+
     // Handle participant disconnection
     ctx.room.on(RoomEvent.ParticipantDisconnected, (disconnectedParticipant: Participant) => {
       if (disconnectedParticipant.identity === participant.identity) {
