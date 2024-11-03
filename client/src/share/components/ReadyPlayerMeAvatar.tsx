@@ -111,16 +111,16 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
         }
         
         // Add body bone references
-        if (child.isBone) {
-          console.log('Found bone:', child.name);
-          switch (child.name) {
-            case 'RightArm': rightArmRef.current = child; console.log('Set RightArm bone ref'); break;
-            case 'LeftArm': leftArmRef.current = child; console.log('Set LeftArm bone ref'); break;
-            case 'Spine': spineRef.current = child; console.log('Set Spine bone ref'); break;
-            case 'RightHand': rightHandRef.current = child; console.log('Set RightHand bone ref'); break;
-            case 'LeftHand': leftHandRef.current = child; console.log('Set LeftHand bone ref'); break;
-          }
-        }
+        // if (child.isBone) {
+        //   console.log('Found bone:', child.name);
+        //   switch (child.name) {
+        //     case 'RightArm': rightArmRef.current = child; console.log('Set RightArm bone ref'); break;
+        //     case 'LeftArm': leftArmRef.current = child; console.log('Set LeftArm bone ref'); break;
+        //     case 'Spine': spineRef.current = child; console.log('Set Spine bone ref'); break;
+        //     case 'RightHand': rightHandRef.current = child; console.log('Set RightHand bone ref'); break;
+        //     case 'LeftHand': leftHandRef.current = child; console.log('Set LeftHand bone ref'); break;
+        //   }
+        // }
       });
 
       // Initialize idle animation parameters
