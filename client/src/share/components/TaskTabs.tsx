@@ -25,6 +25,9 @@ function TaskTabs({ tasks, assistantData }: Props) {
     setLocalTasks([newTask, ...localTasks]);
   };
 
+  // Calculate number of done tasks
+  const doneTasksCount = localTasks.filter(task => task.status === "done").length;
+
   return (
     <Tabs defaultValue="to do" className="w-full ">
       <div className="flex justify-between items-center">
@@ -33,12 +36,12 @@ function TaskTabs({ tasks, assistantData }: Props) {
             To do
           </TabsTrigger>
           <TabsTrigger className="cursor-pointer" value="done">
-            Done
+            Done ({doneTasksCount})
           </TabsTrigger>
         </TabsList>
         <Button
-          variant={"secondary"}
-          disabled={false}
+          variant="secondary"
+          className="hover:bg-secondary"
           onClick={addEmptyTask}
         >
           Add task

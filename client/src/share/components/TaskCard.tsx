@@ -86,7 +86,7 @@ function TaskCard(props: Props) {
       }`}
     >
       <Checkbox
-        className="mt-2 w-6 h-6"
+        className="mt-2 w-6 h-6 hover:border-blue-500 transition-colors"
         checked={status == "done"}
         onClick={async () => {
           if (status == "in progress") {
@@ -104,13 +104,13 @@ function TaskCard(props: Props) {
           value={localName}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocalName(e.target.value)}
           placeholder="Task name"
-          className="font-semibold"
+          className="font-semibold text-lg focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-transparent border-none shadow-none bg-transparent"
         />
-        <Textarea
+        <Input
           value={localDescription}
           onChange={(e) => setLocalDescription(e.target.value)}
           placeholder="Task description"
-          className="mt-1 text-sm text-gray-500"
+          className="mt-1 text-sm text-gray-500 focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-transparent border-none shadow-none bg-transparent"
         />
         <div className="w-full flex items-center justify-between mt-6">
           {status == "in progress" && (
