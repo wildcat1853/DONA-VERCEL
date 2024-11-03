@@ -40,6 +40,7 @@ import { Task } from '@/../.../../../../define';
 import RoomEventListener from './RoomEventListener';
 import { AudioProvider } from '../context/AudioContext';
 import { assistantInstructions } from '../config/assistantInstructions';
+import ProjectName from './ProjectName';
 
 
 type Props = {
@@ -142,10 +143,10 @@ const ClientAssistantProvider: React.FC<Props> = ({
       <div className="w-7/12 flex justify-center max-h-screen overflow-auto">
         <div className="w-2/3 flex flex-col gap-9 mt-32">
           <div>
-            <div className="flex gap-4">
-              <Image src={start} alt="stars" />
-              <p className="font-semibold text-5xl tracking-tight">Project name</p>
-            </div>
+            <ProjectName 
+              initialName={"Project name"} 
+              projectId={projectId}
+            />
           </div>
           <Separator className="bg-gray-200" />
           <TaskTabs tasks={tasks} assistantData={assistantData} />
