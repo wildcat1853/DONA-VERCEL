@@ -3,6 +3,7 @@
 import { db, task } from "@/../../../db"
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { Task } from "../../../../define";
 
 export async function toggleTaskStatus(taskId: string) {
     let taskData = await db.query.task.findFirst({
@@ -15,5 +16,13 @@ export async function toggleTaskStatus(taskId: string) {
     }).where(eq(task.id, taskId));
 
     revalidatePath('/chat/' + taskData.projectId)
+}
+
+export async function saveTask(taskData: Partial<Task> & { id: string }) {
+    await db.update(task)
+        .set(taskData)
+        .where(eq(task.id, taskData.id));
+    
+    revalidatePath('/chat/' + taskData.projectId);
 }
 

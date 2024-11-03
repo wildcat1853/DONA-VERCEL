@@ -292,7 +292,7 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
       // Arm movement
       if (rightArmRef.current && leftArmRef.current) {
         // Default positions
-        const armForwardTilt = 1;  // Brings arms closer to body on X axis
+        const armForwardTilt = 0.1;  // Brings arms closer to body on X axis
         
         // Set base position
         rightArmRef.current.rotation.x = armForwardTilt;
