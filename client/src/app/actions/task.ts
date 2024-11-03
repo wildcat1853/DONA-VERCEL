@@ -9,7 +9,11 @@ export async function toggleTaskStatus(taskId: string) {
     let taskData = await db.query.task.findFirst({
         where: (task, { eq }) => eq(task.id, taskId)
     });
-    if (!taskData) throw new Error("there is no such task");
+    
+    if (!taskData) {
+        console.log(`Task ${taskId} not found - it may have been removed`);
+        return;
+    }
 
     await db.update(task).set({
         status: taskData.status == 'in progress' ? "done" : 'in progress'

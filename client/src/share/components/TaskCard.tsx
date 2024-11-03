@@ -113,27 +113,27 @@ function TaskCard(props: Props) {
           className="mt-1 text-sm text-gray-500"
         />
         <div className="w-full flex items-center justify-between mt-6">
-          {status == "in progress" ? (
-            <Badge className="bg-[#F9D4E8] text-[#323232]  ">
-              <AlarmCheck className="size-4 mr-1" />
-              {formattedDeadline}
-            </Badge>
-          ) : (
-            <Badge className="bg-[#59E7B3] text-[#323232]">Done</Badge>
+          {status == "in progress" && (
+            <>
+              <Badge className="bg-[#F9D4E8] text-[#323232]">
+                <AlarmCheck className="size-4 mr-1" />
+                {formattedDeadline}
+              </Badge>
+              <Button
+                onClick={async () => {
+                  window.open(
+                    await createEventURL({
+                      title: name,
+                      start: new Date(),
+                      end: deadline,
+                    })
+                  );
+                }}
+              >
+                Add to calendar
+              </Button>
+            </>
           )}
-          <Button
-            onClick={async () => {
-              window.open(
-                await createEventURL({
-                  title: name,
-                  start: new Date(),
-                  end: deadline,
-                })
-              );
-            }}
-          >
-            Add to calendar
-          </Button>
         </div>
       </div>
     </Card>
