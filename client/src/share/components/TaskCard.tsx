@@ -46,6 +46,7 @@ function TaskCard(props: Props) {
   const { description, name, id, status, deadline, assistantStatus, onUpdate, projectId, createdAt } = props;
   const [localName, setLocalName] = useState(name);
   const [localDescription, setLocalDescription] = useState(description || "");
+  const [isLeaving, setIsLeaving] = useState(false);
   
   const [debouncedName] = useDebounce(localName, 1000);
   const [debouncedDescription] = useDebounce(localDescription, 1000);
@@ -70,15 +71,21 @@ function TaskCard(props: Props) {
   const formattedDeadline = formatDeadline(new Date(deadline));
 
   return (
-    <Card className="px-5 py-3 bg-gray-100 flex items-start gap-4">
+    <Card 
+      className={`px-5 py-3 bg-gray-100 flex items-start gap-4 transition-all duration-500 ${
+        isLeaving ? 'opacity-0 transform translate-x-full' : 'opacity-100'
+      }`}
+    >
       <Checkbox
         className="mt-2 w-6 h-6"
-        disabled={false}
         checked={status == "done"}
         onClick={async () => {
-          await toggleTaskStatus(id);
           if (status == "in progress") {
-            props.onCheckBoxCLick();
+            setIsLeaving(true);
+            setTimeout(async () => {
+              await toggleTaskStatus(id);
+              props.onCheckBoxCLick();
+            }, 500);
           }
         }}
       />
