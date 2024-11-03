@@ -74,7 +74,7 @@ function TaskTabs({ tasks, assistantData }: Props) {
                 }
               }}
               onUpdate={(updatedTask) => {
-                setLocalTasks(tasks.map(t => 
+                setLocalTasks(localTasks.map(t => 
                   t.id === updatedTask.id ? updatedTask : t
                 ));
               }}
