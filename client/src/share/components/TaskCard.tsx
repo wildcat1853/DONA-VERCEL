@@ -15,6 +15,7 @@ import { saveTask } from "@/app/actions/task";
 import { Task } from "../../../../define";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
+import confetti from 'canvas-confetti';
 
 type Props = {
   name: string;
@@ -70,6 +71,14 @@ function TaskCard(props: Props) {
 
   const formattedDeadline = formatDeadline(new Date(deadline));
 
+  const triggerConfetti = () => {
+    confetti({
+      particleCount: 200,
+      spread: 500,
+      origin: { y: 0.6 }
+    });
+  };
+
   return (
     <Card 
       className={`px-5 py-3 bg-gray-100 flex items-start gap-4 transition-all duration-500 ${
@@ -81,6 +90,7 @@ function TaskCard(props: Props) {
         checked={status == "done"}
         onClick={async () => {
           if (status == "in progress") {
+            triggerConfetti();
             setIsLeaving(true);
             setTimeout(async () => {
               await toggleTaskStatus(id);

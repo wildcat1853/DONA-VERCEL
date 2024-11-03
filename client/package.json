@@ -31,6 +31,7 @@
     "ably": "^2.4.1",
     "ai": "^3.3.0",
     "calendar-link": "^2.7.0",
+    "canvas-confetti": "^1.9.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmu-pronouncing-dictionary": "^3.0.0",
