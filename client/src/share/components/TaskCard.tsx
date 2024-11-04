@@ -20,6 +20,7 @@ import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
+import { Calendar as GoogleCalendarIcon } from 'lucide-react';
 
 type Props = {
   name: string;
@@ -173,7 +174,9 @@ function TaskCard(props: Props) {
                       })
                     );
                   }}
+                  className="flex items-center gap-2"
                 >
+                  <GoogleCalendarIcon className="h-4 w-4" />
                   Add to calendar
                 </Button>
               )}
