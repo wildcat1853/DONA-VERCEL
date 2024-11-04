@@ -16,13 +16,17 @@ import { Task } from "../../../../define";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import confetti from 'canvas-confetti';
+import { Calendar } from "../ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { cn } from "@/lib/utils";
+import { CalendarIcon } from "lucide-react";
 
 type Props = {
   name: string;
   description: string | null;
   id: string;
   assistantStatus: AssistantStatus;
-  deadline: Date;
+  deadline: Date | null;
   onUpdate?: (task: Task) => void;
   projectId: string;
   createdAt: Date;
@@ -52,24 +56,27 @@ function TaskCard(props: Props) {
   const [debouncedName] = useDebounce(localName, 1000);
   const [debouncedDescription] = useDebounce(localDescription, 1000);
 
+  const [date, setDate] = useState<Date | null>(props.deadline || null);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+
   // Auto-save when debounced values change
   useEffect(() => {
-    if (debouncedName !== name || debouncedDescription !== description) {
+    if (debouncedName !== name || debouncedDescription !== description || date !== deadline) {
       const updatedTask = {
         id,
         name: debouncedName,
         description: debouncedDescription,
         status,
-        deadline,
+        deadline: date,
         projectId,
         createdAt
       };
       saveTask(updatedTask);
       onUpdate?.(updatedTask);
     }
-  }, [debouncedName, debouncedDescription, name, description, id, status, deadline, projectId, createdAt, onUpdate]);
+  }, [debouncedName, debouncedDescription, date, name, description, deadline, id, status, projectId, createdAt, onUpdate]);
 
-  const formattedDeadline = formatDeadline(new Date(deadline));
+  const formattedDeadline = props.deadline ? formatDeadline(props.deadline) : null;
 
   const triggerConfetti = () => {
     confetti({
@@ -77,6 +84,11 @@ function TaskCard(props: Props) {
       spread: 500,
       origin: { y: 0.6 }
     });
+  };
+
+  const handleDateSelect = (newDate: Date | null) => {
+    setDate(newDate);
+    setIsCalendarOpen(false);
   };
 
   return (
@@ -114,25 +126,58 @@ function TaskCard(props: Props) {
         />
         <div className="w-full flex items-center justify-between mt-6">
           {status == "in progress" && (
-            <>
-              <Badge className="bg-[#F9D4E8] text-[#323232]">
-                <AlarmCheck className="size-4 mr-1" />
-                {formattedDeadline}
-              </Badge>
-              <Button
-                onClick={async () => {
-                  window.open(
-                    await createEventURL({
-                      title: name,
-                      start: new Date(),
-                      end: deadline,
-                    })
-                  );
-                }}
-              >
-                Add to calendar
-              </Button>
-            </>
+            <div className="flex gap-2 w-full flex-wrap">
+              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                <PopoverTrigger asChild>
+                  {date ? (
+                    <button className="cursor-pointer border-0 p-0 bg-transparent">
+                      <Badge 
+                        variant="outline" 
+                        className="bg-[#F9D4E8] text-[#323232] hover:bg-[#F9D4E8]/80 flex items-center"
+                      >
+                        <AlarmCheck className="size-4 mr-1" />
+                        {formatDeadline(date)}
+                      </Badge>
+                    </button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "justify-start text-left font-normal",
+                        "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      Set deadline
+                    </Button>
+                  )}
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={date ?? undefined}
+                    onSelect={handleDateSelect}
+                    required
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {date && (
+                <Button
+                  onClick={async () => {
+                    window.open(
+                      await createEventURL({
+                        title: name,
+                        start: new Date(),
+                        end: date,
+                      })
+                    );
+                  }}
+                >
+                  Add to calendar
+                </Button>
+              )}
+            </div>
           )}
         </div>
       </div>

@@ -19,8 +19,8 @@ function TaskTabs({ tasks, assistantData }: Props) {
       description: "",
       status: "in progress",
       createdAt: new Date(),
-      deadline: new Date(Date.now() + 24 * 60 * 60 * 1000), // tomorrow
-      projectId: "", // Changed from null to an empty string to match the expected type 'string'
+      deadline: null,
+      projectId: "",
     };
     setLocalTasks([newTask, ...localTasks]);
   };

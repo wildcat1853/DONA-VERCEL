@@ -48,7 +48,7 @@ export const task = pgTable("tasks", {
   name: text("name").notNull(),
   description: text("description"),
   status: statusEnum("status").$type<"done" | "in progress">().notNull().default('in progress'),
-  deadline: timestamp("deadline").notNull(),
+  deadline: timestamp("deadline"),
   projectId: text("projectId")
     .notNull()
     .references(() => project.id), createdAt: timestamp("created_at")
