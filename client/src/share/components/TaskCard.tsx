@@ -48,6 +48,14 @@ function formatDeadline(date: Date): string {
   }
 }
 
+// Add this function to determine badge styling
+function getDeadlineStyling(date: Date) {
+  if (isToday(date)) {
+    return "bg-red-100 text-red-700 hover:bg-red-200";  // Urgent styling
+  }
+  return "bg-[#F9D4E8] text-[#323232] hover:bg-[#F9D4E8]/80";  // Default styling
+}
+
 function TaskCard(props: Props) {
   const { description, name, id, status, deadline, assistantStatus, onUpdate, projectId, createdAt } = props;
   const [localName, setLocalName] = useState(name);
@@ -134,7 +142,7 @@ function TaskCard(props: Props) {
                     <button className="cursor-pointer border-0 p-0 bg-transparent">
                       <Badge 
                         variant="outline" 
-                        className="bg-[#F9D4E8] text-[#323232] hover:bg-[#F9D4E8]/80 flex items-center"
+                        className={`flex items-center ${getDeadlineStyling(date)}`}
                       >
                         <AlarmCheck className="size-4 mr-1" />
                         {formatDeadline(date)}
