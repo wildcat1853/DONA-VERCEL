@@ -312,11 +312,17 @@ function TaskCard(props: Props) {
               {date && (
                 <Button
                   onClick={async () => {
+                    // Create an end time 15 minutes after the start time
+                    const endTime = new Date(date.getTime());
+                    endTime.setMinutes(endTime.getMinutes() + 15);
+
                     window.open(
                       await createEventURL({
                         title: name,
-                        start: new Date(),
-                        end: date,
+                        description: description || '',
+                        start: date,
+                        end: endTime, // 15 minutes after start time
+                        location: '',
                       })
                     );
                   }}
