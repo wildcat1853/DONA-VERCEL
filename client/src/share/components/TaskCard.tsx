@@ -16,10 +16,10 @@ import { saveTask } from "@/app/actions/task";
 import { Task } from "../../../../define";
 import { Input } from "../ui/input";
 import confetti from "canvas-confetti";
-import { LocalizationProvider } from '@mui/x-date-pickers';
-import { DateTimePicker } from '@mui/x-date-pickers';
-import { AdapterLuxon } from '@mui/x-date-pickers/AdapterLuxon';
-import { DateTime } from 'luxon';
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { DateTimePicker } from "@mui/x-date-pickers";
+import { AdapterLuxon } from "@mui/x-date-pickers/AdapterLuxon";
+import { DateTime } from "luxon";
 
 type Props = {
   name: string;
@@ -167,20 +167,37 @@ function TaskCard(props: Props) {
             <div className="flex gap-2 w-full flex-wrap">
               <LocalizationProvider dateAdapter={AdapterLuxon}>
                 {date ? (
-                  <button
-                    className="cursor-pointer border-0 p-0 bg-transparent"
-                    onClick={() => setDate(null)}
-                  >
-                    <Badge
-                      variant="outline"
-                      className={`flex items-center ${getDeadlineStyling(
-                        date
-                      )}`}
+                  <div>
+                    <button
+                      className="cursor-pointer border-0 p-0 bg-transparent"
+                      onClick={handleButtonClick}
                     >
-                      <AlarmCheck className="size-4 mr-1" />
-                      {formatDeadline(date)}
-                    </Badge>
-                  </button>
+                      <Badge
+                        variant="outline"
+                        className={`flex items-center ${getDeadlineStyling(
+                          date
+                        )}`}
+                      >
+                        <AlarmCheck className="size-4 mr-1" />
+                        {formatDeadline(date)}
+                      </Badge>
+                    </button>
+                    {isPickerOpen && anchorEl && (
+                      <DateTimePicker
+                        value={date ? DateTime.fromJSDate(date) : null}
+                        onChange={handleDateSelect}
+                        open={isPickerOpen}
+                        onClose={() => setIsPickerOpen(false)}
+                        slotProps={{
+                          textField: { sx: { display: "none" } },
+                          popper: {
+                            anchorEl: anchorEl,
+                            placement: "bottom-start",
+                          },
+                        }}
+                      />
+                    )}
+                  </div>
                 ) : (
                   <div>
                     <Button
@@ -194,15 +211,15 @@ function TaskCard(props: Props) {
                     </Button>
                     {isPickerOpen && anchorEl && (
                       <DateTimePicker
-                        value={date ? DateTime.fromJSDate(date) : null}
+                        value={null}
                         onChange={handleDateSelect}
                         open={isPickerOpen}
                         onClose={() => setIsPickerOpen(false)}
                         slotProps={{
-                          textField: { sx: { display: 'none' } },
+                          textField: { sx: { display: "none" } },
                           popper: {
                             anchorEl: anchorEl,
-                            placement: 'bottom-start',
+                            placement: "bottom-start",
                           },
                         }}
                       />
