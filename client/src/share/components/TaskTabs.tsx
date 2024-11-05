@@ -68,11 +68,10 @@ function TaskTabs({ tasks, assistantData }: Props) {
               status={el.status}
               assistantStatus={status}
               deadline={el.deadline}
-              onCheckBoxCLick={async () => {
+              onCheckBoxClick={async () => {
                 setLocalTasks(localTasks.map(t => 
                   t.id === el.id ? { ...t, status: "done" } : t
                 ));
-                
                 if (status == "awaiting_message") {
                   append({
                     role: "data",

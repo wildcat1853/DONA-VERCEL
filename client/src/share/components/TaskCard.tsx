@@ -6,7 +6,7 @@ import { Card } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Checkbox } from "../ui/checkbox";
 import { Button } from "../ui/button";
-import { AlarmCheck } from "lucide-react";
+import { AlarmCheck, Calendar as GoogleCalendarIcon } from "lucide-react";
 import { toggleTaskStatus } from "@/app/actions/task";
 import { AssistantStatus } from "ai";
 import { createEventURL } from "@/app/actions/calendar";
@@ -16,11 +16,10 @@ import { saveTask } from "@/app/actions/task";
 import { Task } from "../../../../define";
 import { Input } from "../ui/input";
 import confetti from "canvas-confetti";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { cn } from "@/lib/utils";
-import { CalendarIcon } from "lucide-react";
-import { Calendar as GoogleCalendarIcon } from "lucide-react";
-import { DateTimePicker } from "../ui/DateTimePicker";
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { DateTimePicker } from '@mui/x-date-pickers';
+import { AdapterLuxon } from '@mui/x-date-pickers/AdapterLuxon';
+import { DateTime } from 'luxon';
 
 type Props = {
   name: string;
@@ -33,7 +32,7 @@ type Props = {
   createdAt: Date;
 } & (
   | { status: "done" }
-  | { status: "in progress"; onCheckBoxCLick: () => void }
+  | { status: "in progress"; onCheckBoxClick: () => void }
 );
 
 function formatDeadline(date: Date): string {
@@ -75,7 +74,8 @@ function TaskCard(props: Props) {
   const [debouncedDescription] = useDebounce(localDescription, 1000);
 
   const [date, setDate] = useState<Date | null>(props.deadline || null);
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   useEffect(() => {
     if (
@@ -117,9 +117,14 @@ function TaskCard(props: Props) {
     });
   };
 
-  const handleDateSelect = (newDate: Date | null) => {
-    setDate(newDate);
-    setIsCalendarOpen(false);
+  const handleDateSelect = (newDate: DateTime | null) => {
+    setDate(newDate ? newDate.toJSDate() : null);
+    setIsPickerOpen(false);
+  };
+
+  const handleButtonClick = (event: React.MouseEvent<HTMLElement>) => {
+    setIsPickerOpen(true);
+    setAnchorEl(event.currentTarget);
   };
 
   return (
@@ -137,7 +142,7 @@ function TaskCard(props: Props) {
             setIsLeaving(true);
             setTimeout(async () => {
               await toggleTaskStatus(id);
-              props.onCheckBoxCLick();
+              props.onCheckBoxClick();
             }, 500);
           }
         }}
@@ -160,43 +165,51 @@ function TaskCard(props: Props) {
         <div className="w-full flex items-center justify-between mt-6">
           {status === "in progress" && (
             <div className="flex gap-2 w-full flex-wrap">
-              <Popover
-                open={isCalendarOpen}
-                onOpenChange={setIsCalendarOpen}
-              >
-                <PopoverTrigger asChild>
-                  {date ? (
-                    <button className="cursor-pointer border-0 p-0 bg-transparent">
-                      <Badge
-                        variant="outline"
-                        className={`flex items-center ${getDeadlineStyling(
-                          date
-                        )}`}
-                      >
-                        <AlarmCheck className="size-4 mr-1" />
-                        {formatDeadline(date)}
-                      </Badge>
-                    </button>
-                  ) : (
+              <LocalizationProvider dateAdapter={AdapterLuxon}>
+                {date ? (
+                  <button
+                    className="cursor-pointer border-0 p-0 bg-transparent"
+                    onClick={() => setDate(null)}
+                  >
+                    <Badge
+                      variant="outline"
+                      className={`flex items-center ${getDeadlineStyling(
+                        date
+                      )}`}
+                    >
+                      <AlarmCheck className="size-4 mr-1" />
+                      {formatDeadline(date)}
+                    </Badge>
+                  </button>
+                ) : (
+                  <div>
                     <Button
                       variant="outline"
-                      className={cn(
-                        "justify-start text-left font-normal",
-                        "text-muted-foreground"
-                      )}
+                      size="sm"
+                      className="rounded-full"
+                      onClick={handleButtonClick}
                     >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      <AlarmCheck className="h-4 w-4 mr-2" />
                       Set deadline
                     </Button>
-                  )}
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-4" align="start">
-                  <DateTimePicker
-                    date={date}
-                    onDateChange={handleDateSelect}
-                  />
-                </PopoverContent>
-              </Popover>
+                    {isPickerOpen && anchorEl && (
+                      <DateTimePicker
+                        value={date ? DateTime.fromJSDate(date) : null}
+                        onChange={handleDateSelect}
+                        open={isPickerOpen}
+                        onClose={() => setIsPickerOpen(false)}
+                        slotProps={{
+                          textField: { sx: { display: 'none' } },
+                          popper: {
+                            anchorEl: anchorEl,
+                            placement: 'bottom-start',
+                          },
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
+              </LocalizationProvider>
 
               {date && (
                 <Button
