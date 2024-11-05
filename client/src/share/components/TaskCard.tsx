@@ -20,6 +20,8 @@ import { LocalizationProvider } from "@mui/x-date-pickers";
 import { DateTimePicker } from "@mui/x-date-pickers";
 import { AdapterLuxon } from "@mui/x-date-pickers/AdapterLuxon";
 import { DateTime } from "luxon";
+import { Popper, Paper } from "@mui/material";
+import { StaticDateTimePicker } from "@mui/x-date-pickers/StaticDateTimePicker";
 
 type Props = {
   name: string;
@@ -127,6 +129,13 @@ function TaskCard(props: Props) {
     setAnchorEl(event.currentTarget);
   };
 
+  const handleOpenPicker = () => {
+    if (!date) {
+      setDate(new Date());
+    }
+    setIsPickerOpen(true);
+  };
+
   return (
     <Card
       className={`px-5 py-3 bg-gray-100 flex items-start gap-4 transition-all duration-500 ${
@@ -182,21 +191,29 @@ function TaskCard(props: Props) {
                         {formatDeadline(date)}
                       </Badge>
                     </button>
-                    {isPickerOpen && anchorEl && (
-                      <DateTimePicker
-                        value={date ? DateTime.fromJSDate(date) : null}
-                        onChange={handleDateSelect}
-                        open={isPickerOpen}
-                        onClose={() => setIsPickerOpen(false)}
-                        slotProps={{
-                          textField: { sx: { display: "none" } },
-                          popper: {
-                            anchorEl: anchorEl,
-                            placement: "bottom-start",
-                          },
-                        }}
-                      />
-                    )}
+                    <Popper
+                      open={isPickerOpen}
+                      anchorEl={anchorEl}
+                      placement="bottom-start"
+                      style={{ zIndex: 9999 }}
+                    >
+                      <Paper>
+                        <StaticDateTimePicker
+                          defaultValue={DateTime.now()}
+                          value={date ? DateTime.fromJSDate(date) : DateTime.now()}
+                          onChange={handleDateSelect}
+                          onClose={() => setIsPickerOpen(false)}
+                          slotProps={{
+                            actionBar: {
+                              actions: ['cancel', 'accept']
+                            },
+                            toolbar: {
+                              hidden: false,
+                            }
+                          }}
+                        />
+                      </Paper>
+                    </Popper>
                   </div>
                 ) : (
                   <div>
@@ -209,21 +226,29 @@ function TaskCard(props: Props) {
                       <AlarmCheck className="h-4 w-4 mr-2" />
                       Set deadline
                     </Button>
-                    {isPickerOpen && anchorEl && (
-                      <DateTimePicker
-                        value={null}
-                        onChange={handleDateSelect}
-                        open={isPickerOpen}
-                        onClose={() => setIsPickerOpen(false)}
-                        slotProps={{
-                          textField: { sx: { display: "none" } },
-                          popper: {
-                            anchorEl: anchorEl,
-                            placement: "bottom-start",
-                          },
-                        }}
-                      />
-                    )}
+                    <Popper
+                      open={isPickerOpen}
+                      anchorEl={anchorEl}
+                      placement="bottom-start"
+                      style={{ zIndex: 9999 }}
+                    >
+                      <Paper>
+                        <StaticDateTimePicker
+                          defaultValue={DateTime.now()}
+                          value={null}
+                          onChange={handleDateSelect}
+                          onClose={() => setIsPickerOpen(false)}
+                          slotProps={{
+                            actionBar: {
+                              actions: ['cancel', 'accept']
+                            },
+                            toolbar: {
+                              hidden: false,
+                            }
+                          }}
+                        />
+                      </Paper>
+                    </Popper>
                   </div>
                 )}
               </LocalizationProvider>
