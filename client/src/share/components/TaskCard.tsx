@@ -133,6 +133,7 @@ function TaskCard(props: Props) {
   const handleAccept = () => {
     if (tempDate) {
       setDate(tempDate.toJSDate());
+      setTempDate(null);
     }
     setIsPickerOpen(false);
   };
@@ -289,8 +290,9 @@ function TaskCard(props: Props) {
                       >
                         <StaticDateTimePicker
                           defaultValue={DateTime.now()}
-                          value={null}
+                          value={tempDate}
                           onChange={handleDateSelect}
+                          onAccept={handleAccept}
                           onClose={() => setIsPickerOpen(false)}
                           slotProps={{
                             actionBar: {
