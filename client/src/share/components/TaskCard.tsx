@@ -1,7 +1,7 @@
 // TaskCard.tsx
 
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Checkbox } from "../ui/checkbox";
@@ -22,6 +22,7 @@ import { AdapterLuxon } from "@mui/x-date-pickers/AdapterLuxon";
 import { DateTime } from "luxon";
 import { Popper, Paper } from "@mui/material";
 import { StaticDateTimePicker } from "@mui/x-date-pickers/StaticDateTimePicker";
+import { createOrUpdateTask } from "@/app/actions/task";
 
 type Props = {
   name: string;
@@ -79,6 +80,11 @@ function TaskCard(props: Props) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [tempDate, setTempDate] = useState<DateTime | null>(null);
+
+  const saveTimeout = useRef<NodeJS.Timeout>();
+
+  console.log('TaskCard props:', props); // Debug log
+  console.log('ProjectId in TaskCard:', projectId); // Debug log
 
   useEffect(() => {
     if (
@@ -143,6 +149,30 @@ function TaskCard(props: Props) {
     setIsPickerOpen(true);
   };
 
+  const handleNameChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = event.target.value;
+    setLocalName(newName);
+    
+    console.log('About to save task with projectId:', projectId); // Debug log
+    
+    clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(() => {
+      if (newName.trim()) {
+        const taskData = {
+          id: id,
+          name: newName,
+          projectId: projectId,
+          status: status,
+          description: localDescription,
+          deadline: date,
+          createdAt: createdAt
+        };
+        console.log('Saving task with data:', taskData); // Debug log
+        createOrUpdateTask(taskData);
+      }
+    }, 500);
+  };
+
   return (
     <Card
       className={`px-5 py-3 bg-gray-100 flex items-start gap-4 transition-all duration-500 ${
@@ -166,9 +196,7 @@ function TaskCard(props: Props) {
       <div className="w-full">
         <Input
           value={localName}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setLocalName(e.target.value)
-          }
+          onChange={handleNameChange}
           placeholder="Task name"
           className="font-semibold text-lg focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-transparent border-none shadow-none bg-transparent"
         />

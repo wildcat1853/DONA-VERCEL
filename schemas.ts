@@ -7,6 +7,7 @@ import {
   json,
 } from "drizzle-orm/pg-core";
 import { Task } from "./define.js";
+import { sql } from "drizzle-orm";
 
 
 export type User = typeof user.$inferSelect;
@@ -48,7 +49,7 @@ export const task = pgTable("tasks", {
   name: text("name").notNull(),
   description: text("description"),
   status: statusEnum("status").$type<"done" | "in progress">().notNull().default('in progress'),
-  deadline: timestamp("deadline"),
+  deadline: timestamp("deadline").default(sql`CURRENT_TIMESTAMP`),
   projectId: text("projectId")
     .notNull()
     .references(() => project.id), createdAt: timestamp("created_at")

@@ -4,7 +4,9 @@
   "scripts": {
     "start": "tsx ./server/agent.ts start",
     "start:dev": "tsx ./server/agent.ts dev",
-    "start:connect": "tsx ./server/agent.ts connect"
+    "start:connect": "tsx ./server/agent.ts connect",
+    "generate": "drizzle-kit generate",
+    "push": "drizzle-kit push"
   },
   "keywords": [],
   "type": "module",

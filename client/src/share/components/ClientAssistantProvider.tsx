@@ -149,7 +149,11 @@ const ClientAssistantProvider: React.FC<Props> = ({
             />
           </div>
           <Separator className="bg-gray-200" />
-          <TaskTabs tasks={tasks} assistantData={assistantData} />
+          <TaskTabs 
+            tasks={tasks} 
+            assistantData={assistantData} 
+            projectId={projectId}
+          />
         </div>
       </div>
 

@@ -7,9 +7,9 @@ import { Button } from "../ui/button";
 import { Plus } from "lucide-react";
 import { v4 as uuidv4 } from 'uuid';
 
-type Props = { tasks: Task[]; assistantData: any };
+type Props = { tasks: Task[]; assistantData: any; projectId: string };
 
-function TaskTabs({ tasks, assistantData }: Props) {
+function TaskTabs({ tasks, assistantData, projectId }: Props) {
   const { status, append } = assistantData;
   const [localTasks, setLocalTasks] = useState<Task[]>(tasks);
   const addEmptyTask = () => {
@@ -20,7 +20,7 @@ function TaskTabs({ tasks, assistantData }: Props) {
       status: "in progress",
       createdAt: new Date(),
       deadline: null,
-      projectId: "",
+      projectId: projectId,
     };
     setLocalTasks([newTask, ...localTasks]);
   };

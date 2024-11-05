@@ -150,8 +150,6 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   const triggerIdleGesture = () => {
     if (!avatarMeshRef.current) return;
 
-    console.log('Triggering idle gesture');
-
     isIdleAnimatingRef.current = true;
 
     // Randomly select an idle gesture
@@ -178,7 +176,6 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
         avatarMeshRef.current!.morphTargetInfluences![morphIndex] = 0;
         previousMorphValuesRef.current[gesture] = 0;
         isIdleAnimatingRef.current = false;
-        console.log(`Idle gesture '${gesture}' animation completed and reset.`);
         return;
       }
 
@@ -230,9 +227,6 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
       smileValue,
       0.05 // Smoother transition
     );
-
-    // Optional: Log the smile values for debugging
-    console.log(`Idle smile value: ${smileValue.toFixed(2)}`);
   };
 
   // Function to animate idle eyebrows smoothly
@@ -254,9 +248,6 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
         eyebrowValue,
         0.05 // Smooth transition
       );
-
-      // Optional: Log the eyebrow values for debugging
-      console.log(`Idle eyebrow '${morphName}' value: ${eyebrowValue.toFixed(2)}`);
     });
   };
 
@@ -379,8 +370,6 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
     
     avatarMeshRef.current!.morphTargetInfluences![index] = clampedValue;
     previousMorphValuesRef.current[morphName] = clampedValue;
-
-    console.log(`Updated morph '${morphName}':`, clampedValue);
   };
 
   // Helper function to update eye morph targets
@@ -403,8 +392,6 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
 
     avatarMeshRef.current!.morphTargetInfluences![index] = clampedValue;
     previousMorphValuesRef.current[morphName] = clampedValue;
-
-    console.log(`Updated eye morph '${morphName}':`, clampedValue);
   };
 
   // Helper function to update eyebrow morph targets
@@ -420,8 +407,6 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
     
     avatarMeshRef.current!.morphTargetInfluences![index] = clampedValue;
     previousMorphValuesRef.current[morphName] = clampedValue;
-
-    console.log(`Updated eyebrow morph '${morphName}':`, clampedValue);
   };
 
   // Helper function to set blink morphs
