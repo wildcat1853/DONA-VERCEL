@@ -41,6 +41,7 @@ import RoomEventListener from './RoomEventListener';
 import { AudioProvider } from '../context/AudioContext';
 import { assistantInstructions } from '../config/assistantInstructions';
 import ProjectName from './ProjectName';
+import CircularProgress from './CircularProgress';
 
 
 type Props = {
@@ -138,15 +139,21 @@ const ClientAssistantProvider: React.FC<Props> = ({
     fetchToken();
   }, []);
 
+  // Calculate progress
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter(task => task.status === 'done').length;
+  const progress = totalTasks === 0 ? 0 : (completedTasks / totalTasks) * 100;
+
   return (
     <>
       <div className="w-7/12 flex justify-center max-h-screen overflow-auto">
-        <div className="w-2/3 flex flex-col gap-9 mt-32">
-          <div>
+        <div className="w-2/3 flex flex-col gap-9 mt-20">
+          <div className="scale-90 origin-left flex items-center gap-4">
             <ProjectName 
               initialName={"Project name"} 
               projectId={projectId}
             />
+            
           </div>
           <Separator className="bg-gray-200" />
           <TaskTabs 

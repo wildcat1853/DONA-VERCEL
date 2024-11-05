@@ -318,7 +318,7 @@ function TaskCard(props: Props) {
 
                     window.open(
                       await createEventURL({
-                        title: name,
+                        title: `Sync with Dona: ${name}`,
                         description: description || '',
                         start: date,
                         end: endTime, // 15 minutes after start time

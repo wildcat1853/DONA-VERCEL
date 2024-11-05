@@ -35,7 +35,7 @@ function TaskTabs({ tasks, assistantData, projectId }: Props) {
           <TabsTrigger className="cursor-pointer" value="to do">
             To do
           </TabsTrigger>
-          <TabsTrigger className="cursor-pointer" value="done">
+          <TabsTrigger className="cursor-pointer text-gray-400" value="done">
             Done ({doneTasksCount})
           </TabsTrigger>
         </TabsList>
