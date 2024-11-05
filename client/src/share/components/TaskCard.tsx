@@ -78,6 +78,7 @@ function TaskCard(props: Props) {
   const [date, setDate] = useState<Date | null>(props.deadline || null);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [tempDate, setTempDate] = useState<DateTime | null>(null);
 
   useEffect(() => {
     if (
@@ -120,7 +121,13 @@ function TaskCard(props: Props) {
   };
 
   const handleDateSelect = (newDate: DateTime | null) => {
-    setDate(newDate ? newDate.toJSDate() : null);
+    setTempDate(newDate);
+  };
+
+  const handleAccept = () => {
+    if (tempDate) {
+      setDate(tempDate.toJSDate());
+    }
     setIsPickerOpen(false);
   };
 
@@ -197,18 +204,28 @@ function TaskCard(props: Props) {
                       placement="bottom-start"
                       style={{ zIndex: 9999 }}
                     >
-                      <Paper>
+                      <Paper
+                        elevation={3}
+                        sx={{
+                          borderRadius: 2,
+                          bgcolor: 'background.paper',
+                          '& .MuiStaticDateTimePicker-root': {
+                            borderRadius: 2,
+                          }
+                        }}
+                      >
                         <StaticDateTimePicker
                           defaultValue={DateTime.now()}
-                          value={date ? DateTime.fromJSDate(date) : DateTime.now()}
+                          value={tempDate || (date ? DateTime.fromJSDate(date) : DateTime.now())}
                           onChange={handleDateSelect}
+                          onAccept={handleAccept}
                           onClose={() => setIsPickerOpen(false)}
                           slotProps={{
                             actionBar: {
                               actions: ['cancel', 'accept']
                             },
                             toolbar: {
-                              hidden: false,
+                              hidden: false
                             }
                           }}
                         />
@@ -232,7 +249,16 @@ function TaskCard(props: Props) {
                       placement="bottom-start"
                       style={{ zIndex: 9999 }}
                     >
-                      <Paper>
+                      <Paper
+                        elevation={3}
+                        sx={{
+                          borderRadius: 2,
+                          bgcolor: 'background.paper',
+                          '& .MuiStaticDateTimePicker-root': {
+                            borderRadius: 2,
+                          }
+                        }}
+                      >
                         <StaticDateTimePicker
                           defaultValue={DateTime.now()}
                           value={null}
@@ -243,7 +269,7 @@ function TaskCard(props: Props) {
                               actions: ['cancel', 'accept']
                             },
                             toolbar: {
-                              hidden: false,
+                              hidden: false
                             }
                           }}
                         />
