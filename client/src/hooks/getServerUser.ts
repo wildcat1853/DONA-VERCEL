@@ -20,9 +20,13 @@ export default async function getServerUser() {
     // Add a health check query first
     try {
       await db.execute(sql`SELECT 1`);
-    } catch (dbError) {
-      console.error('Database connection error:', dbError);
-      throw new Error('Database connection failed');
+    } catch (dbError: any) {
+      console.error('Database connection error details:', {
+        message: dbError.message,
+        code: dbError.code,
+        stack: dbError.stack
+      });
+      throw new Error(`Database connection failed: ${dbError.message}`);
     }
 
     // Try to find the user
