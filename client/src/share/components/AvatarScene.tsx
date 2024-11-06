@@ -22,19 +22,19 @@ const AvatarScene: React.FC<AvatarSceneProps> = ({ avatarUrl }) => {
     >
       <PerspectiveCamera 
         makeDefault 
-        position={[0.88, 0, 0.88]}
-        fov={37}
+        position={[0, 0.6, 0.88]}
+        fov={54}
       />
       {/* Lights */}
       <ambientLight intensity={1} />
       <directionalLight position={[0, 2, 2]} intensity={1.8} />
-      {/* Controls */}
+      {/* Controls - all interactions disabled */}
       <OrbitControls
         ref={controlsRef}
         target={[0, 0.5, 0]}
-        enableZoom={true}
-        minDistance={0.75}
-        maxDistance={2.2}
+        enableZoom={false}
+        enableRotate={false}
+        enablePan={false}
       />
       {/* Avatar */}
       <React.Suspense fallback={null}>
@@ -42,6 +42,7 @@ const AvatarScene: React.FC<AvatarSceneProps> = ({ avatarUrl }) => {
           avatarUrl={avatarUrl} 
           analyser={analyser}
           position={[0, -0.9, 0]}
+          rotation={[0, 0, 0]}
           isPlaying={isPlaying}
         />
       </React.Suspense>
