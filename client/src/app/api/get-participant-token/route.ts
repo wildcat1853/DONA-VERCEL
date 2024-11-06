@@ -11,7 +11,8 @@ interface TokenRequestBody {
     turnDetection: string;
     modalities: string;
     voice: string;
-    instructions: string[];
+    instructions: string;
+    isOnboarding: boolean;
     temperature?: number;
     maxOutputTokens?: number | null;
     vadThreshold: number;
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
         voice: sessionConfig.voice,
         openai_api_key: openaiAPIKey,
         instructions: sessionConfig.instructions,
+        isOnboarding: sessionConfig.isOnboarding,
         turn_detection: JSON.stringify({
           type: sessionConfig.turnDetection,
           threshold: sessionConfig.vadThreshold,

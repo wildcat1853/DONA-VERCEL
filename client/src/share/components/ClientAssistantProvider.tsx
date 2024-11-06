@@ -8,7 +8,15 @@ import TaskTabs from './TaskTabs';
 import Image from 'next/image';
 import start from '@/../public/stars.svg';
 import dynamic from 'next/dynamic';
-
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../ui/dialog";
 
 import {
   ControlBar,
@@ -42,6 +50,7 @@ import { AudioProvider } from '../context/AudioContext';
 import { assistantInstructions } from '../config/assistantInstructions';
 import ProjectName from './ProjectName';
 import CircularProgress from './CircularProgress';
+import { onboardingInstructions } from '../config/onboardingInstructions';
 
 
 type Props = {
@@ -64,21 +73,22 @@ const ClientAssistantProvider: React.FC<Props> = ({
   const [roomName, setRoomName] = useState('');
   const name = 'User';
   
+  const [localIsOnboarding, setLocalIsOnboarding] = useState(false);
   
+  const isOnboarding = assistantData.isOnboarding ?? localIsOnboarding;
+
   const [audioAllowed, setAudioAllowed] = useState(false);
+  const [showMicrophoneDialog, setShowMicrophoneDialog] = useState(false);
 
   useEffect(() => {
     const requestMediaPermissions = async () => {
       try {
         await navigator.mediaDevices.getUserMedia({ audio: true });
         setAudioAllowed(true);
+        setShowMicrophoneDialog(false);
       } catch (error: any) {
         console.error('Error requesting media permissions:', error);
-        if (error.name === 'NotFoundError') {
-          alert('No microphone found. Please connect a microphone and try again.');
-        } else {
-          alert('Unable to access the microphone. Please check your browser settings.');
-        }
+        setShowMicrophoneDialog(true);
       }
     };
   
@@ -91,6 +101,10 @@ const ClientAssistantProvider: React.FC<Props> = ({
         const generatedRoomName = `room-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
         console.log('🚀 Frontend: Generated room name:', generatedRoomName);
         
+        const currentInstructions = isOnboarding 
+          ? [...onboardingInstructions, ...assistantInstructions]
+          : assistantInstructions;
+
         const response = await fetch('/api/get-participant-token', {
           method: 'POST',
           headers: {
@@ -105,7 +119,8 @@ const ClientAssistantProvider: React.FC<Props> = ({
               turnDetection: "server_vad",
               modalities: "text_and_audio",
               voice: "sage",
-              instructions: assistantInstructions.join('\n'),
+              instructions: currentInstructions.join('\n'),
+              isOnboarding: isOnboarding,
               vadThreshold: 0.5,
               vadSilenceDurationMs: 200,
               vadPrefixPaddingMs: 300,
@@ -137,7 +152,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
     };
 
     fetchToken();
-  }, []);
+  }, [isOnboarding]);
 
   // Calculate progress
   const totalTasks = tasks.length;
@@ -146,6 +161,52 @@ const ClientAssistantProvider: React.FC<Props> = ({
 
   return (
     <>
+      <Dialog open={showMicrophoneDialog} onOpenChange={setShowMicrophoneDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Enable Microphone Access</DialogTitle>
+            <DialogDescription>
+              Voice interaction requires microphone access to work properly.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-full bg-blue-100">
+                <svg
+                  className="w-6 h-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h4 className="text-sm font-medium">How to enable:</h4>
+                <ol className="mt-2 text-sm text-gray-500 list-decimal list-inside space-y-1">
+                  <li>Click the camera icon in your browser&apos;s address bar</li>
+                  <li>Select &quot;Allow&quot; for microphone access</li>
+                  <li>Refresh this page</li>
+                </ol>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full mt-4 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition-colors"
+              >
+                Refresh Page
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="w-7/12 flex justify-center max-h-screen overflow-auto">
         <div className="w-2/3 flex flex-col gap-9 mt-20">
           <div className="scale-90 origin-left flex items-center gap-4">

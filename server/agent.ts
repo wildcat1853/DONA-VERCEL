@@ -103,6 +103,7 @@ interface SessionConfig {
   maxOutputTokens?: number;
   modalities: ["text", "audio"] | ["text"];
   turnDetection?: TurnDetectionType;
+  instructions: string;
 }
 
 function parseSessionConfig(data: any): SessionConfig {
@@ -117,6 +118,7 @@ function parseSessionConfig(data: any): SessionConfig {
         : parseInt(data.max_output_tokens) || undefined,
     modalities: modalitiesFromString(data.modalities || "text_and_audio"),
     turnDetection: data.turn_detection ? JSON.parse(data.turn_detection) : undefined,
+    instructions: data.instructions || '',
   };
 }
 
@@ -134,11 +136,14 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
   try {
     const metadata = JSON.parse(participant.metadata || '{}');
     const config = parseSessionConfig(metadata);
+    const isOnboarding = metadata.isOnboarding === true;
+
     console.log('🔧 Backend: Agent configuration:', {
       roomName: roomName,
       model: config.model,
       voice: config.voice,
-      modalities: config.modalities
+      modalities: config.modalities,
+      isOnboarding: isOnboarding
     });
 
     const model = new openai.realtime.RealtimeModel({
@@ -149,20 +154,22 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
       maxResponseOutputTokens: config.maxOutputTokens,
       modalities: config.modalities,
       turnDetection: config.turnDetection,
-      instructions: metadata.instructions || [],
+      instructions: config.instructions,
     });
 
     const agent = new multimodal.MultimodalAgent({ model });
     let session = (await agent.start(ctx.room)) as openai.realtime.RealtimeSession;
 
-    // Add initial greeting using the correct API
+    // Add initial greeting based on onboarding status
     await session.conversation.item.create({
       type: "message",
       role: "user",
       content: [
         {
           type: "input_text",
-          text: "Please introduce yourself, your name, your purpose, and ask the user what they're working on.",
+          text: isOnboarding 
+            ? "This is a new user's first time. Please give them a warm, comprehensive welcome. Introduce yourself, explain your capabilities in detail, and guide them through getting started with their first project."
+            : "Please introduce yourself, your name, your purpose, and ask the user what they're working on.",
         },
       ],
     });
