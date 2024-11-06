@@ -272,27 +272,36 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
     if (!isPlaying && !isIdleAnimatingRef.current) {  
       // Breathing animation for spine
       if (spineRef.current) {
-        const breathingSpeed = 0.5; // Slower breathing rate
-        const breathingDepth = 0.03; // Increased breathing movement
-        
-        // Forward/back breathing motion
+        const breathingSpeed = 0.5;
+        const breathingDepth = 0.02;
         const breathing = Math.sin(elapsedTime * breathingSpeed) * breathingDepth;
         spineRef.current.rotation.x = breathing;
       }
 
       // Arm movement
       if (rightArmRef.current && leftArmRef.current) {
-        // Default positions
-        const armForwardTilt = 0.1;  // Brings arms closer to body on X axis
-        
-        // Set base position
-        rightArmRef.current.rotation.x = armForwardTilt;
-        leftArmRef.current.rotation.x = armForwardTilt;
+        // Base arm positions - keeping arms closer to body
+        const armForwardTilt = 0.1;     // X rotation (forward/back tilt)
+        const armSidePosition = 0.002;     // Z rotation (brings arms closer to body)
+        const armInwardTilt = 0.05;      // Y rotation (slight inward rotation)
 
-        // Add subtle sway on Z axis
-        const armSway = Math.sin(elapsedTime * 0.1) * 0.002;
-        rightArmRef.current.rotation.z = armSway;
-        leftArmRef.current.rotation.z = -armSway;
+        // Right Arm
+        rightArmRef.current.rotation.x = armForwardTilt;
+        rightArmRef.current.rotation.z = armSidePosition;
+        rightArmRef.current.rotation.y = armInwardTilt;
+
+        // Left Arm (mirrored)
+        leftArmRef.current.rotation.x = armForwardTilt;
+        leftArmRef.current.rotation.z = -armSidePosition;
+        leftArmRef.current.rotation.y = -armInwardTilt;
+
+        // Add very subtle sway
+        const armSwaySpeed = 0.1;
+        const armSwayAmount = 0.01;
+        const armSway = Math.sin(elapsedTime * armSwaySpeed) * armSwayAmount;
+        
+        rightArmRef.current.rotation.z += armSway;
+        leftArmRef.current.rotation.z -= armSway;
       }
 
       // Extremely subtle hand movement
