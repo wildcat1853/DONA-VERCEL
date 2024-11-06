@@ -138,6 +138,7 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
     const config = parseSessionConfig(metadata);
     const isOnboarding = metadata.isOnboarding === true;
 
+    console.log('[Onboarding] Backend Status:', isOnboarding ? 'Started' : 'Not in onboarding mode');
     console.log('🔧 Backend: Agent configuration:', {
       roomName: roomName,
       model: config.model,

@@ -83,8 +83,8 @@ function TaskCard(props: Props) {
 
   const saveTimeout = useRef<NodeJS.Timeout>();
 
-  console.log('TaskCard props:', props); // Debug log
-  console.log('ProjectId in TaskCard:', projectId); // Debug log
+  // console.log('TaskCard props:', props); // Debug log
+  // console.log('ProjectId in TaskCard:', projectId); // Debug log
 
   useEffect(() => {
     if (

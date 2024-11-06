@@ -100,6 +100,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
       try {
         const generatedRoomName = `room-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
         console.log('🚀 Frontend: Generated room name:', generatedRoomName);
+        console.log('[Onboarding] Status:', isOnboarding ? 'Starting' : 'Skipped');
         
         const currentInstructions = isOnboarding 
           ? [...onboardingInstructions, ...assistantInstructions]
