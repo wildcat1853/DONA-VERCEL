@@ -110,17 +110,16 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
           });
         }
         
-        // Add body bone references
-        // if (child.isBone) {
-        //   console.log('Found bone:', child.name);
-        //   switch (child.name) {
-        //     case 'RightArm': rightArmRef.current = child; console.log('Set RightArm bone ref'); break;
-        //     case 'LeftArm': leftArmRef.current = child; console.log('Set LeftArm bone ref'); break;
-        //     case 'Spine': spineRef.current = child; console.log('Set Spine bone ref'); break;
-        //     case 'RightHand': rightHandRef.current = child; console.log('Set RightHand bone ref'); break;
-        //     case 'LeftHand': leftHandRef.current = child; console.log('Set LeftHand bone ref'); break;
-        //   }
-        // }
+        // Update bone references to target correct bones
+        if (child.isBone) {
+          switch (child.name) {
+            case 'RightForeArm': rightArmRef.current = child; break;
+            case 'LeftForeArm': leftArmRef.current = child; break;
+            case 'RightHand': rightHandRef.current = child; break;
+            case 'LeftHand': leftHandRef.current = child; break;
+            case 'Spine': spineRef.current = child; break;
+          }
+        }
       });
 
       // Initialize idle animation parameters
@@ -270,45 +269,47 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   // Add new function for idle body animations with doubled movement
   const animateIdleBody = (elapsedTime: number) => {
     if (!isPlaying && !isIdleAnimatingRef.current) {  
-      // Breathing animation for spine
-      if (spineRef.current) {
-        const breathingSpeed = 0.5;
-        const breathingDepth = 0.02;
-        const breathing = Math.sin(elapsedTime * breathingSpeed) * breathingDepth;
-        spineRef.current.rotation.x = breathing;
-      }
-
-      // Arm movement
+      // Forearms (bringing hands closer to body)
       if (rightArmRef.current && leftArmRef.current) {
-        // Base arm positions - keeping arms closer to body
-        const armForwardTilt = 0.1;     // X rotation (forward/back tilt)
-        const armSidePosition = 0.002;     // Z rotation (brings arms closer to body)
-        const armInwardTilt = 0.05;      // Y rotation (slight inward rotation)
+        // Forearm rotations
+        const forearmRotationX = 0.05;  // Forward rotation
+        const forearmRotationY = -0.05;  // Inward rotation
+        const forearmRotationZ = 0.05;  // Side rotation
 
-        // Right Arm
-        rightArmRef.current.rotation.x = armForwardTilt;
-        rightArmRef.current.rotation.z = armSidePosition;
-        rightArmRef.current.rotation.y = armInwardTilt;
+        // Right Forearm
+        rightArmRef.current.rotation.x = forearmRotationX;
+        rightArmRef.current.rotation.y = forearmRotationY;
+        rightArmRef.current.rotation.z = forearmRotationZ;
 
-        // Left Arm (mirrored)
-        leftArmRef.current.rotation.x = armForwardTilt;
-        leftArmRef.current.rotation.z = -armSidePosition;
-        leftArmRef.current.rotation.y = -armInwardTilt;
-
-        // Add very subtle sway
-        const armSwaySpeed = 0.1;
-        const armSwayAmount = 0.01;
-        const armSway = Math.sin(elapsedTime * armSwaySpeed) * armSwayAmount;
-        
-        rightArmRef.current.rotation.z += armSway;
-        leftArmRef.current.rotation.z -= armSway;
+        // Left Forearm (mirrored)
+        leftArmRef.current.rotation.x = forearmRotationX;
+        leftArmRef.current.rotation.y = -forearmRotationY;
+        leftArmRef.current.rotation.z = -forearmRotationZ;
       }
 
-      // Extremely subtle hand movement
+      // Hands (wrist rotations)
       if (rightHandRef.current && leftHandRef.current) {
-        const handSway = Math.sin(elapsedTime * 0.1) * 0.001;
-        rightHandRef.current.rotation.z = handSway;
-        leftHandRef.current.rotation.z = -handSway;
+        const handRotationX = 0.2;  // Tilt forward/back
+        const handRotationY = 0.1;  // Rotate inward/outward
+        const handRotationZ = 0.1;  // Side rotation
+
+        // Right Hand
+        rightHandRef.current.rotation.x = handRotationX;
+        rightHandRef.current.rotation.y = handRotationY;
+        rightHandRef.current.rotation.z = handRotationZ;
+
+        // Left Hand (mirrored)
+        leftHandRef.current.rotation.x = handRotationX;
+        leftHandRef.current.rotation.y = -handRotationY;
+        leftHandRef.current.rotation.z = -handRotationZ;
+
+        // Very subtle animation
+        const swayAmount = 0.01;
+        const swaySpeed = 0.5;
+        const sway = Math.sin(elapsedTime * swaySpeed) * swayAmount;
+        
+        rightHandRef.current.rotation.z += sway;
+        leftHandRef.current.rotation.z -= sway;
       }
     }
   };
