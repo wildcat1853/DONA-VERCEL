@@ -2,7 +2,9 @@
   "compilerOptions": {
     "baseUrl": "./src",
     "paths": {
-      "@/*": ["*"]
+      "@/*": ["*"],
+      "@db": ["../../db.ts"],
+      "@schemas": ["../../schemas"]
     },
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,

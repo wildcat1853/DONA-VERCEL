@@ -19,6 +19,7 @@ export const user = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull(),
   image: text("image"),
+  isOnboarding: text("is_onboarding").default('true').notNull(),
   createdAt: timestamp("created_at")
     .$default(() => new Date())
     .notNull(),

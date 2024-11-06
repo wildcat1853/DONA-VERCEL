@@ -155,6 +155,16 @@ const ClientAssistantProvider: React.FC<Props> = ({
     fetchToken();
   }, [isOnboarding]);
 
+  // Add this new useEffect for logging onboarding status
+  useEffect(() => {
+    console.log('[Onboarding] Current Status:', {
+      isOnboarding,
+      fromAssistantData: assistantData.isOnboarding,
+      fromLocalState: localIsOnboarding,
+      timestamp: new Date().toISOString()
+    });
+  }, [isOnboarding, assistantData.isOnboarding, localIsOnboarding]);
+
   // Calculate progress
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter(task => task.status === 'done').length;
