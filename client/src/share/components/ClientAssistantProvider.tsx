@@ -51,6 +51,7 @@ import { assistantInstructions } from '../config/assistantInstructions';
 import ProjectName from './ProjectName';
 import CircularProgress from './CircularProgress';
 import { onboardingInstructions } from '../config/onboardingInstructions';
+import { Badge } from "../ui/badge";
 
 
 type Props = {
@@ -58,6 +59,7 @@ type Props = {
   projectThreadId: string | undefined;
   serverMessages: any[];
   tasks: Task[];
+  userId: string;
 };
 
 const avatarUrl = 'https://models.readyplayer.me/670c2238e4f39be58fe308ae.glb?morphTargets=mouthSmile,mouthOpen,mouthFunnel,browOuterUpLeft,browOuterUpRight,tongueOut,ARKit';
@@ -67,16 +69,20 @@ const ClientAssistantProvider: React.FC<Props> = ({
   projectThreadId,
   serverMessages,
   tasks,
+  userId,
 }) => {
-  const assistantData = useAssistant({ projectId, projectThreadId });
+  const assistantData = useAssistant({ projectId, projectThreadId, userId });
+  const { isOnboarding, isLoading } = assistantData
   const [token, setToken] = useState('');
   const [roomName, setRoomName] = useState('');
   const name = 'User';
   
-  const [localIsOnboarding, setLocalIsOnboarding] = useState(false);
+  console.log('Debug Onboarding State:', {
+    isOnboarding,
+    isLoading,
+    projectId
+  });
   
-  const isOnboarding = assistantData.isOnboarding ?? localIsOnboarding;
-
   const [audioAllowed, setAudioAllowed] = useState(false);
   const [showMicrophoneDialog, setShowMicrophoneDialog] = useState(false);
 
@@ -121,6 +127,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
               modalities: "text_and_audio",
               voice: "sage",
               instructions: currentInstructions.join('\n'),
+              userId: userId,
               isOnboarding: isOnboarding,
               vadThreshold: 0.5,
               vadSilenceDurationMs: 200,
@@ -153,22 +160,24 @@ const ClientAssistantProvider: React.FC<Props> = ({
     };
 
     fetchToken();
-  }, [isOnboarding]);
-
-  // Add this new useEffect for logging onboarding status
-  useEffect(() => {
-    console.log('[Onboarding] Current Status:', {
-      isOnboarding,
-      fromAssistantData: assistantData.isOnboarding,
-      fromLocalState: localIsOnboarding,
-      timestamp: new Date().toISOString()
-    });
-  }, [isOnboarding, assistantData.isOnboarding, localIsOnboarding]);
+  }, [isOnboarding, userId]);
 
   // Calculate progress
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter(task => task.status === 'done').length;
   const progress = totalTasks === 0 ? 0 : (completedTasks / totalTasks) * 100;
+
+  const handleRepeatOnboarding = async () => {
+    try {
+      console.log('Setting onboarding status to true for userId:', userId);
+      await assistantData.updateOnboardingStatus(true);
+      
+      // No need to reload the page, the state will update automatically
+      // window.location.reload();
+    } catch (error) {
+      console.error('Error updating onboarding status:', error);
+    }
+  };
 
   return (
     <>
@@ -225,7 +234,11 @@ const ClientAssistantProvider: React.FC<Props> = ({
               initialName={"Project name"} 
               projectId={projectId}
             />
-            
+            {isOnboarding && (
+              <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                Onboarding
+              </span>
+            )}
           </div>
           <Separator className="bg-gray-200" />
           <TaskTabs 
@@ -279,6 +292,12 @@ const ClientAssistantProvider: React.FC<Props> = ({
           <p>Loading...</p>
         )}
       </div>
+      <button
+        onClick={handleRepeatOnboarding}
+        className="fixed top-4 right-4 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition-colors z-50"
+      >
+        Repeat Onboarding
+      </button>
     </>
   );
 };

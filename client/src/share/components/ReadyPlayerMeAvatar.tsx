@@ -104,10 +104,10 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
             child.morphTargetInfluences.fill(0);
           }
           
-          console.log('Available morph targets:', {
-            dictionary: Object.keys(child.morphTargetDictionary || {}),
-            influences: child.morphTargetInfluences?.length
-          });
+          // console.log('Available morph targets:', {
+          //   dictionary: Object.keys(child.morphTargetDictionary || {}),
+          //   influences: child.morphTargetInfluences?.length
+          // });
         }
         
         // Update bone references to target correct bones
@@ -443,7 +443,7 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
         const index = avatarMeshRef.current!.morphTargetDictionary![morphName];
         if (index !== undefined) {
           avatarMeshRef.current!.morphTargetInfluences![index] = 0;
-          console.log(`Reset morph '${morphName}' to 0`);
+          // console.log(`Reset morph '${morphName}' to 0`);
         }
       }
     });
@@ -452,7 +452,7 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   // Add this helper function to verify bone references
   const logBoneHierarchy = (bone: THREE.Bone, level = 0) => {
     const indent = '  '.repeat(level);
-    console.log(`${indent}${bone.name}`);
+    // console.log(`${indent}${bone.name}`);
     bone.children.forEach(child => {
       if (child instanceof THREE.Bone) {
         logBoneHierarchy(child, level + 1);
@@ -465,7 +465,7 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
     if (scene) {
       scene.traverse((child: any) => {
         if (child.isBone && child.name === 'Hips') {
-          console.log('Full bone hierarchy:');
+          // console.log('Full bone hierarchy:');
           logBoneHierarchy(child);
         }
       });
@@ -474,12 +474,12 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
 
   const updateMouthMorphsForSpeech = useCallback(() => {
     if (!analyser || !dataArrayRef.current || !avatarMeshRef.current || !isMeshReadyRef.current) {
-      console.log('Skipping lip sync - dependencies not ready:', {
-        hasAnalyser: !!analyser,
-        hasDataArray: !!dataArrayRef.current,
-        hasAvatarMesh: !!avatarMeshRef.current,
-        isMeshReady: isMeshReadyRef.current
-      });
+      // console.log('Skipping lip sync - dependencies not ready:', {
+      //   hasAnalyser: !!analyser,
+      //   hasDataArray: !!dataArrayRef.current,
+      //   hasAvatarMesh: !!avatarMeshRef.current,
+      //   isMeshReady: isMeshReadyRef.current
+      // });
       return;
     }
 
@@ -498,7 +498,7 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
       mouthMorphTargets.forEach((morphName) => {
         const index = avatarMeshRef.current!.morphTargetDictionary?.[morphName];
         if (index === undefined) {
-          console.warn(`Morph target ${morphName} not found`);
+          // console.warn(`Morph target ${morphName} not found`);
           return;
         }
 
@@ -513,7 +513,7 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
         }
       });
     } catch (error) {
-      console.error('Error in lip sync:', error);
+      // console.error('Error in lip sync:', error);
     }
   }, [analyser, audioThreshold, smoothingFactor]);
 

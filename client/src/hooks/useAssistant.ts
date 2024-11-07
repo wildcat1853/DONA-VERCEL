@@ -4,12 +4,15 @@ import { useState, useCallback, useEffect } from 'react';
 interface UseAssistantReturn {
     append: (message: Message | CreateMessage, requestOptions?: { data?: Record<string, string> }) => Promise<void>;
     status: 'idle' | 'in_progress' | 'complete';
-    isOnboarding: boolean;
+    isOnboarding: boolean | undefined;
+    isLoading: boolean;
+    updateOnboardingStatus: (isOnboarding: boolean) => Promise<void>;
 }
 
-function useAssistant({ projectId, projectThreadId }: { projectThreadId: string | undefined, projectId: string }) {
+function useAssistant({ projectId, projectThreadId, userId }: { projectThreadId: string | undefined, projectId: string, userId: string }) {
     const [status, setStatus] = useState<'idle' | 'in_progress' | 'complete'>('idle');
-    const [isOnboarding, setIsOnboarding] = useState(false);
+    const [isOnboarding, setIsOnboarding] = useState<boolean | undefined>(undefined);
+    const [isLoading, setIsLoading] = useState(true);
 
     const ass = _useAssistant({
         api: "/api/chat",
@@ -34,39 +37,61 @@ function useAssistant({ projectId, projectThreadId }: { projectThreadId: string 
 
     useEffect(() => {
         const checkOnboardingStatus = async () => {
-            console.log('[Onboarding] Fetching status for project:', projectId);
             try {
-                const response = await fetch('/api/user/onboarding-status');
+                console.log('Fetching onboarding status with params:', { userId });
+                const response = await fetch(`/api/onboarding/status/get?userId=${userId}`);
+                
                 if (!response.ok) {
+                    console.error('Response not OK:', response.status);
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
+                
                 const data = await response.json();
-                console.log('[Onboarding] API Response:', data);
-                setIsOnboarding(data.isOnboarding);
+                console.log('Raw onboarding API response:', data);
+                
+                // Convert string 'true'/'false' to boolean if necessary
+                const onboardingValue = data.isOnboarding === 'true' || data.isOnboarding === true;
+                setIsOnboarding(onboardingValue);
+                console.log('Set isOnboarding state to:', onboardingValue);
             } catch (error) {
-                console.error('[Onboarding] Failed to fetch status:', error);
-                setIsOnboarding(false);
+                console.error('Failed to fetch onboarding status:', error);
+                setIsOnboarding(undefined);
+            } finally {
+                setIsLoading(false);
             }
         };
 
-        checkOnboardingStatus();
-    }, [projectId]);
+        if (userId) {
+            checkOnboardingStatus();
+        } else {
+            console.warn('No userId provided to useAssistant hook');
+        }
+    }, [userId]);
 
     const updateOnboardingStatus = async (isOnboarding: boolean) => {
         try {
-            const response = await fetch('/api/user/onboarding-status/update', {
+            const endpoint = isOnboarding 
+                ? '/api/onboarding/status/set-true' 
+                : '/api/onboarding/status/set-false';
+                
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ isOnboarding }),
+                body: JSON.stringify({ userId }),
             });
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            console.log('[Onboarding] Status updated:', isOnboarding);
+            const data = await response.json();
+            console.log('[Onboarding] Status updated:', data);
+            
+            // Update local state immediately
+            setIsOnboarding(data.isOnboarding);
+            
         } catch (error) {
             console.error('[Onboarding] Failed to update status:', error);
         }
@@ -77,6 +102,8 @@ function useAssistant({ projectId, projectThreadId }: { projectThreadId: string 
         append,
         status,
         isOnboarding,
+        isLoading,
+        updateOnboardingStatus
     }
 }
 
