@@ -136,9 +136,12 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
   try {
     const metadata = JSON.parse(participant.metadata || '{}');
     const config = parseSessionConfig(metadata);
-    const isOnboarding = metadata.isOnboarding === true;
+    const isOnboarding = metadata.sessionConfig?.isOnboarding === true || metadata.isOnboarding === true;
 
-    console.log('[Onboarding] Backend Status:', isOnboarding ? 'Started' : 'Not in onboarding mode');
+    console.log('[Onboarding] Backend Status:', isOnboarding ? 'Started' : 'Not in onboarding mode', {
+      metadata: metadata, // Log the full metadata for debugging
+      isOnboarding: isOnboarding
+    });
     console.log('🔧 Backend: Agent configuration:', {
       roomName: roomName,
       model: config.model,
@@ -169,7 +172,7 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
         {
           type: "input_text",
           text: isOnboarding 
-            ? "This is a new user's first time. Please give them a warm, comprehensive welcome. Introduce yourself, explain your capabilities in detail, and guide them through getting started with their first project. Talk for at least 20 seconds.Ask them what they're working on and prompt them to create their fist task with deadline."
+            ? "This is a new user's first time. Tell him it's onboarding. Please give them a warm, comprehensive welcome. Talk for 30 seconds. Introduce yourself, explain your capabilities in detail, and guide them through getting started with their first project. Talk for at least 20 seconds.Ask them what they're working on and prompt them to create their fist task with deadline."
             : "Please introduce yourself, your name, your purpose, and ask the user what they're working on.",
         },
       ],

@@ -127,11 +127,10 @@ const ClientAssistantProvider: React.FC<Props> = ({
               modalities: "text_and_audio",
               voice: "sage",
               instructions: currentInstructions.join('\n'),
-              userId: userId,
-              isOnboarding: isOnboarding,
-              vadThreshold: 0.5,
-              vadSilenceDurationMs: 200,
-              vadPrefixPaddingMs: 300,
+              metadata: {
+                isOnboarding: isOnboarding,
+                userId: userId
+              }
             },
           }),
         });
