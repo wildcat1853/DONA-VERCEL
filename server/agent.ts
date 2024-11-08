@@ -61,22 +61,23 @@ export default defineAgent({
 
     try {
       await ctx.connect();
-      console.log('🔗 Backend: Agent connected to LiveKit server');
-      console.log('🏠 Backend: Current room:', ctx.room.name);
+      // console.log('🔗 Backend: Agent connected to LiveKit server');
+      // console.log('🏠 Backend: Current room:', ctx.room.name);
       
-      console.log('⏳ Backend: Waiting for participant...');
+      // console.log('⏳ Backend: Waiting for participant...');
       const participant = await ctx.waitForParticipant();
       
       console.log('👤 Backend: Participant connected:', {
         identity: participant.identity,
-        metadata: participant.metadata // Log the full metadata
+        metadata: participant.metadata,
+        userId: JSON.parse(participant.metadata || '{}')?.sessionConfig?.metadata?.userId || 'No userId found'
       });
 
       // Extract room name from participant metadata
       const metadata = JSON.parse(participant.metadata || '{}');
       const roomName: string = metadata.roomName || "default-room";
 
-      console.log('🎯 Backend: Extracted room name from metadata:', roomName);
+      // console.log('🎯 Backend: Extracted room name from metadata:', roomName);
 
       // Register the shutdown hook with the room name
       ctx.addShutdownCallback(() => shutdownHook(roomName));
@@ -138,17 +139,17 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
     const config = parseSessionConfig(metadata);
     const isOnboarding = metadata.sessionConfig?.isOnboarding === true || metadata.isOnboarding === true;
 
-    console.log('[Onboarding] Backend Status:', isOnboarding ? 'Started' : 'Not in onboarding mode', {
-      metadata: metadata, // Log the full metadata for debugging
-      isOnboarding: isOnboarding
-    });
-    console.log('🔧 Backend: Agent configuration:', {
-      roomName: roomName,
-      model: config.model,
-      voice: config.voice,
-      modalities: config.modalities,
-      isOnboarding: isOnboarding
-    });
+    // console.log('[Onboarding] Backend Status:', isOnboarding ? 'Started' : 'Not in onboarding mode', {
+    //   metadata: metadata, // Log the full metadata for debugging
+    //   isOnboarding: isOnboarding
+    // });
+    // console.log('🔧 Backend: Agent configuration:', {
+    //   roomName: roomName,
+    //   model: config.model,
+    //   voice: config.voice,
+    //   modalities: config.modalities,
+    //   isOnboarding: isOnboarding
+    // });
 
     const model = new openai.realtime.RealtimeModel({
       apiKey: config.openaiApiKey,
@@ -164,16 +165,14 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
     const agent = new multimodal.MultimodalAgent({ model });
     let session = (await agent.start(ctx.room)) as openai.realtime.RealtimeSession;
 
-    // Add initial greeting based on onboarding status
+    // Simplify the conversation starter since instructions are now handled via config
     await session.conversation.item.create({
       type: "message",
       role: "user",
       content: [
         {
           type: "input_text",
-          text: isOnboarding 
-            ? "This is a new user's first time. Tell him it's onboarding. Please give them a warm, comprehensive welcome. Talk for 30 seconds. Introduce yourself, explain your capabilities in detail, and guide them through getting started with their first project. Talk for at least 20 seconds.Ask them what they're working on and prompt them to create their fist task with deadline."
-            : "Please introduce yourself, your name, your purpose, and ask the user what they're working on.",
+          text: "Start the conversation according to the provided instructions.",
         },
       ],
     });

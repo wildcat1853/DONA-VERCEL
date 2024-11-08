@@ -106,11 +106,26 @@ const ClientAssistantProvider: React.FC<Props> = ({
       try {
         const generatedRoomName = `room-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
         console.log('🚀 Frontend: Generated room name:', generatedRoomName);
-        console.log('[Onboarding] Status:', isOnboarding ? 'Starting' : 'Skipped');
+        console.log('[Onboarding] Status:', isOnboarding ? 'True' : 'False');
         
-        const currentInstructions = isOnboarding 
-          ? [...onboardingInstructions, ...assistantInstructions]
-          : assistantInstructions;
+        const getInstructions = () => {
+          if (isOnboarding) {
+            return [
+              "You are an AI assistant focused on project management and productivity.",
+              "This is a new user's first time. Give them a warm, comprehensive welcome.",
+              "Introduce yourself, explain your capabilities in detail, and guide them through getting started with their first project.",
+              "Talk for at least 20 seconds.",
+              "Ask them what they're working on and prompt them to create their first task with deadline."
+            ];
+          } else {
+            return [
+              "You are an AI assistant focused on project management and productivity.",
+              "Introduce yourself briefly, explain your purpose, and ask the user what they're working on."
+            ];
+          }
+        };
+
+        const currentInstructions = getInstructions();
 
         const response = await fetch('/api/get-participant-token', {
           method: 'POST',
@@ -286,17 +301,18 @@ const ClientAssistantProvider: React.FC<Props> = ({
               </div>
             </div>
           </AudioProvider>
-        </LiveKitRoom>
-        ) : (
-          <p>Loading...</p>
-        )}
-      </div>
-      <button
+          <button
         onClick={handleRepeatOnboarding}
         className="fixed top-4 right-4 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition-colors z-50"
       >
         Repeat Onboarding
       </button>
+        </LiveKitRoom>
+        ) : (
+          <p>Loading...</p>
+        )}
+      </div>
+      
     </>
   );
 };
