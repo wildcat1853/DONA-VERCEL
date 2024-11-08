@@ -137,6 +137,7 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
   try {
     const metadata = JSON.parse(participant.metadata || '{}');
     const config = parseSessionConfig(metadata);
+    // const config = parseSessionConfig(metadata.sessionConfig || {});
     const isOnboarding = metadata.sessionConfig?.isOnboarding === true || metadata.isOnboarding === true;
 
     // console.log('[Onboarding] Backend Status:', isOnboarding ? 'Started' : 'Not in onboarding mode', {
@@ -172,11 +173,23 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
       content: [
         {
           type: "input_text",
-          text: "Start the conversation according to the provided instructions.",
+          text: "Start the conversation according to onboarding instructions.",
         },
       ],
     });
     await session.response.create();
+
+    // await session.conversation.item.create({
+    //   type: "message",
+    //   role: "system",
+    //   content: [
+    //     {
+    //       type: "input_text",
+    //       text: "Do onboarding instructions.",
+    //     },
+    //   ],
+    // });
+    // await session.response.create();
 
     // Handle participant disconnection
     ctx.room.on(RoomEvent.ParticipantDisconnected, (disconnectedParticipant: Participant) => {

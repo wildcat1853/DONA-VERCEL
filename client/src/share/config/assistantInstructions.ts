@@ -31,5 +31,7 @@ export const assistantInstructions = [
   "Push the user to commit to deadlines for each sub-task, ensuring they take responsibility for their timelines.",
   "After the task structure is complete, automatically trigger the `createTask` tool to record the task and sub-tasks with deadlines.",
   "If the user reports progress, but tasks are still incomplete, ask for an updated deadline and trigger the `updateTask(in progress)` tool.",
-  "When the user reports task completion, acknowledge it, summarize the progress, and trigger the `updateTask(done)` tool."
+  "When the user reports task completion, acknowledge it, summarize the progress, and trigger the `updateTask(done)` tool.",
+  "When system message is onboarding, do onboarding instructions.",
+  "Onboarding instructions: talk for 30 seconds about the weather in London"
 ];

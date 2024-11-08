@@ -105,27 +105,15 @@ const ClientAssistantProvider: React.FC<Props> = ({
     const fetchToken = async () => {
       try {
         const generatedRoomName = `room-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-        console.log('🚀 Frontend: Generated room name:', generatedRoomName);
-        console.log('[Onboarding] Status:', isOnboarding ? 'True' : 'False');
         
-        const getInstructions = () => {
-          if (isOnboarding) {
-            return [
-              "You are an AI assistant focused on project management and productivity.",
-              "This is a new user's first time. Give them a warm, comprehensive welcome.",
-              "Introduce yourself, explain your capabilities in detail, and guide them through getting started with their first project.",
-              "Talk for at least 20 seconds.",
-              "Ask them what they're working on and prompt them to create their first task with deadline."
-            ];
-          } else {
-            return [
-              "You are an AI assistant focused on project management and productivity.",
-              "Introduce yourself briefly, explain your purpose, and ask the user what they're working on."
-            ];
-          }
-        };
-
-        const currentInstructions = getInstructions();
+        // const currentInstructions = isOnboarding ? onboardingInstructions : assistantInstructions;
+        
+        // console.log('Debug Instructions:', {
+        //   isOnboarding,
+        //   instructionsType: isOnboarding ? 'onboarding' : 'regular',
+        //   instructionsLength: currentInstructions.length,
+        //   firstFewInstructions: currentInstructions.slice(0, 2)
+        // });
 
         const response = await fetch('/api/get-participant-token', {
           method: 'POST',
@@ -141,7 +129,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
               turnDetection: "server_vad",
               modalities: "text_and_audio",
               voice: "sage",
-              instructions: currentInstructions.join('\n'),
+              instructions: assistantInstructions.join('\n'),
               metadata: {
                 isOnboarding: isOnboarding,
                 userId: userId
