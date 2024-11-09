@@ -52,6 +52,7 @@ import ProjectName from './ProjectName';
 import CircularProgress from './CircularProgress';
 import { onboardingInstructions } from '../config/onboardingInstructions';
 import { Badge } from "../ui/badge";
+import { HelpCircle } from 'lucide-react';
 
 
 type Props = {
@@ -236,11 +237,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
               initialName={"Project name"} 
               projectId={projectId}
             />
-            {isOnboarding && (
-              <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                Onboarding
-              </span>
-            )}
+           
           </div>
           <Separator className="bg-gray-200" />
           <TaskTabs 
@@ -284,16 +281,17 @@ const ClientAssistantProvider: React.FC<Props> = ({
               <StartAudio label="Click to allow audio playback" />
              
               <ConnectionStateToast />
-              <div className="text-center text-sm font-medium text-gray-600 mt-2"> 
+              {/* <div className="text-center text-sm font-medium text-gray-600 mt-2"> 
                 <ConnectionState />
-              </div>
+              </div> */}
             </div>
           </AudioProvider>
           <button
         onClick={handleRepeatOnboarding}
-        className="fixed top-4 right-4 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition-colors z-50"
+        className="fixed top-4 right-4 w-10 h-10 rounded-full bg-white/80 hover:bg-white/90 border border-gray-200 flex items-center justify-center transition-colors z-50 shadow-sm"
+        title="Repeat Onboarding"
       >
-        Repeat Onboarding
+        <HelpCircle className="w-6 h-6 text-gray-600" />
       </button>
         </LiveKitRoom>
         ) : (
