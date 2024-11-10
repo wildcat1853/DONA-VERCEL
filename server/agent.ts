@@ -237,7 +237,7 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
               content: [
                 {
                   type: "input_text",
-                  text: `Current tasks state: ${JSON.stringify(taskData, null, 2)}\nPlease provide feedback about the project progress and tasks.`
+                  text: `Current tasks state: ${JSON.stringify(taskData, null, 2)}\nPlease provide feedback about the most recently created task. Remind user to input deadlines for tasks. If deadline was just input, ask if they want to add another task.`
                 },
               ],
             });
