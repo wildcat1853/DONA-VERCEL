@@ -9,9 +9,10 @@ import start from '@/../public/stars.svg';
 type Props = {
   initialName: string;
   projectId: string;
+  className?: string;
 };
 
-function ProjectName({ initialName, projectId }: Props) {
+function ProjectName({ initialName, projectId, className }: Props) {
   const [name, setName] = useState(initialName);
   const [debouncedName] = useDebounce(name, 1000);
 
@@ -22,7 +23,7 @@ function ProjectName({ initialName, projectId }: Props) {
   }, [debouncedName, initialName, projectId]);
 
   return (
-    <div className="flex gap-4">
+    <div className={`flex gap-4 ${className}`}>
       <Image src={start} alt="stars" />
       <Input
         value={name}

@@ -62,29 +62,36 @@ function TaskTabs({ tasks, assistantData, projectId }: Props) {
   const doneTasksCount = localTasks.filter(task => task.status === "done").length;
 
   return (
-    <Tabs defaultValue="to do" className="w-full ">
+    <Tabs defaultValue="todo" className="w-[650px]">
       <div className="flex justify-between items-center">
-        <TabsList className="grid  grid-cols-2 ">
-          <TabsTrigger className="cursor-pointer" value="to do">
+        <TabsList className="flex space-x-2 bg-gray-200 rounded-full p-1 w-[200px]">
+          <TabsTrigger
+            value="todo"
+            className="flex-1 px-4 py-2 rounded-full text-sm font-medium text-gray-700
+              hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition
+              data-[state=active]:bg-white data-[state=active]:shadow-md"
+          >
             To do
           </TabsTrigger>
-          <TabsTrigger className="cursor-pointer text-gray-400" value="done">
+          <TabsTrigger
+            value="done"
+            className="flex-1 px-4 py-2 rounded-full text-sm font-medium text-gray-700
+              hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition
+              data-[state=active]:bg-white data-[state=active]:shadow-md"
+          >
             Done ({doneTasksCount})
           </TabsTrigger>
         </TabsList>
         <Button
-          variant="secondary"
-          className="hover:bg-secondary"
           onClick={addEmptyTask}
+          className="w-[120px] flex items-center justify-center gap-2 py-6 text-blue-500 hover:text-blue-600 hover:bg-blue-50 border border-solid border-blue-200"
         >
+          <Plus className="h-4 w-4" />
           Add task
-          <Plus />
         </Button>
       </div>
-      <TabsContent
-        value="to do"
-        className="text-white flex flex-col mt-6 gap-3 overflow-auto"
-      >
+
+      <TabsContent value="todo" className="mt-6 mb-2 space-y-4">
         {localTasks
           .filter(
             (el): el is Task & { status: "in progress" } =>
@@ -114,10 +121,8 @@ function TaskTabs({ tasks, assistantData, projectId }: Props) {
             />
           ))}
       </TabsContent>
-      <TabsContent
-        value="done"
-        className="text-white flex flex-col mt-6 gap-3 overflow-auto"
-      >
+      
+      <TabsContent value="done" className="mt-6 mb-2 space-y-4">
         {tasks
           .filter((el): el is Task & { status: "done" } => el.status == "done")
           .map((el) => (

@@ -292,6 +292,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
                   <ProjectName 
                     initialName={"Project name"} 
                     projectId={projectId}
+                    className="text-gray-900 text-3xl font-semibold"
                   />
                 </div>
                 <Separator className="bg-gray-200" />
