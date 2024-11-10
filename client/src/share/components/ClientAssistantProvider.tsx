@@ -236,7 +236,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-full bg-blue-100">
                 <svg
-                  className="w-6 h-6 text-blue-600"
+                  className="w-6 h-12 text-blue-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"

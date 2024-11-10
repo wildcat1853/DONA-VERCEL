@@ -62,9 +62,9 @@ function TaskTabs({ tasks, assistantData, projectId }: Props) {
   const doneTasksCount = localTasks.filter(task => task.status === "done").length;
 
   return (
-    <Tabs defaultValue="todo" className="w-[650px]">
-      <div className="flex justify-between items-center">
-        <TabsList className="flex space-x-2 bg-gray-200 rounded-full p-1 w-[200px]">
+    <Tabs defaultValue="todo" className="w-[600px]">
+      <div className="flex justify-between items-start h-[80px]">
+        <TabsList className="flex space-x-2 bg-gray-200 rounded-full p-1 w-[200px] h-[45px]">
           <TabsTrigger
             value="todo"
             className="flex-1 px-4 py-2 rounded-full text-sm font-medium text-gray-700
