@@ -16,13 +16,10 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   ...props
 }) => {
   const { scene } = useGLTF(avatarUrl) as any;
-  const animationGltf = useGLTF('/animations/idle5.glb');
-  console.log('Animation loaded:', {
-    animations: animationGltf.animations,
-    hasAnimations: animationGltf.animations?.length > 0,
-  });
-  const { animations } = animationGltf;
-  const { actions, mixer } = useAnimations(animations, scene);
+  const idleAnimation = useGLTF('/animations/idle5.glb');
+  // const talkingAnimation = useGLTF('/animations/talking.glb'); // Commented out talking animation
+
+  const { actions, mixer } = useAnimations(idleAnimation.animations, scene);
   const avatarMeshRef = useRef<THREE.SkinnedMesh | null>(null);
   const dataArrayRef = useRef<Float32Array>();
 
@@ -104,55 +101,28 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
     }
   }, [scene]);
 
-  // Play idle animation continuously without facial tracks
+  // Update the animation effect to use only idle animation
   useEffect(() => {
-    if (actions && animations?.length > 0 && mixer) {
-      const idleActionName = actions['idle'] ? 'idle' : animations[0].name;
-      const originalIdleAction = actions[idleActionName];
+    if (actions && idleAnimation.animations?.length > 0) {
+      const actionName = actions['idle'] ? 'idle' : idleAnimation.animations[0].name;
+      const currentAction = actions[actionName];
 
-      if (originalIdleAction) {
-        // Filter out tracks that affect facial morph targets
-        const idleAnimationClip = originalIdleAction.getClip();
-        const filteredTracks = idleAnimationClip.tracks.filter((track) => {
-          // Exclude tracks that affect morph targets for the face
-          const isMorphTarget = track.name.includes('morphTargetInfluences');
-          const isFaceMorph =
-            track.name.includes('mouth') ||
-            track.name.includes('jaw') ||
-            track.name.includes('eye') ||
-            track.name.includes('brow') ||
-            track.name.includes('cheek') ||
-            track.name.includes('tongue');
-
-          return !(isMorphTarget && isFaceMorph);
-        });
-
-        // Create a new clip with filtered tracks
-        const filteredClip = new THREE.AnimationClip(
-          `${idleAnimationClip.name}_filtered`,
-          idleAnimationClip.duration,
-          filteredTracks
-        );
-
-        // Create a new action with the filtered clip
-        const idleAction = mixer.clipAction(filteredClip, scene);
-
-        idleAction.timeScale = 0.5; // Adjust playback speed
-        idleAction.setLoop(THREE.LoopRepeat, Infinity); // Loop infinitely
-
-        idleAction
+      if (currentAction) {
+        currentAction.timeScale = 0.5;
+        currentAction.setLoop(THREE.LoopRepeat, Infinity);
+        
+        currentAction
           .reset()
-          .fadeIn(1.0)
+          .fadeIn(0.5)
           .play();
 
-        // Cleanup function to stop the idle action when the component unmounts
         return () => {
-          idleAction.fadeOut(1.0);
-          idleAction.stop();
+          currentAction.fadeOut(0.5);
+          currentAction.stop();
         };
       }
     }
-  }, [actions, animations, mixer]);
+  }, [actions, idleAnimation.animations, mixer]);
 
   // Function to get a random blink interval between 0.3 to 4 seconds
   const getRandomBlinkInterval = () => {

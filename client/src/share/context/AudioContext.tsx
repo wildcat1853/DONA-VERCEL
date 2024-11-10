@@ -48,8 +48,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setAnalyser(analyserNode);
         setIsPlaying(true);
         
+        audioTrack.mediaStreamTrack.onended = () => {
+          console.log('Audio track ended');
+          setIsPlaying(false);
+        };
+        
         return () => {
           console.log('Cleanup triggered');
+          audioTrack.mediaStreamTrack.onended = null;
           source.disconnect();
           analyserNode.disconnect();
           audioContext.close();
@@ -59,6 +65,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } catch (error) {
         console.error('Error in audio setup:', error);
       }
+    } else {
+      setIsPlaying(false);
     }
   }, [audioTrack]);
 
