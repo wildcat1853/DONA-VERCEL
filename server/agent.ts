@@ -204,7 +204,7 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
     // Handle participant attribute changes
     ctx.room.on(
       "participantAttributesChanged",
-      (
+      async (
         changedAttributes: Record<string, string>,
         changedParticipant: Participant,
       ) => {
@@ -215,6 +215,22 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
         // Parse the metadata into an object
         const participantMetadata = JSON.parse(changedParticipant.metadata || '{}');
 
+        // Check if this is a repeat onboarding request
+        if (participantMetadata.repeatOnboarding) {
+          await session.conversation.item.create({
+            type: "message",
+            role: "system",
+            content: [
+              {
+                type: "input_text",
+                text: "User has requested to repeat onboarding. Start fresh with onboarding instructions: introduce yourself as Dona, explain how the app works with task creation and deadlines, and guide them through getting started.",
+              },
+            ],
+          });
+          await session.response.create();
+        }
+
+        // Continue with existing config update logic
         const newConfig = parseSessionConfig({
           ...participantMetadata,
           ...changedAttributes,

@@ -26,6 +26,7 @@ import {
   RoomAudioRenderer,
   useTracks,
   useRoomContext,
+  useLocalParticipant,
   useVoiceAssistant,
   BarVisualizer,
   VoiceAssistantControlBar,
@@ -64,6 +65,39 @@ type Props = {
 };
 
 const avatarUrl = 'https://models.readyplayer.me/670c2238e4f39be58fe308ae.glb?morphTargets=mouthSmile,mouthOpen,mouthFunnel,browOuterUpLeft,browOuterUpRight,tongueOut,ARKit';
+
+// Create a new component for the onboarding button
+const OnboardingButton = ({ userId, assistantData }: { userId: string, assistantData: any }) => {
+  const { localParticipant } = useLocalParticipant();
+
+  const handleRepeatOnboarding = async () => {
+    try {
+      console.log('Setting onboarding status to true for userId:', userId);
+      await assistantData.updateOnboardingStatus(true);
+      
+      if (localParticipant) {
+        await localParticipant.setAttributes({
+          repeatOnboarding: 'true',
+          timestamp: Date.now().toString()
+        });
+      } else {
+        console.warn('Local participant not found');
+      }
+    } catch (error) {
+      console.error('Error updating onboarding status:', error);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleRepeatOnboarding}
+      className="fixed top-4 right-4 w-10 h-10 rounded-full bg-white/80 hover:bg-white/90 border border-gray-200 flex items-center justify-center transition-colors z-50 shadow-sm"
+      title="Repeat Onboarding"
+    >
+      <HelpCircle className="w-6 h-6 text-gray-600" />
+    </button>
+  );
+};
 
 const ClientAssistantProvider: React.FC<Props> = ({
   projectId,
@@ -170,18 +204,6 @@ const ClientAssistantProvider: React.FC<Props> = ({
   const completedTasks = tasks.filter(task => task.status === 'done').length;
   const progress = totalTasks === 0 ? 0 : (completedTasks / totalTasks) * 100;
 
-  const handleRepeatOnboarding = async () => {
-    try {
-      console.log('Setting onboarding status to true for userId:', userId);
-      await assistantData.updateOnboardingStatus(true);
-      
-      // No need to reload the page, the state will update automatically
-      // window.location.reload();
-    } catch (error) {
-      console.error('Error updating onboarding status:', error);
-    }
-  };
-
   return (
     <>
       <Dialog open={showMicrophoneDialog} onOpenChange={setShowMicrophoneDialog}>
@@ -249,51 +271,45 @@ const ClientAssistantProvider: React.FC<Props> = ({
       </div>
 
       <div className="w-5/12 fixed right-0 top-0 h-screen">
-      {token ? ( // Add this conditional rendering
-        <LiveKitRoom
-          token={token}
-          serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
-          connect={true}
-          audio={true}
-          video={false}
-          data-lk-theme="default"
-          onError={(error) => console.error('LiveKit connection error:', error)}
-          onConnected={() => console.log('LiveKit connected')}
-          onDisconnected={() => console.log('LiveKit disconnected')}
-        > 
-          <ParticipantLogger />
-          <StartMediaButton label="Click to allow media playback" />
-          <ConnectionStateToast />
-          <AudioProvider>
-            <RoomAudioRenderer />
-            <RoomEventListener />
-            <div className="absolute top-0 right-0 w-full h-full bg-F1F2F4">
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE] animate-gradient-xy">
-                <div className="absolute inset-0 flex flex-col justify-end">
-                  <AvatarScene avatarUrl={avatarUrl} />
-                  <div className="absolute bottom-0 left-0 right-0 h-3/4 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+        {token ? (
+          <LiveKitRoom
+            token={token}
+            serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
+            connect={true}
+            audio={true}
+            video={false}
+            data-lk-theme="default"
+            onError={(error) => console.error('LiveKit connection error:', error)}
+            onConnected={() => console.log('LiveKit connected')}
+            onDisconnected={() => console.log('LiveKit disconnected')}
+          > 
+            <ParticipantLogger />
+            <StartMediaButton label="Click to allow media playback" />
+            <ConnectionStateToast />
+            <AudioProvider>
+              <RoomAudioRenderer />
+              <RoomEventListener />
+              <div className="absolute top-0 right-0 w-full h-full bg-F1F2F4">
+                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE] animate-gradient-xy">
+                  <div className="absolute inset-0 flex flex-col justify-end">
+                    <AvatarScene avatarUrl={avatarUrl} />
+                    <div className="absolute bottom-0 left-0 right-0 h-3/4 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+                  </div>
                 </div>
               </div>
-            </div>
     
-            <div className="absolute bottom-14 w-full z-10">
-              <VoiceAssistantControlBar />
-              <StartAudio label="Click to allow audio playback" />
-             
-              <ConnectionStateToast />
-              {/* <div className="text-center text-sm font-medium text-gray-600 mt-2"> 
-                <ConnectionState />
-              </div> */}
-            </div>
-          </AudioProvider>
-          <button
-        onClick={handleRepeatOnboarding}
-        className="fixed top-4 right-4 w-10 h-10 rounded-full bg-white/80 hover:bg-white/90 border border-gray-200 flex items-center justify-center transition-colors z-50 shadow-sm"
-        title="Repeat Onboarding"
-      >
-        <HelpCircle className="w-6 h-6 text-gray-600" />
-      </button>
-        </LiveKitRoom>
+              <div className="absolute bottom-14 w-full z-10">
+                <VoiceAssistantControlBar />
+                <StartAudio label="Click to allow audio playback" />
+               
+                <ConnectionStateToast />
+                {/* <div className="text-center text-sm font-medium text-gray-600 mt-2"> 
+                  <ConnectionState />
+                </div> */}
+              </div>
+              <OnboardingButton userId={userId} assistantData={assistantData} />
+            </AudioProvider>
+          </LiveKitRoom>
         ) : (
           <p>Loading...</p>
         )}
