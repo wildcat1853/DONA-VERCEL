@@ -201,29 +201,32 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
       }
     });
 
-    // Handle participant attribute changes
+    // Set up participant attribute change listener
     ctx.room.on(
       "participantAttributesChanged",
       async (changedAttributes: Record<string, string>, changedParticipant: Participant) => {
-        console.log('🔄 Full event details:', {
+        console.log('🔄 Agent: Received attribute change:', {
           participantId: changedParticipant.identity,
           expectedId: participant.identity,
           attributes: changedAttributes,
-          metadata: changedParticipant.metadata, // Add metadata logging
-          isAgentIdentity: changedParticipant.identity.startsWith('agent-')
+          metadata: changedParticipant.metadata,
+          isAgentIdentity: changedParticipant.identity.startsWith('agent-'),
+          timestamp: new Date().toISOString()
         });
 
         // Skip agent events
         if (changedParticipant.identity.startsWith('agent-')) {
-          console.log('⏭️ Skipping agent event');
+          console.log('⏭️ Agent: Skipping agent event');
           return;
         }
 
         // Handle task updates
         if (changedAttributes.taskUpdate === 'true') {
           try {
+            console.log('📝 Agent: Processing task update');
             const taskData = JSON.parse(changedAttributes.taskData);
-            console.log('📝 Task Update Received:', {
+            console.log('📊 Agent: Task data received:', {
+              taskCount: Array.isArray(taskData) ? taskData.length : 'not an array',
               tasks: taskData,
               timestamp: new Date(parseInt(changedAttributes.timestamp)).toISOString()
             });
@@ -240,20 +243,16 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
             });
             
             await session.response.create();
+            console.log('✅ Agent: Sent task update to assistant');
           } catch (error) {
-            console.error('❌ Error handling task update:', error);
+            console.error('❌ Agent: Error handling task update:', error);
           }
+          return; // Return after handling task update
         }
 
-        // Log the specific value we're checking
-        console.log('🔍 Checking repeatOnboarding flag:', {
-          value: changedAttributes.repeatOnboarding,
-          allAttributes: changedAttributes
-        });
-
-        // Check if this is a repeat onboarding request
+        // Handle onboarding separately
         if (changedAttributes.repeatOnboarding === 'true') {
-          console.log('🎯 Repeat onboarding request detected');
+          console.log('🎯 Agent: Repeat onboarding request detected');
           try {
             console.log('Creating new conversation item...');
             await session.conversation.item.create({
@@ -277,10 +276,9 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
             //   repeatOnboarding: 'false'
             // });
           } catch (error) {
-            console.error('❌ Error in onboarding sequence:', error);
+            console.error('❌ Agent: Error in onboarding sequence:', error);
           }
-        } else {
-          console.log('ℹ️ Not a repeat onboarding request. Full attributes:', changedAttributes);
+          return;
         }
       }
     );

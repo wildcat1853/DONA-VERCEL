@@ -54,6 +54,7 @@ import CircularProgress from './CircularProgress';
 import { onboardingInstructions } from '../config/onboardingInstructions';
 import { Badge } from "../ui/badge";
 import { HelpCircle } from 'lucide-react';
+import { TaskTabsWithLiveKit } from './TaskTabs';
 
 
 type Props = {
@@ -269,69 +270,69 @@ const ClientAssistantProvider: React.FC<Props> = ({
         </DialogContent>
       </Dialog>
 
-      <div className="w-7/12 flex justify-center max-h-screen overflow-auto">
-        <div className="w-2/3 flex flex-col gap-9 mt-20">
-          <div className="scale-90 origin-left flex items-center gap-4">
-            <ProjectName 
-              initialName={"Project name"} 
-              projectId={projectId}
-            />
-           
-          </div>
-          <Separator className="bg-gray-200" />
-          <TaskTabs 
-            tasks={tasks} 
-            assistantData={assistantData} 
-            projectId={projectId}
-          />
-        </div>
-      </div>
+      {token ? (
+        <LiveKitRoom
+          token={token}
+          serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
+          connect={true}
+          audio={true}
+          video={false}
+          data-lk-theme="default"
+          onError={(error) => console.error('LiveKit connection error:', error)}
+          onConnected={() => console.log('LiveKit connected')}
+          onDisconnected={() => console.log('LiveKit disconnected')}
+        > 
+          <ParticipantLogger />
+          <div className="flex">
+            {/* Left side */}
+            <div className="w-7/12 flex justify-center max-h-screen overflow-auto">
+              <div className="w-2/3 flex flex-col gap-9 mt-20">
+                <div className="scale-90 origin-left flex items-center gap-4">
+                  <ProjectName 
+                    initialName={"Project name"} 
+                    projectId={projectId}
+                  />
+                </div>
+                <Separator className="bg-gray-200" />
+                <TaskTabsWithLiveKit 
+                  tasks={tasks} 
+                  assistantData={assistantData} 
+                  projectId={projectId}
+                />
+              </div>
+            </div>
 
-      <div className="w-5/12 fixed right-0 top-0 h-screen">
-        {token ? (
-          <LiveKitRoom
-            token={token}
-            serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
-            connect={true}
-            audio={true}
-            video={false}
-            data-lk-theme="default"
-            onError={(error) => console.error('LiveKit connection error:', error)}
-            onConnected={() => console.log('LiveKit connected')}
-            onDisconnected={() => console.log('LiveKit disconnected')}
-          > 
-            <ParticipantLogger />
-            <StartMediaButton label="Click to allow media playback" />
-            <ConnectionStateToast />
-            <AudioProvider>
-              <RoomAudioRenderer />
-              <RoomEventListener />
-              <div className="absolute top-0 right-0 w-full h-full bg-F1F2F4">
-                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE] animate-gradient-xy">
-                  <div className="absolute inset-0 flex flex-col justify-end">
-                    <AvatarScene avatarUrl={avatarUrl} />
-                    <div className="absolute bottom-0 left-0 right-0 h-3/4 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+            {/* Right side */}
+            <div className="w-5/12 fixed right-0 top-0 h-screen">
+              <AudioProvider>
+                <RoomAudioRenderer />
+                <RoomEventListener />
+                <div className="absolute top-0 right-0 w-full h-full bg-F1F2F4">
+                  <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE] animate-gradient-xy">
+                    <div className="absolute inset-0 flex flex-col justify-end">
+                      <AvatarScene avatarUrl={avatarUrl} />
+                      <div className="absolute bottom-0 left-0 right-0 h-3/4 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+                    </div>
                   </div>
                 </div>
-              </div>
     
-              <div className="absolute bottom-14 w-full z-10">
-                <VoiceAssistantControlBar />
-                <StartAudio label="Click to allow audio playback" />
-               
-                <ConnectionStateToast />
-                {/* <div className="text-center text-sm font-medium text-gray-600 mt-2"> 
-                  <ConnectionState />
-                </div> */}
-              </div>
-              <OnboardingButton userId={userId} assistantData={assistantData} />
-            </AudioProvider>
-          </LiveKitRoom>
-        ) : (
-          <p>Loading...</p>
-        )}
-      </div>
-      
+                <div className="absolute bottom-14 w-full z-10">
+                  <VoiceAssistantControlBar />
+                  <StartAudio label="Click to allow audio playback" />
+                 
+                  <ConnectionStateToast />
+                  {/* <div className="text-center text-sm font-medium text-gray-600 mt-2"> 
+                    <ConnectionState />
+                  </div> */}
+                </div>
+                <OnboardingButton userId={userId} assistantData={assistantData} />
+              </AudioProvider>
+            </div>
+          </div>
+        </LiveKitRoom>
+      ) : (
+        <p>Loading...</p>
+      )}
     </>
   );
 };
