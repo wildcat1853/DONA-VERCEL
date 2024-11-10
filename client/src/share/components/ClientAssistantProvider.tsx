@@ -281,11 +281,12 @@ const ClientAssistantProvider: React.FC<Props> = ({
           onError={(error) => console.error('LiveKit connection error:', error)}
           onConnected={() => console.log('LiveKit connected')}
           onDisconnected={() => console.log('LiveKit disconnected')}
+          className="bg-white"
         > 
           <ParticipantLogger />
-          <div className="flex">
+          <div className="flex bg-white">
             {/* Left side */}
-            <div className="w-7/12 flex justify-center max-h-screen overflow-auto">
+            <div className="w-7/12 flex justify-center max-h-screen overflow-auto bg-white">
               <div className="w-2/3 flex flex-col gap-9 mt-20">
                 <div className="scale-90 origin-left flex items-center gap-4">
                   <ProjectName 
