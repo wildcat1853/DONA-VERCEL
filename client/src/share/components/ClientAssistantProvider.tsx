@@ -72,19 +72,32 @@ const OnboardingButton = ({ userId, assistantData }: { userId: string, assistant
 
   const handleRepeatOnboarding = async () => {
     try {
-      console.log('Setting onboarding status to true for userId:', userId);
-      await assistantData.updateOnboardingStatus(true);
+      console.log('Starting repeat onboarding sequence...');
+      console.log('Local participant:', localParticipant?.identity);
       
       if (localParticipant) {
-        await localParticipant.setAttributes({
+        // First update the onboarding status
+        console.log('Updating onboarding status...');
+        await assistantData.updateOnboardingStatus(true);
+        
+        // Then set the attributes
+        const attributes = {
           repeatOnboarding: 'true',
-          timestamp: Date.now().toString()
-        });
+          timestamp: Date.now().toString(),
+          userId: userId
+        };
+        console.log('Setting participant attributes:', attributes);
+        await localParticipant.setAttributes(attributes);
+        console.log('✅ Attributes set successfully');
       } else {
-        console.warn('Local participant not found');
+        console.warn('❌ Local participant not found');
       }
-    } catch (error) {
-      console.error('Error updating onboarding status:', error);
+    } catch (error: any) {
+      console.error('❌ Error in handleRepeatOnboarding:', error);
+      console.error('Error details:', {
+        message: (error as Error).message,
+        stack: (error as Error).stack
+      });
     }
   };
 
@@ -166,8 +179,8 @@ const ClientAssistantProvider: React.FC<Props> = ({
               voice: "sage",
               instructions: assistantInstructions.join('\n'),
               metadata: {
-                isOnboarding: isOnboarding,
-                userId: userId
+                userId: userId,
+                isOnboarding: isOnboarding
               }
             },
           }),

@@ -204,29 +204,32 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
     // Handle participant attribute changes
     ctx.room.on(
       "participantAttributesChanged",
-      async (
-        changedAttributes: Record<string, string>,
-        changedParticipant: Participant,
-      ) => {
-        console.log('🔄 Attribute change event received:', {
+      async (changedAttributes: Record<string, string>, changedParticipant: Participant) => {
+        console.log('🔄 Full event details:', {
           participantId: changedParticipant.identity,
           expectedId: participant.identity,
-          attributes: changedAttributes
+          attributes: changedAttributes,
+          metadata: changedParticipant.metadata, // Add metadata logging
+          isAgentIdentity: changedParticipant.identity.startsWith('agent-')
         });
 
-        if (changedParticipant.identity !== participant.identity) {
-          console.log('❌ Participant mismatch, ignoring event');
+        // Skip agent events
+        if (changedParticipant.identity.startsWith('agent-')) {
+          console.log('⏭️ Skipping agent event');
           return;
         }
 
-        // Parse the metadata into an object
-        const participantMetadata = JSON.parse(changedParticipant.metadata || '{}');
-        console.log('📦 Parsed metadata:', participantMetadata);
+        // Log the specific value we're checking
+        console.log('🔍 Checking repeatOnboarding flag:', {
+          value: changedAttributes.repeatOnboarding,
+          allAttributes: changedAttributes
+        });
 
         // Check if this is a repeat onboarding request
-        if (participantMetadata.repeatOnboarding) {
-          console.log('🔄 Repeat onboarding request detected');
+        if (changedAttributes.repeatOnboarding === 'true') {
+          console.log('🎯 Repeat onboarding request detected');
           try {
+            console.log('Creating new conversation item...');
             await session.conversation.item.create({
               type: "message",
               role: "system",
@@ -237,31 +240,23 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
                 },
               ],
             });
-            console.log('✅ Created new conversation item for onboarding');
+            console.log('✅ Created conversation item');
+            
             await session.response.create();
             console.log('✅ Response created');
+
+            // Reset the flag
+            // await changedParticipant.setAttributes({
+            //   ...changedAttributes,
+            //   repeatOnboarding: 'false'
+            // });
           } catch (error) {
-            console.error('❌ Error creating onboarding conversation:', error);
+            console.error('❌ Error in onboarding sequence:', error);
           }
         } else {
-          console.log('ℹ️ No repeat onboarding flag found in metadata');
+          console.log('ℹ️ Not a repeat onboarding request. Full attributes:', changedAttributes);
         }
-
-        // Continue with existing config update logic
-        console.log('🔧 Updating session config');
-        const newConfig = parseSessionConfig({
-          ...participantMetadata,
-          ...changedAttributes,
-        });
-
-        session.sessionUpdate({
-          temperature: newConfig.temperature,
-          maxResponseOutputTokens: newConfig.maxOutputTokens,
-          modalities: newConfig.modalities,
-          turnDetection: newConfig.turnDetection,
-        });
-        console.log('✅ Session config updated');
-      },
+      }
     );
 
     // Handle session close events
