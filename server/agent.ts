@@ -208,29 +208,47 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
         changedAttributes: Record<string, string>,
         changedParticipant: Participant,
       ) => {
+        console.log('🔄 Attribute change event received:', {
+          participantId: changedParticipant.identity,
+          expectedId: participant.identity,
+          attributes: changedAttributes
+        });
+
         if (changedParticipant.identity !== participant.identity) {
+          console.log('❌ Participant mismatch, ignoring event');
           return;
         }
 
         // Parse the metadata into an object
         const participantMetadata = JSON.parse(changedParticipant.metadata || '{}');
+        console.log('📦 Parsed metadata:', participantMetadata);
 
         // Check if this is a repeat onboarding request
         if (participantMetadata.repeatOnboarding) {
-          await session.conversation.item.create({
-            type: "message",
-            role: "system",
-            content: [
-              {
-                type: "input_text",
-                text: "User has requested to repeat onboarding. Start fresh with onboarding instructions: introduce yourself as Dona, explain how the app works with task creation and deadlines, and guide them through getting started.",
-              },
-            ],
-          });
-          await session.response.create();
+          console.log('🔄 Repeat onboarding request detected');
+          try {
+            await session.conversation.item.create({
+              type: "message",
+              role: "system",
+              content: [
+                {
+                  type: "input_text",
+                  text: "User has requested to repeat onboarding. Start fresh with onboarding instructions: introduce yourself as Dona, explain how the app works with task creation and deadlines, and guide them through getting started.",
+                },
+              ],
+            });
+            console.log('✅ Created new conversation item for onboarding');
+            await session.response.create();
+            console.log('✅ Response created');
+          } catch (error) {
+            console.error('❌ Error creating onboarding conversation:', error);
+          }
+        } else {
+          console.log('ℹ️ No repeat onboarding flag found in metadata');
         }
 
         // Continue with existing config update logic
+        console.log('🔧 Updating session config');
         const newConfig = parseSessionConfig({
           ...participantMetadata,
           ...changedAttributes,
@@ -242,6 +260,7 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
           modalities: newConfig.modalities,
           turnDetection: newConfig.turnDetection,
         });
+        console.log('✅ Session config updated');
       },
     );
 
