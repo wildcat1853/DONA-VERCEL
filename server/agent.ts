@@ -219,6 +219,32 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
           return;
         }
 
+        // Handle task updates
+        if (changedAttributes.taskUpdate === 'true') {
+          try {
+            const taskData = JSON.parse(changedAttributes.taskData);
+            console.log('📝 Task Update Received:', {
+              tasks: taskData,
+              timestamp: new Date(parseInt(changedAttributes.timestamp)).toISOString()
+            });
+
+            await session.conversation.item.create({
+              type: "message",
+              role: "user",
+              content: [
+                {
+                  type: "input_text",
+                  text: `Current tasks state: ${JSON.stringify(taskData, null, 2)}\nPlease provide feedback about the project progress and tasks.`
+                },
+              ],
+            });
+            
+            await session.response.create();
+          } catch (error) {
+            console.error('❌ Error handling task update:', error);
+          }
+        }
+
         // Log the specific value we're checking
         console.log('🔍 Checking repeatOnboarding flag:', {
           value: changedAttributes.repeatOnboarding,

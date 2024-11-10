@@ -159,14 +159,12 @@ const ClientAssistantProvider: React.FC<Props> = ({
       try {
         const generatedRoomName = `room-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
         
-        // const currentInstructions = isOnboarding ? onboardingInstructions : assistantInstructions;
-        
-        // console.log('Debug Instructions:', {
-        //   isOnboarding,
-        //   instructionsType: isOnboarding ? 'onboarding' : 'regular',
-        //   instructionsLength: currentInstructions.length,
-        //   firstFewInstructions: currentInstructions.slice(0, 2)
-        // });
+        console.log('🔄 ClientAssistant: Sending initial task data:', {
+          tasks,
+          userId,
+          isOnboarding,
+          timestamp: new Date().toISOString()
+        });
 
         const response = await fetch('/api/get-participant-token', {
           method: 'POST',
@@ -185,7 +183,8 @@ const ClientAssistantProvider: React.FC<Props> = ({
               instructions: assistantInstructions.join('\n'),
               metadata: {
                 userId: userId,
-                isOnboarding: isOnboarding
+                isOnboarding: isOnboarding,
+                tasks: tasks
               }
             },
           }),
@@ -215,7 +214,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
     };
 
     fetchToken();
-  }, [isOnboarding, userId]);
+  }, [isOnboarding, userId, tasks]);
 
   // Calculate progress
   const totalTasks = tasks.length;

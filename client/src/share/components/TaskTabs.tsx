@@ -1,17 +1,50 @@
 "use client";
 import { Task } from "@/../../../define";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import TaskCard from "./TaskCard";
 import { Button } from "../ui/button";
 import { Plus } from "lucide-react";
 import { v4 as uuidv4 } from 'uuid';
+import { useLocalParticipant } from '@livekit/components-react';
 
 type Props = { tasks: Task[]; assistantData: any; projectId: string };
 
+// Create a new component for LiveKit integration
+const TaskUpdater = ({ tasks }: { tasks: Task[] }) => {
+  const { localParticipant } = useLocalParticipant();
+
+  // Update agent whenever tasks change
+  useEffect(() => {
+    if (localParticipant) {
+      const currentAttributes = localParticipant.attributes || {};
+      
+      const attributes = {
+        ...currentAttributes,
+        taskUpdate: 'true',
+        taskData: JSON.stringify(tasks),
+        timestamp: Date.now().toString()
+      };
+      
+      console.log('🔄 TaskUpdater: Sending task update:', {
+        participantId: localParticipant.identity,
+        currentAttributes,
+        newAttributes: attributes,
+        tasks: tasks,
+        timestamp: new Date().toISOString()
+      });
+
+      localParticipant.setAttributes(attributes);
+    }
+  }, [tasks, localParticipant]);
+
+  return null; // This component doesn't render anything
+};
+
 function TaskTabs({ tasks, assistantData, projectId }: Props) {
-  const { status, append } = assistantData;
+  const { status } = assistantData;
   const [localTasks, setLocalTasks] = useState<Task[]>(tasks);
+
   const addEmptyTask = () => {
     const newTask: Task = {
       id: uuidv4(),
@@ -68,16 +101,10 @@ function TaskTabs({ tasks, assistantData, projectId }: Props) {
               status={el.status}
               assistantStatus={status}
               deadline={el.deadline}
-              onCheckBoxClick={async () => {
+              onCheckBoxClick={() => {
                 setLocalTasks(localTasks.map(t => 
                   t.id === el.id ? { ...t, status: "done" } : t
                 ));
-                if (status == "awaiting_message") {
-                  append({
-                    role: "data",
-                    content: `I just finished task: ${el.name}`,
-                  });
-                }
               }}
               onUpdate={(updatedTask) => {
                 setLocalTasks(localTasks.map(t => 
@@ -108,6 +135,16 @@ function TaskTabs({ tasks, assistantData, projectId }: Props) {
           ))}
       </TabsContent>
     </Tabs>
+  );
+}
+
+// Modify ClientAssistantProvider to include TaskUpdater
+export function TaskTabsWithLiveKit(props: Props) {
+  return (
+    <>
+      <TaskTabs {...props} />
+      <TaskUpdater tasks={props.tasks} />
+    </>
   );
 }
 

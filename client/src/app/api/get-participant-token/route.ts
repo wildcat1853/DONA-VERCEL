@@ -18,6 +18,11 @@ interface TokenRequestBody {
     vadThreshold: number;
     vadSilenceDurationMs: number;
     vadPrefixPaddingMs: number;
+    metadata: {
+      userId: string;
+      isOnboarding: boolean;
+      tasks?: any[];
+    }
   };
 }
 
@@ -59,6 +64,7 @@ export async function POST(request: Request) {
         openai_api_key: openaiAPIKey,
         instructions: sessionConfig.instructions,
         isOnboarding: sessionConfig.isOnboarding,
+        tasks: sessionConfig.metadata.tasks,
         turn_detection: JSON.stringify({
           type: sessionConfig.turnDetection,
           threshold: sessionConfig.vadThreshold,
