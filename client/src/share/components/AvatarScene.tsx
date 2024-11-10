@@ -22,7 +22,7 @@ const AvatarScene: React.FC<AvatarSceneProps> = ({ avatarUrl }) => {
     >
       <PerspectiveCamera 
         makeDefault 
-        position={[0, 0.6, 0.88]}
+        position={[0, 0.9, 0.88]}
         fov={54}
       />
       {/* Lights */}
