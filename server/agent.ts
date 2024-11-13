@@ -232,7 +232,7 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
             content: [
               {
                 type: "input_text",
-                text: `Current tasks state: ${JSON.stringify(data.tasks, null, 2)}\nPlease provide feedback about the most currently created task. Remind user to input deadlines for tasks. If deadline was just input, ask if they want to add another task. When deadline is set, tell user is done for now, he will receive invite in calendar to a meeting and and Dona is gonna follow up on deadline date and there will be a session with the user to discuss the progress.`
+                text: `Current tasks state: ${JSON.stringify(data.tasks, null, 2)}\nPlease watch the latest task user created. Once user set name and description, congratulate him and encourage user to input deadlines for task. Explain that deadline is important for Dona to follow up on task. When deadline is set, tell user he is done for now, he will receive invite in calendar to a meeting and and Dona is gonna follow up on deadline date and there will be a session with the user to discuss the progress.Thank user and tell him he can close the tab and go now. Do not pronounce every part of the task like a parrot.`
               },
             ],
           });
