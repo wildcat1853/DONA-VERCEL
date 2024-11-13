@@ -70,39 +70,52 @@ const avatarUrl = 'https://models.readyplayer.me/670c2238e4f39be58fe308ae.glb?mo
 // Create a new component for the onboarding button
 const OnboardingButton = ({ userId, assistantData }: { userId: string, assistantData: any }) => {
   const { localParticipant } = useLocalParticipant();
+  const room = useRoomContext();
 
   const handleRepeatOnboarding = async () => {
     try {
       console.log('Starting repeat onboarding sequence...');
-      console.log('Local participant:', localParticipant?.identity);
       
-      if (localParticipant) {
-        // First update the onboarding status
-        console.log('Updating onboarding status...');
-        await assistantData.updateOnboardingStatus(true);
-        
-        // Get existing attributes and merge with new ones
-        const currentAttributes = localParticipant.attributes || {};
-        
-        // Log current state
-        console.log('Current attributes:', currentAttributes);
-        
-        // Create new attributes object preserving ALL existing attributes
-        const attributes = {
-          ...currentAttributes,  // Spread existing attributes
-          repeatOnboarding: 'true',
-          timestamp: Date.now().toString(),
-          userId: userId
-        };
-        
-        console.log('Setting participant attributes:', attributes);
-        await localParticipant.setAttributes(attributes);
-        console.log('✅ Attributes set successfully');
-      } else {
-        console.warn('❌ Local participant not found');
+      if (room.state !== 'connected') {
+        console.warn('❌ Room not connected yet');
+        return;
       }
+
+      if (!localParticipant) {
+        console.warn('❌ Local participant not found');
+        return;
+      }
+
+      // First update the onboarding status
+      console.log('Updating onboarding status...');
+      await assistantData.updateOnboardingStatus(true);
+      
+      // Get existing attributes and merge with new ones
+      const currentAttributes = localParticipant.attributes || {};
+      const newAttributes = {
+        ...currentAttributes,
+        repeatOnboarding: 'true',
+        timestamp: Date.now().toString(),
+        userId: userId
+      };
+      
+      console.log('Setting participant attributes:', newAttributes);
+      
+      // Add timeout promise
+      const timeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Metadata update timed out')), 5000)
+      );
+
+      // Race between the metadata update and timeout
+      await Promise.race([
+        localParticipant.setMetadata(JSON.stringify(newAttributes)),
+        timeout
+      ]);
+
+      console.log('✅ Attributes set successfully');
     } catch (error: any) {
       console.error('❌ Error in handleRepeatOnboarding:', error);
+      // Optionally add user feedback here
     }
   };
 
