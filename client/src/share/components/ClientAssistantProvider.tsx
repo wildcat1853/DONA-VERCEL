@@ -198,7 +198,6 @@ const ClientAssistantProvider: React.FC<Props> = ({
               metadata: {
                 userId: userId,
                 isOnboarding: isOnboarding,
-                tasks: tasks
               }
             },
           }),

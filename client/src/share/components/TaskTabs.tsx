@@ -6,39 +6,39 @@ import TaskCard from "./TaskCard";
 import { Button } from "../ui/button";
 import { Plus } from "lucide-react";
 import { v4 as uuidv4 } from 'uuid';
-import { useLocalParticipant } from '@livekit/components-react';
+import { useLocalParticipant, useRoomContext } from '@livekit/components-react';
+import { RoomEvent, DataPacket_Kind } from 'livekit-client';
 
 type Props = { tasks: Task[]; assistantData: any; projectId: string };
 
-// Create a new component for LiveKit integration
+// Create a new component for LiveKit data messaging
 const TaskUpdater = ({ tasks }: { tasks: Task[] }) => {
   const { localParticipant } = useLocalParticipant();
+  const room = useRoomContext();
 
   // Update agent whenever tasks change
   useEffect(() => {
-    if (localParticipant) {
-      const currentAttributes = localParticipant.attributes || {};
-      
-      const attributes = {
-        ...currentAttributes,
-        taskUpdate: 'true',
-        taskData: JSON.stringify(tasks),
-        timestamp: Date.now().toString()
-      };
-      
-      console.log('🔄 TaskUpdater: Sending task update:', {
-        participantId: localParticipant.identity,
-        currentAttributes,
-        newAttributes: attributes,
+    if (localParticipant && room) {
+      const taskUpdate = {
+        type: 'taskUpdate',
         tasks: tasks,
-        timestamp: new Date().toISOString()
+        timestamp: Date.now()
+      };
+
+      // Convert to Uint8Array
+      const encoder = new TextEncoder();
+      const data = encoder.encode(JSON.stringify(taskUpdate));
+
+      // Publish data reliably to the room
+      localParticipant.publishData(data, {
+        reliable: true,
       });
 
-      localParticipant.setAttributes(attributes);
+      console.log('📤 TaskUpdater: Sent task update');
     }
-  }, [tasks, localParticipant]);
+  }, [tasks, localParticipant, room]);
 
-  return null; // This component doesn't render anything
+  return null;
 };
 
 function TaskTabs({ tasks, assistantData, projectId }: Props) {

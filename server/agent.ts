@@ -30,7 +30,7 @@ if (!LIVEKIT_URL || !LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
 
 // Import necessary modules after loading env variables
 import { WorkerOptions, cli, defineAgent, multimodal, JobContext } from "@livekit/agents";
-import { RoomEvent } from "@livekit/rtc-node";
+import { RoomEvent, DataPacketKind, RemoteParticipant } from "@livekit/rtc-node";
 import * as openai from "@livekit/agents-plugin-openai";
 import type { Participant } from "@livekit/rtc-node";
 
@@ -200,57 +200,56 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
         // Optionally exit or wait for reconnection
       }
     });
+    // Handle data messages
+    ctx.room.on('dataReceived', async (payload: Uint8Array, participant?: RemoteParticipant | undefined) => {
+      if (participant && participant.identity.startsWith('agent-')) {
+        console.log('⏭️ Skipping message from agent');
+        return;
+      }
 
-    // Set up participant attribute change listener
+      try {
+        const decoder = new TextDecoder();
+        const rawData = decoder.decode(payload);
+        console.log('📥 Agent: Received raw data:', rawData);
+        
+        const data = JSON.parse(rawData);
+        console.log('📦 Agent: Parsed data:', {
+          type: data.type,
+          timestamp: new Date(data.timestamp).toISOString(),
+          tasksCount: data.tasks?.length,
+          participantId: participant?.identity
+        });
+
+        if (data.type === 'taskUpdate') {
+          console.log('📝 Agent: Processing task update', {
+            tasks: data.tasks,
+            timestamp: new Date(data.timestamp).toISOString()
+          });
+
+          await session.conversation.item.create({
+            type: "message",
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: `Current tasks state: ${JSON.stringify(data.tasks, null, 2)}\nPlease provide feedback about the most currently created task. Remind user to input deadlines for tasks. If deadline was just input, ask if they want to add another task. When deadline is set, tell user is done for now, he will receive invite in calendar to a meeting and and Dona is gonna follow up on deadline date and there will be a session with the user to discuss the progress.`
+              },
+            ],
+          });
+          
+          await session.response.create();
+        }
+      } catch (error) {
+        console.error('❌ Agent: Error processing data message:', error);
+      }
+    });
+
+    // Remove the old participantAttributesChanged listener for tasks
+    // Keep the onboarding listener as is since it's not frequent
     ctx.room.on(
       "participantAttributesChanged",
       async (changedAttributes: Record<string, string>, changedParticipant: Participant) => {
-        console.log('🔄 Agent: Received attribute change:', {
-          participantId: changedParticipant.identity,
-          expectedId: participant.identity,
-          attributes: changedAttributes,
-          metadata: changedParticipant.metadata,
-          isAgentIdentity: changedParticipant.identity.startsWith('agent-'),
-          timestamp: new Date().toISOString()
-        });
-
-        // Skip agent events
-        if (changedParticipant.identity.startsWith('agent-')) {
-          console.log('⏭️ Agent: Skipping agent event');
-          return;
-        }
-
-        // Handle task updates
-        if (changedAttributes.taskUpdate === 'true') {
-          try {
-            console.log('📝 Agent: Processing task update');
-            const taskData = JSON.parse(changedAttributes.taskData);
-            console.log('📊 Agent: Task data received:', {
-              taskCount: Array.isArray(taskData) ? taskData.length : 'not an array',
-              tasks: taskData,
-              timestamp: new Date(parseInt(changedAttributes.timestamp)).toISOString()
-            });
-
-            await session.conversation.item.create({
-              type: "message",
-              role: "user",
-              content: [
-                {
-                  type: "input_text",
-                  text: `Current tasks state: ${JSON.stringify(taskData, null, 2)}\nPlease provide feedback about the most currently created task. Remind user to input deadlines for tasks. If deadline was just input, ask if they want to add another task.`
-                },
-              ],
-            });
-            
-            await session.response.create();
-            console.log('✅ Agent: Sent task update to assistant');
-          } catch (error) {
-            console.error('❌ Agent: Error handling task update:', error);
-          }
-          return; // Return after handling task update
-        }
-
-        // Handle onboarding separately
+        // Only handle onboarding requests
         if (changedAttributes.repeatOnboarding === 'true') {
           console.log('🎯 Agent: Repeat onboarding request detected');
           try {

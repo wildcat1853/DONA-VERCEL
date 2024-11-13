@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 
 // Define the structure of the expected request body
 interface TokenRequestBody {
-  room: string; // Add room to the interface
+  room: string;
   sessionConfig: {
     model: string;
     turnDetection: string;
@@ -21,7 +21,6 @@ interface TokenRequestBody {
     metadata: {
       userId: string;
       isOnboarding: boolean;
-      tasks?: any[];
     }
   };
 }
@@ -64,7 +63,6 @@ export async function POST(request: Request) {
         openai_api_key: openaiAPIKey,
         instructions: sessionConfig.instructions,
         isOnboarding: sessionConfig.isOnboarding,
-        tasks: sessionConfig.metadata.tasks,
         turn_detection: JSON.stringify({
           type: sessionConfig.turnDetection,
           threshold: sessionConfig.vadThreshold,
