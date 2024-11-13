@@ -199,7 +199,7 @@ function TaskCard(props: Props) {
           value={localName}
           onChange={handleNameChange}
           placeholder="Task name"
-          className="font-semibold text-lg focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-transparent border-none shadow-none bg-transparent"
+          className="font-semibold text-xl focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-transparent border-none shadow-none bg-transparent"
         />
         <Input
           value={localDescription}
