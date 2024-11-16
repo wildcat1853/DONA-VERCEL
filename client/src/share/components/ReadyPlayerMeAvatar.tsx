@@ -17,6 +17,8 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
 }) => {
   const { scene } = useGLTF(avatarUrl) as any;
   const idleAnimation = useGLTF('/animations/idle5.glb');
+  // const idleAnimation = useGLTF('/animations/greeting.glb');
+  // const idleAnimation = useGLTF('/animations/calling.glb');
   // const talkingAnimation = useGLTF('/animations/talking.glb'); // Commented out talking animation
 
   const { actions, mixer } = useAnimations(idleAnimation.animations, scene);
