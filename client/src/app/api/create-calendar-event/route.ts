@@ -6,23 +6,15 @@ import { authConfig } from "../auth/[...nextauth]/authConfig";
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authConfig);
-    console.log('Session received:', {
-      hasSession: !!session,
-      hasAccessToken: !!session?.accessToken,
-      userEmail: session?.user?.email
-    });
-
     if (!session?.accessToken) {
-      console.log('No access token in session');
       return NextResponse.json({ error: "No access token found" }, { status: 401 });
     }
 
     const { taskName, description, deadline } = await request.json();
-    console.log('Task details:', { taskName, description, deadline });
 
-    // Create end time (15 minutes after deadline)
+    // Create end time (30 minutes after deadline instead of 15)
     const endTime = new Date(deadline);
-    endTime.setMinutes(endTime.getMinutes() + 15);
+    endTime.setMinutes(endTime.getMinutes() + 30);
 
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_ID,
@@ -43,7 +35,7 @@ export async function POST(request: Request) {
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
     const event = {
-      summary: `Dona Task Review: ${taskName}`,
+      summary: `Review progress with Dona`,  // Updated event name
       description: description || 'Task review with Dona',
       start: {
         dateTime: new Date(deadline).toISOString(),
