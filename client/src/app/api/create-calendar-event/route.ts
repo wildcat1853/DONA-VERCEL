@@ -34,25 +34,37 @@ export async function POST(request: Request) {
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
+    const appUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://app.aidona.co'
+      : 'http://localhost:3000';
+
     const event = {
-      summary: `Review progress with Dona`,  // Updated event name
-      description: description || 'Task review with Dona',
+      summary: "Review progress with Dona",
+      description: "Follow the link in google calendar to review your progress with Dona",
       start: {
         dateTime: new Date(deadline).toISOString(),
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
       },
       end: {
         dateTime: endTime.toISOString(),
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
       },
-      attendees: [{ email: session.user.email }],
+      attendees: [{
+        email: session.user.email,
+        responseStatus: 'needsAction'
+      }],
+      location: appUrl,
       reminders: {
         useDefault: false,
         overrides: [
           { method: 'email', minutes: 24 * 60 },
-          { method: 'popup', minutes: 30 },
-        ],
+          { method: 'popup', minutes: 30 }
+        ]
       },
+      guestsCanModify: false,
+      guestsCanInviteOthers: false,
+      guestsCanSeeOtherGuests: true,
+      visibility: 'private'
     };
 
     const response = await calendar.events.insert({
