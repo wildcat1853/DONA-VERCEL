@@ -55,6 +55,8 @@ import { onboardingInstructions } from '../config/onboardingInstructions';
 import { Badge } from "../ui/badge";
 import { HelpCircle } from 'lucide-react';
 import { TaskTabsWithLiveKit } from './TaskTabs';
+import { SessionProvider } from "next-auth/react";
+import AccountDropdown from './AccountDropdown';
 
 
 type Props = {
@@ -235,7 +237,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
   const progress = totalTasks === 0 ? 0 : (completedTasks / totalTasks) * 100;
 
   return (
-    <>
+    <SessionProvider>
       <Dialog open={showMicrophoneDialog} onOpenChange={setShowMicrophoneDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -296,6 +298,9 @@ const ClientAssistantProvider: React.FC<Props> = ({
           className="bg-white"
         > 
           <ParticipantLogger />
+          <div className="fixed top-5 left-5 z-50">
+            <AccountDropdown />
+          </div>
           <div className="flex bg-white">
             {/* Left side */}
             <div className="w-7/12 flex justify-center max-h-screen overflow-auto bg-white">
@@ -347,7 +352,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
       ) : (
         <p>Loading...</p>
       )}
-    </>
+    </SessionProvider>
   );
 };
 

@@ -23,6 +23,7 @@ import { DateTime } from "luxon";
 import { Popper, Paper } from "@mui/material";
 import { StaticDateTimePicker } from "@mui/x-date-pickers/StaticDateTimePicker";
 import { createOrUpdateTask } from "@/app/actions/task";
+import { useSession } from "next-auth/react";
 
 type Props = {
   name: string;
@@ -83,6 +84,8 @@ function TaskCard(props: Props) {
 
   const saveTimeout = useRef<NodeJS.Timeout>();
 
+  const { data: session } = useSession();
+
   // console.log('TaskCard props:', props); // Debug log
   // console.log('ProjectId in TaskCard:', projectId); // Debug log
 
@@ -130,10 +133,31 @@ function TaskCard(props: Props) {
     setTempDate(newDate);
   };
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     if (tempDate) {
       setDate(tempDate.toJSDate());
       setTempDate(null);
+      
+      // Create calendar event when deadline is set
+      try {
+        const response = await fetch('/api/create-calendar-event', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            taskName: localName,
+            description: localDescription,
+            deadline: tempDate.toJSDate(),
+          }),
+        });
+
+        if (!response.ok) {
+          console.error('Failed to create calendar event');
+        }
+      } catch (error) {
+        console.error('Error creating calendar event:', error);
+      }
     }
     setIsPickerOpen(false);
   };
