@@ -2,6 +2,48 @@ import { NextResponse } from "next/server";
 import { google } from 'googleapis';
 import { getServerSession } from "next-auth";
 import { authConfig } from "../auth/[...nextauth]/authConfig";
+import { Resend } from 'resend';
+import { EmailTemplate } from '@/components/EmailTemplate';
+
+async function sendConfirmationEmail(userEmail: string, scheduledDate: string, calendarLink: string) {
+  try {
+    const resend = new Resend(process.env.RESEND_KEY);
+    console.log('Attempting to send confirmation email to:', userEmail);
+
+    const { data: emailData, error: emailError } = await resend.emails.send({
+      from: 'Dona AI <dona@resend.dev>',
+      to: userEmail,
+      subject: 'Your Session with Dona is Scheduled',
+      react: EmailTemplate({
+        userEmail,
+        scheduledDate,
+        meetingLink: calendarLink
+      })
+    });
+
+    if (emailError) {
+      console.error('Error sending confirmation email:', emailError);
+      return { success: false, error: emailError };
+    }
+    if (emailData) {
+      console.log('Confirmation email sent successfully:', {
+        emailId: emailData.id,
+        to: userEmail,
+        scheduledFor: scheduledDate
+      });
+    }
+
+    if (emailData) {
+      return { success: true, emailId: emailData.id };
+    } else {
+      console.error('No email data received');
+      return { success: false, error: 'No email data received' };
+    }
+  } catch (error) {
+    console.error('Failed to send confirmation email:', error);
+    return { success: false, error };
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -85,10 +127,30 @@ export async function POST(request: Request) {
         attendees: response.data.attendees
       });
 
+      // After calendar event is created successfully, send confirmation email
+      const formattedDate = new Date(deadline).toLocaleString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short'
+      });
+
+      const emailResult = await sendConfirmationEmail(
+        session.user.email || '',
+        formattedDate,
+        response.data.htmlLink || ''
+      );
+
       return NextResponse.json({ 
         eventId: response.data.id,
-        htmlLink: response.data.htmlLink 
+        htmlLink: response.data.htmlLink,
+        emailSent: emailResult.success,
+        emailId: emailResult.success ? emailResult.emailId : undefined
       });
+
     } catch (calendarError: any) {
       console.error('Calendar API Error:', {
         status: calendarError.response?.status,
