@@ -5,12 +5,19 @@ import { authConfig } from "../auth/[...nextauth]/authConfig";
 import { Resend } from 'resend';
 import { EmailTemplate } from '@/components/EmailTemplate';
 
-async function sendConfirmationEmail(userEmail: string, scheduledDate: string, calendarLink: string) {
+async function sendConfirmationAndScheduleReminder(
+  userEmail: string, 
+  scheduledDate: string, 
+  calendarLink: string,
+  deadline: Date,
+  projectId: string
+) {
   try {
     const resend = new Resend(process.env.RESEND_KEY);
-    console.log('Attempting to send confirmation email to:', userEmail);
+    console.log('Sending confirmation and scheduling reminder for:', userEmail);
 
-    const { data: emailData, error: emailError } = await resend.emails.send({
+    // Send immediate confirmation email
+    const { data: confirmationData, error: confirmationError } = await resend.emails.send({
       from: 'Dona AI <dona@resend.dev>',
       to: userEmail,
       subject: 'Your Session with Dona is Scheduled',
@@ -21,26 +28,69 @@ async function sendConfirmationEmail(userEmail: string, scheduledDate: string, c
       })
     });
 
-    if (emailError) {
-      console.error('Error sending confirmation email:', emailError);
-      return { success: false, error: emailError };
-    }
-    if (emailData) {
-      console.log('Confirmation email sent successfully:', {
-        emailId: emailData.id,
-        to: userEmail,
-        scheduledFor: scheduledDate
-      });
+    if (confirmationError) {
+      console.error('Error sending confirmation email:', confirmationError);
+      return { success: false, error: confirmationError };
     }
 
-    if (emailData) {
-      return { success: true, emailId: emailData.id };
-    } else {
-      console.error('No email data received');
-      return { success: false, error: 'No email data received' };
+    console.log('Confirmation email sent successfully:', {
+      emailId: confirmationData?.id,
+      to: userEmail,
+      scheduledFor: scheduledDate
+    });
+
+    // Schedule reminder email for 10 minutes before
+    const reminderTime = new Date(deadline.getTime() - 10 * 60000);
+    console.log('Scheduling reminder email for:', {
+      to: userEmail,
+      scheduledFor: reminderTime.toISOString(),
+      meetingLink: `${process.env.NEXTAUTH_URL}/chat/${projectId}`
+    });
+
+    const { data: reminderData, error: reminderError } = await resend.emails.send({
+      from: 'Dona AI <dona@resend.dev>',
+      to: userEmail,
+      subject: 'Upcoming Session with Dona',
+      react: EmailTemplate({
+        userEmail,
+        scheduledDate,
+        meetingLink: `${process.env.NEXTAUTH_URL}/chat/${projectId}`,
+        isReminder: true
+      }),
+      scheduledAt: reminderTime.toISOString()
+    });
+
+    if (reminderError) {
+      console.error('Error scheduling reminder email:', reminderError);
+      return { 
+        success: true, 
+        confirmationEmailId: confirmationData?.id,
+        reminderError 
+      };
     }
+
+    console.log('Reminder email scheduled successfully:', {
+      emailId: reminderData?.id,
+      to: userEmail,
+      scheduledFor: reminderTime.toISOString(),
+      projectId
+    });
+
+    console.log('All emails processed successfully:', {
+      confirmationEmailId: confirmationData?.id,
+      reminderEmailId: reminderData?.id,
+      userEmail,
+      scheduledFor: scheduledDate,
+      reminderAt: reminderTime.toISOString()
+    });
+
+    return { 
+      success: true, 
+      confirmationEmailId: confirmationData?.id,
+      reminderEmailId: reminderData?.id 
+    };
   } catch (error) {
-    console.error('Failed to send confirmation email:', error);
+    console.error('Failed to process emails:', error);
     return { success: false, error };
   }
 }
@@ -55,7 +105,7 @@ export async function POST(request: Request) {
       }, { status: 401 });
     }
 
-    const { taskName, description, deadline } = await request.json();
+    const { taskName, description, deadline, projectId } = await request.json();
 
     const endTime = new Date(deadline);
     endTime.setMinutes(endTime.getMinutes() + 30);
@@ -127,7 +177,6 @@ export async function POST(request: Request) {
         attendees: response.data.attendees
       });
 
-      // After calendar event is created successfully, send confirmation email
       const formattedDate = new Date(deadline).toLocaleString('en-US', {
         weekday: 'long',
         year: 'numeric',
@@ -138,17 +187,22 @@ export async function POST(request: Request) {
         timeZoneName: 'short'
       });
 
-      const emailResult = await sendConfirmationEmail(
-        session.user.email || '',
+      // Send confirmation and schedule reminder in one go
+      const emailResult = await sendConfirmationAndScheduleReminder(
+        session.user.email,
         formattedDate,
-        response.data.htmlLink || ''
+        response.data.htmlLink || '',
+        new Date(deadline),
+        projectId
       );
 
       return NextResponse.json({ 
         eventId: response.data.id,
         htmlLink: response.data.htmlLink,
         emailSent: emailResult.success,
-        emailId: emailResult.success ? emailResult.emailId : undefined
+        confirmationEmailId: emailResult.confirmationEmailId,
+        reminderEmailId: emailResult.reminderEmailId,
+        reminderError: emailResult.reminderError
       });
 
     } catch (calendarError: any) {

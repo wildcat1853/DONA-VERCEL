@@ -5,6 +5,11 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { Task } from "../../../../define";
 
+interface TaskDataWithEmail extends Partial<Task> {
+    id: string;
+    userEmail?: string;
+}
+
 export async function toggleTaskStatus(taskId: string) {
     let taskData = await db.query.task.findFirst({
         where: (task, { eq }) => eq(task.id, taskId)
@@ -36,11 +41,11 @@ export async function saveTask(taskData: Partial<Task> & { id: string }) {
     revalidatePath('/chat/' + taskData.projectId);
 }
 
-export async function createOrUpdateTask(taskData: Partial<Task> & { id: string }) {
+export async function createOrUpdateTask(taskData: TaskDataWithEmail) {
     console.log('Received taskData:', taskData);
 
     if (!taskData.name?.trim()) {
-        return; // Don't save if no name
+        return;
     }
 
     if (!taskData.projectId) {
@@ -53,13 +58,14 @@ export async function createOrUpdateTask(taskData: Partial<Task> & { id: string 
     });
 
     const currentDate = new Date();
-    
+    const deadline = taskData.deadline || currentDate;
+
     if (existingTask) {
         await db.update(task)
             .set({
                 ...taskData,
                 status: taskData.status || 'in progress',
-                deadline: taskData.deadline || currentDate, // Ensure deadline is never null
+                deadline,
             })
             .where(eq(task.id, taskData.id));
     } else {
@@ -69,7 +75,7 @@ export async function createOrUpdateTask(taskData: Partial<Task> & { id: string 
             projectId: taskData.projectId,
             status: taskData.status || 'in progress',
             description: taskData.description || null,
-            deadline: taskData.deadline || currentDate, // Ensure deadline is never null
+            deadline,
             createdAt: currentDate
         });
     }
