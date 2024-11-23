@@ -7,18 +7,9 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authConfig);
     
-    // Debug session state with token details
-    console.log("Calendar Event Creation - Session:", {
-      hasSession: !!session,
-      hasAccessToken: !!session?.accessToken,
-      email: session?.user?.email,
-      tokenType: typeof session?.accessToken,
-      tokenPrefix: session?.accessToken?.substring(0, 10) // Log first 10 chars of token
-    });
-
-    if (!session?.accessToken) {
+    if (!session?.user?.email || !session.accessToken) {
       return NextResponse.json({ 
-        error: "No access token found" 
+        error: "No user email or access token found" 
       }, { status: 401 });
     }
 
@@ -27,27 +18,25 @@ export async function POST(request: Request) {
     const endTime = new Date(deadline);
     endTime.setMinutes(endTime.getMinutes() + 30);
 
-    // Create OAuth2 client with redirect URI
+    // Use OAuth2 with user's access token
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_ID,
       process.env.GOOGLE_SECRET,
-      `${process.env.NEXTAUTH_URL}/api/auth/callback/google`  // Add explicit redirect URI
+      `${process.env.NEXTAUTH_URL}/api/auth/callback/google`
     );
 
-    // Set credentials with full token object
     oauth2Client.setCredentials({
-      access_token: session.accessToken,
-      token_type: 'Bearer'
+      access_token: session.accessToken
     });
 
-    const calendar = google.calendar({ 
-      version: 'v3', 
-      auth: oauth2Client 
+    const calendar = google.calendar({
+      version: 'v3',
+      auth: oauth2Client
     });
 
     const event = {
-      summary: taskName || "Review progress with Dona",
-      description: description || "Follow the link in google calendar to review your progress with Dona",
+      summary: "Sync with Dona",
+      description: `Please give update on your task at ${process.env.NEXTAUTH_URL}`,
       start: {
         dateTime: new Date(deadline).toISOString(),
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -57,30 +46,43 @@ export async function POST(request: Request) {
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
       },
       attendees: [{
-        email: session.user?.email,
-        responseStatus: 'needsAction'
+        email: session.user.email,
+        responseStatus: 'needsAction',
+        optional: false
       }],
       reminders: {
         useDefault: false,
         overrides: [
-          { method: 'email', minutes: 0 },
+          { method: 'email', minutes: 5 },
           { method: 'email', minutes: 24 * 60 },
           { method: 'popup', minutes: 30 }
         ]
-      }
+      },
+      guestsCanModify: false,
+      guestsCanInviteOthers: false,
+      guestsCanSeeOtherGuests: false,
+      sendUpdates: 'all',
+      status: 'confirmed'
     };
 
     try {
+      console.log('Attempting to create calendar event:', {
+        userEmail: session.user.email,
+        hasAccessToken: !!session.accessToken
+      });
+
       const response = await calendar.events.insert({
         calendarId: 'primary',
         requestBody: event,
-        sendUpdates: 'all'
+        sendUpdates: 'all',
+        conferenceDataVersion: 0
       });
 
       console.log('Calendar event created successfully:', {
         eventId: response.data.id,
         status: response.status,
-        reminders: response.data.reminders
+        organizer: response.data.organizer,
+        attendees: response.data.attendees
       });
 
       return NextResponse.json({ 
@@ -91,8 +93,7 @@ export async function POST(request: Request) {
       console.error('Calendar API Error:', {
         status: calendarError.response?.status,
         message: calendarError.message,
-        errors: calendarError.response?.data?.error,
-        token: session.accessToken?.substring(0, 10) // Log first 10 chars of token for debugging
+        errors: calendarError.response?.data?.error
       });
       
       return NextResponse.json({
