@@ -2,47 +2,66 @@ import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
 export const authConfig: NextAuthOptions = {
-  debug: true,
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_ID!,
       clientSecret: process.env.GOOGLE_SECRET!,
       authorization: {
         params: {
-          prompt: "consent",
-          access_type: "offline",
-          response_type: "code",
           scope: [
             'openid',
             'email',
             'profile',
-            'https://www.googleapis.com/auth/userinfo.profile',
-            'https://www.googleapis.com/auth/userinfo.email',
             'https://www.googleapis.com/auth/calendar',
             'https://www.googleapis.com/auth/calendar.events'
-          ].join(' ')
-        },
-      },
-    }),
+          ].join(' '),
+          access_type: 'offline',
+          prompt: 'consent',
+          response_type: 'code'
+        }
+      }
+    })
   ],
   callbacks: {
     async jwt({ token, account, user }) {
-      console.log('JWT Callback:', { hasAccount: !!account, hasUser: !!user });
+      console.log("JWT Callback - Raw Data:", { 
+        hasAccount: !!account,
+        accountScopes: account?.scope,
+        accessToken: !!account?.access_token,
+        tokenData: token
+      });
       
       if (account) {
         token.accessToken = account.access_token;
-        console.log('Setting access token in JWT:', !!account.access_token);
+        token.scope = account.scope;
       }
       return token;
     },
     async session({ session, token }) {
-      console.log('Session Callback:', { 
+      console.log("Session Callback - Token Data:", { 
         hasToken: !!token, 
-        hasAccessToken: !!token.accessToken 
+        hasAccessToken: !!token.accessToken,
+        scope: token.scope
       });
       
-      session.accessToken = token.accessToken as string;
+      session.accessToken = token.accessToken;
+      session.scope = token.scope;
       return session;
-    },
+    }
   },
+  debug: true
 };
+
+declare module "next-auth" {
+  interface Session {
+    accessToken?: string;
+    scope?: string;
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    accessToken?: string;
+    scope?: string;
+  }
+}
