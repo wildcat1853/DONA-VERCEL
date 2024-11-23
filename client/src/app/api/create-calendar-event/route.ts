@@ -7,13 +7,13 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authConfig);
     
-    // Debug session state with scope
+    // Debug session state with token details
     console.log("Calendar Event Creation - Session:", {
       hasSession: !!session,
       hasAccessToken: !!session?.accessToken,
       email: session?.user?.email,
-      scope: session?.scope,
-      tokenType: typeof session?.accessToken
+      tokenType: typeof session?.accessToken,
+      tokenPrefix: session?.accessToken?.substring(0, 10) // Log first 10 chars of token
     });
 
     if (!session?.accessToken) {
@@ -27,18 +27,17 @@ export async function POST(request: Request) {
     const endTime = new Date(deadline);
     endTime.setMinutes(endTime.getMinutes() + 30);
 
-    // Create OAuth2 client
+    // Create OAuth2 client with redirect URI
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_ID,
       process.env.GOOGLE_SECRET,
-      process.env.NEXTAUTH_URL
+      `${process.env.NEXTAUTH_URL}/api/auth/callback/google`  // Add explicit redirect URI
     );
 
-    // Set credentials with scope from session
+    // Set credentials with full token object
     oauth2Client.setCredentials({
       access_token: session.accessToken,
-      token_type: 'Bearer',
-      scope: session.scope || 'https://www.googleapis.com/auth/calendar.events'
+      token_type: 'Bearer'
     });
 
     const calendar = google.calendar({ 
@@ -68,26 +67,14 @@ export async function POST(request: Request) {
           { method: 'email', minutes: 24 * 60 },
           { method: 'popup', minutes: 30 }
         ]
-      },
-      sendNotifications: true,
-      guestsCanModify: false,
-      guestsCanInviteOthers: false,
-      visibility: 'private'
+      }
     };
-
-    console.log('Attempting to create calendar event:', {
-      eventSummary: event.summary,
-      startTime: event.start.dateTime,
-      attendee: event.attendees[0].email
-    });
 
     try {
       const response = await calendar.events.insert({
         calendarId: 'primary',
         requestBody: event,
-        sendUpdates: 'all',
-        conferenceDataVersion: 0,
-        sendNotifications: true
+        sendUpdates: 'all'
       });
 
       console.log('Calendar event created successfully:', {
@@ -104,7 +91,8 @@ export async function POST(request: Request) {
       console.error('Calendar API Error:', {
         status: calendarError.response?.status,
         message: calendarError.message,
-        errors: calendarError.response?.data?.error
+        errors: calendarError.response?.data?.error,
+        token: session.accessToken?.substring(0, 10) // Log first 10 chars of token for debugging
       });
       
       return NextResponse.json({
