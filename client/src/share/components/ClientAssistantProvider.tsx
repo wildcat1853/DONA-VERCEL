@@ -38,7 +38,8 @@ import {
   StartAudio,
   useEnsureParticipant,
   useIsSpeaking,
-  useParticipants
+  useParticipants,
+  Chat
 } from '@livekit/components-react';
 
 import '@livekit/components-styles';
@@ -330,6 +331,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
                   <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE] animate-gradient-xy">
                     <div className="absolute inset-0 flex flex-col justify-end">
                       <AvatarScene avatarUrl={avatarUrl} />
+                      
                       <div className="absolute bottom-0 left-0 right-0 h-3/4 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
                     </div>
                   </div>
