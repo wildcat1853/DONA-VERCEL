@@ -203,6 +203,7 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
     // Handle data messages
     ctx.room.on('dataReceived', async (payload: Uint8Array, participant?: RemoteParticipant | undefined) => {
       if (participant && participant.identity.startsWith('agent-')) {
+        // console.log('⏭️ Skipping message from agent');
         return;
       }
 
@@ -210,13 +211,23 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
         const decoder = new TextDecoder();
         const rawData = decoder.decode(payload);
         const data = JSON.parse(rawData);
+        
+        // Handle onboarding control messages
+        if (data.type === 'onboardingControl') {
+          console.log('📥 Agent: Received onboarding control:', data);
 
-        // Add handler for disable onboarding message
-        if (data.type === 'onboardingControl' && data.action === 'disable') {
-          console.log('🔕 Agent: Onboarding disabled via message:', {
-            userId: data.userId,
-            timestamp: new Date(data.timestamp).toISOString()
+          await session.conversation.item.create({
+            type: "message",
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: `User has completed onboarding. Please review their tasks and progress. Look at the tasks they've created, which ones have deadlines set, and which ones still need attention. Congratulate them on their progress and remind them you'll be here to help manage tasks and deadlines. Keep the tone friendly and encouraging.`
+              },
+            ],
           });
+          
+          await session.response.create();
           return;
         }
 
