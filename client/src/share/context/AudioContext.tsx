@@ -19,55 +19,64 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [audioTrack, setAudioTrack] = useState<Track | null>(null);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
 
   useEffect(() => {
     console.log('AudioContext useEffect triggered with track:', {
       hasTrack: !!audioTrack,
       trackSid: audioTrack?.sid,
-      hasMediaStreamTrack: !!audioTrack?.mediaStreamTrack
+      hasMediaStreamTrack: !!audioTrack?.mediaStreamTrack,
+      audioContextState: audioContext?.state
     });
 
-    if (audioTrack?.mediaStreamTrack) {
-      console.log('Setting up audio processing...');
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      console.log('AudioContext created');
-      
-      const analyserNode = audioContext.createAnalyser();
-      console.log('AnalyserNode created');
+    const setupAudio = async () => {
+      if (audioTrack?.mediaStreamTrack) {
+        try {
+          // Create or resume AudioContext
+          let ctx = audioContext;
+          if (!ctx) {
+            ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            setAudioContext(ctx);
+          } else if (ctx.state === 'suspended') {
+            await ctx.resume();
+          }
 
-      try {
-        const mediaStream = new MediaStream([audioTrack.mediaStreamTrack]);
-        console.log('MediaStream created:', mediaStream.id);
+          console.log('AudioContext state:', ctx.state);
 
-        const source = audioContext.createMediaStreamSource(mediaStream);
-        console.log('MediaStreamSource created');
-        
-        source.connect(analyserNode);
-        console.log('Source connected to analyser');
-        
-        setAnalyser(analyserNode);
-        setIsPlaying(true);
-        
-        audioTrack.mediaStreamTrack.onended = () => {
-          console.log('Audio track ended');
+          const analyserNode = ctx.createAnalyser();
+          analyserNode.fftSize = 2048; // Ensure consistent FFT size
+          
+          const mediaStream = new MediaStream([audioTrack.mediaStreamTrack]);
+          const source = ctx.createMediaStreamSource(mediaStream);
+          source.connect(analyserNode);
+          
+          setAnalyser(analyserNode);
+          setIsPlaying(true);
+
+          audioTrack.mediaStreamTrack.onended = () => {
+            console.log('Audio track ended');
+            setIsPlaying(false);
+          };
+
+          return () => {
+            console.log('Cleanup triggered');
+            audioTrack.mediaStreamTrack.onended = null;
+            source.disconnect();
+            analyserNode.disconnect();
+            setAnalyser(null);
+            setIsPlaying(false);
+          };
+        } catch (error) {
+          console.error('Error in audio setup:', error);
           setIsPlaying(false);
-        };
-        
-        return () => {
-          console.log('Cleanup triggered');
-          audioTrack.mediaStreamTrack.onended = null;
-          source.disconnect();
-          analyserNode.disconnect();
-          audioContext.close();
           setAnalyser(null);
-          setIsPlaying(false);
-        };
-      } catch (error) {
-        console.error('Error in audio setup:', error);
+        }
+      } else {
+        setIsPlaying(false);
       }
-    } else {
-      setIsPlaying(false);
-    }
+    };
+
+    setupAudio();
   }, [audioTrack]);
 
   return (
