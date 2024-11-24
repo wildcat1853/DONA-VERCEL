@@ -49,7 +49,7 @@ import useAssistant from '@/hooks/useAssistant';
 import { Task } from '@/../.../../../../define';
 import RoomEventListener from './RoomEventListener';
 import { AudioProvider } from '../context/AudioContext';
-import { assistantInstructions } from '../config/assistantInstructions';
+import { getAssistantInstructions } from '../config/assistantInstructions';
 import ProjectName from './ProjectName';
 import CircularProgress from './CircularProgress';
 import { onboardingInstructions } from '../config/onboardingInstructions';
@@ -157,7 +157,23 @@ const ClientAssistantProvider: React.FC<Props> = ({
   tasks,
   userId,
 }) => {
-  const assistantData = useAssistant({ projectId, projectThreadId, userId });
+  const [instructions, setInstructions] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Get instructions with correct language after component mounts
+    const currentInstructions = getAssistantInstructions();
+    setInstructions(currentInstructions);
+    console.log('🌍 Initialized assistant with language:', 
+      currentInstructions[0].split('in ')[1].split('.')[0]
+    );
+  }, []); // Empty dependency array - only runs once on mount
+
+  // Use instructions in your assistant setup
+  const assistantData = useAssistant({
+    projectId,
+    projectThreadId,
+    userId
+  });
   const { isOnboarding, isLoading } = assistantData
   const [token, setToken] = useState('');
   const [roomName, setRoomName] = useState('');
@@ -213,7 +229,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
               turnDetection: "server_vad",
               modalities: "text_and_audio",
               voice: "sage",
-              instructions: assistantInstructions.join('\n'),
+              instructions: instructions.join('\n'),
               metadata: {
                 userId: userId,
                 isOnboarding: isOnboarding,
