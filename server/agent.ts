@@ -222,7 +222,7 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
             content: [
               {
                 type: "input_text",
-                text: `User has completed onboarding. Please review their tasks and progress. Look at the tasks they've created, which ones have deadlines set, and which ones still need attention. Congratulate them on their progress and remind them you'll be here to help manage tasks and deadlines. Keep the tone friendly and encouraging.`
+                text: `It's a review progress session when user came back. Please review their tasks and progress. Ask about progress on recent task. If user has done it, tell user to mark it as done and help with next task. If user has not done it, ask user why and what is the problem. Keep the tone friendly, ambitious, motivational and encouraging.`
               },
             ],
           });
