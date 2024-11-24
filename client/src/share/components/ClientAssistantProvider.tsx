@@ -70,30 +70,20 @@ type Props = {
 
 const avatarUrl = 'https://models.readyplayer.me/670c2238e4f39be58fe308ae.glb?morphTargets=mouthSmile,mouthOpen,mouthFunnel,browOuterUpLeft,browOuterUpRight,tongueOut,ARKit';
 
-// Create a new component for the onboarding button
-const OnboardingButton = ({ userId, assistantData }: { userId: string, assistantData: any }) => {
+// Update the OnboardingControls component to include both buttons
+const OnboardingControls = ({ userId, assistantData }: { userId: string, assistantData: any }) => {
   const { localParticipant } = useLocalParticipant();
   const room = useRoomContext();
 
   const handleRepeatOnboarding = async () => {
     try {
-      console.log('Starting repeat onboarding sequence...');
-      
-      if (room.state !== 'connected') {
-        console.warn('❌ Room not connected yet');
+      if (room.state !== 'connected' || !localParticipant) {
+        console.warn('❌ Room or participant not ready');
         return;
       }
 
-      if (!localParticipant) {
-        console.warn('❌ Local participant not found');
-        return;
-      }
-
-      // First update the onboarding status
-      console.log('Updating onboarding status...');
+      // Keep existing attribute-based logic for repeat
       await assistantData.updateOnboardingStatus(true);
-      
-      // Get existing attributes and merge with new ones
       const currentAttributes = localParticipant.attributes || {};
       const newAttributes = {
         ...currentAttributes,
@@ -102,35 +92,61 @@ const OnboardingButton = ({ userId, assistantData }: { userId: string, assistant
         userId: userId
       };
       
-      console.log('Setting participant attributes:', newAttributes);
-      
-      // Add timeout promise
-      const timeout = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Metadata update timed out')), 5000)
-      );
+      await localParticipant.setAttributes(newAttributes);
+      console.log('✅ Repeat onboarding attributes set');
+    } catch (error) {
+      console.error('❌ Error in repeat onboarding:', error);
+    }
+  };
 
-      // Race between the metadata update and timeout
-      await Promise.race([
-        localParticipant.setMetadata(JSON.stringify(newAttributes)),
-        timeout
-      ]);
+  const handleDisableOnboarding = async () => {
+    try {
+      if (room.state !== 'connected' || !localParticipant) {
+        console.warn('❌ Room or participant not ready');
+        return;
+      }
 
-      console.log('✅ Attributes set successfully');
-    } catch (error: any) {
-      console.error('❌ Error in handleRepeatOnboarding:', error);
-      // Optionally add user feedback here
+      // Update database status
+      await assistantData.updateOnboardingStatus(false);
+
+      // Use data message for disable
+      const message = {
+        type: 'onboardingControl',
+        action: 'disable',
+        timestamp: Date.now(),
+        userId: userId
+      };
+
+      console.log('📤 Sending disable onboarding message:', message);
+      const encoder = new TextEncoder();
+      const data = encoder.encode(JSON.stringify(message));
+      localParticipant.publishData(data, {
+        reliable: true,
+      });
+    } catch (error) {
+      console.error('❌ Error in disable onboarding:', error);
     }
   };
 
   return (
-    <button
-      onClick={handleRepeatOnboarding}
-      className="fixed top-4 right-4 flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 hover:bg-white/90 border border-gray-200 transition-colors z-50 shadow-sm"
-      title="Repeat Onboarding"
-    >
-      <HelpCircle className="w-5 h-5 text-gray-600" />
-      <span className="text-sm text-gray-600">How it works</span>
-    </button>
+    <div className="fixed top-4 right-4 flex items-center gap-3 z-50">
+      <button
+        onClick={() => handleRepeatOnboarding()}
+        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 hover:bg-white/90 border border-gray-200 transition-colors shadow-sm"
+        title="Repeat Onboarding"
+      >
+        <HelpCircle className="w-5 h-5 text-gray-600" />
+        <span className="text-sm text-gray-600">How it works</span>
+      </button>
+      
+      <button
+        onClick={() => handleDisableOnboarding()}
+        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 hover:bg-white/90 border border-gray-200 transition-colors shadow-sm"
+        title="Turn Off Onboarding"
+      >
+        <span className="text-sm text-gray-600">Turn off onboarding</span>
+      </button>
+    </div>
   );
 };
 
@@ -346,7 +362,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
                     <ConnectionState />
                   </div> */}
                 </div>
-                <OnboardingButton userId={userId} assistantData={assistantData} />
+                <OnboardingControls userId={userId} assistantData={assistantData} />
               </AudioProvider>
             </div>
           </div>

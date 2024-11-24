@@ -203,28 +203,28 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
     // Handle data messages
     ctx.room.on('dataReceived', async (payload: Uint8Array, participant?: RemoteParticipant | undefined) => {
       if (participant && participant.identity.startsWith('agent-')) {
-        console.log('⏭️ Skipping message from agent');
         return;
       }
 
       try {
         const decoder = new TextDecoder();
         const rawData = decoder.decode(payload);
-        console.log('📥 Agent: Received raw data:', rawData);
-        
         const data = JSON.parse(rawData);
-        console.log('📦 Agent: Parsed data:', {
-          type: data.type,
-          timestamp: new Date(data.timestamp).toISOString(),
-          tasksCount: data.tasks?.length,
-          participantId: participant?.identity
-        });
 
-        if (data.type === 'taskUpdate') {
-          console.log('📝 Agent: Processing task update', {
-            tasks: data.tasks,
+        // Add handler for disable onboarding message
+        if (data.type === 'onboardingControl' && data.action === 'disable') {
+          console.log('🔕 Agent: Onboarding disabled via message:', {
+            userId: data.userId,
             timestamp: new Date(data.timestamp).toISOString()
           });
+          return;
+        }
+
+        if (data.type === 'taskUpdate') {
+          // console.log('📝 Agent: Processing task update', {
+          //   tasks: data.tasks,
+          //   timestamp: new Date(data.timestamp).toISOString()
+          // });
 
           await session.conversation.item.create({
             type: "message",
@@ -249,6 +249,13 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
     ctx.room.on(
       "participantAttributesChanged",
       async (changedAttributes: Record<string, string>, changedParticipant: Participant) => {
+        // Log all attribute changes for debugging
+        console.log('🔄 Agent: Attributes changed:', {
+          attributes: changedAttributes,
+          participantId: changedParticipant.identity,
+          repeatOnboarding: changedAttributes.repeatOnboarding
+        });
+
         // Only handle onboarding requests
         if (changedAttributes.repeatOnboarding === 'true') {
           console.log('🎯 Agent: Repeat onboarding request detected');
@@ -278,6 +285,16 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
             console.error('❌ Agent: Error in onboarding sequence:', error);
           }
           return;
+        }
+
+        // Log when onboarding is turned off
+        if (changedAttributes.repeatOnboarding === 'false') {
+          console.log('🔕 Agent: Onboarding turned off by user:', {
+            participant: changedParticipant.identity,
+            timestamp: new Date().toISOString()
+          });
+        } else {
+          console.log('❓ Agent: Unhandled repeatOnboarding value:', changedAttributes.repeatOnboarding);
         }
       }
     );
