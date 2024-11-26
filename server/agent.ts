@@ -133,6 +133,52 @@ function modalitiesFromString(
   return modalitiesMap[modalities] || ["text", "audio"];
 }
 
+interface Task {
+  name: string;
+  description?: string;
+  status: string;
+  deadline: string;
+  createdAt: string;
+}
+
+function getRelevantTasks(tasks: Task[], limit: number = 5) {
+  const today = new Date();
+  const oneWeekAgo = new Date(today);
+  oneWeekAgo.setDate(today.getDate() - 7);
+  const oneWeekAhead = new Date(today);
+  oneWeekAhead.setDate(today.getDate() + 7);
+
+  const relevantTasks = tasks
+    .filter(task => {
+      // First filter out completed tasks
+      if (task.status === 'done') return false;
+      
+      const taskDeadline = new Date(task.deadline);
+      return (
+        // Tasks due today
+        taskDeadline.toDateString() === today.toDateString() ||
+        // Tasks from last week
+        (taskDeadline >= oneWeekAgo && taskDeadline < today) ||
+        // Tasks due in next week
+        (taskDeadline > today && taskDeadline <= oneWeekAhead)
+      );
+    })
+    .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
+    .slice(0, limit);
+
+  console.log('🔍 Relevant Tasks Debug:', {
+    totalTasks: tasks.length,
+    inProgressTasks: tasks.filter(t => t.status !== 'done').length,
+    relevantTasksCount: relevantTasks.length,
+    dateRanges: {
+      from: oneWeekAgo.toISOString(),
+      to: oneWeekAhead.toISOString()
+    }
+  });
+
+  return relevantTasks;
+}
+
 async function runMultimodalAgent(ctx: JobContext, participant: Participant, roomName: string) {
   try {
     const metadata = JSON.parse(participant.metadata || '{}');
@@ -220,24 +266,22 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
             tasksCount: data.tasks?.length
           });
 
-          // Update currentTasks before creating conversation item
           currentTasks = data.tasks || [];
-          
-          console.log('🔍 Tasks Debug:', {
-            receivedTasks: currentTasks.length,
-            firstTask: currentTasks[0],
-            lastTask: currentTasks[currentTasks.length - 1]
-          });
+          const relevantTasks = getRelevantTasks(currentTasks);
 
-          // Create conversation item with verified tasks
           await session.conversation.item.create({
             type: "message",
             role: "user",
             content: [
               {
                 type: "input_text",
-                text: `Here's the latest task: ${JSON.stringify(currentTasks[currentTasks.length - 1], null, 2)}
-                       \nPlease tell a dad joke and review this latest task...`
+                text: `Here are the 5 most relevant tasks based on deadlines:
+${relevantTasks.map(task => `
+- "${task.name}" (${task.status})
+  Due: ${new Date(task.deadline).toLocaleDateString()}
+  Description: ${task.description || 'No description'}`).join('\n')}
+
+Please review these tasks and tell a dad joke to lighten the mood. Focus on any tasks that are overdue or due today.`
               },
             ],
           });
@@ -247,10 +291,8 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
         }
 
         if (data.type === 'taskUpdate') {
-          // console.log('📝 Agent: Processing task update', {
-          //   tasks: data.tasks,
-          //   timestamp: new Date(data.timestamp).toISOString()
-          // });
+          currentTasks = data.tasks || [];
+          const relevantTasks = getRelevantTasks(currentTasks);
 
           await session.conversation.item.create({
             type: "message",
@@ -258,7 +300,13 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
             content: [
               {
                 type: "input_text",
-                text: `Current tasks state: ${JSON.stringify(data.tasks, null, 2)}\nPlease watch the latest task user created. Once user set name and description, congratulate him and encourage user to input deadlines for task. Explain that deadline is important for Dona to follow up on task. When deadline is set, tell user he is done for now, he will receive invite in calendar to a meeting and and Dona is gonna follow up on deadline date and there will be a session with the user to discuss the progress.Thank user and tell him he can close the tab and go now. Do not pronounce every part of the task like a parrot.`
+                text: `Here are your most relevant tasks:
+${relevantTasks.map(task => `
+- "${task.name}" (${task.status})
+  Due: ${new Date(task.deadline).toLocaleDateString()}
+  Description: ${task.description || 'No description'}`).join('\n')}
+
+Please watch the latest task user created. Once user set name and description, congratulate them and encourage them to input deadlines for task. Explain that deadline is important for Dona to follow up on task.`
               },
             ],
           });
