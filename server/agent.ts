@@ -137,8 +137,8 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
   try {
     const metadata = JSON.parse(participant.metadata || '{}');
     const config = parseSessionConfig(metadata);
-    // const config = parseSessionConfig(metadata.sessionConfig || {});
-    const isOnboarding = metadata.sessionConfig?.isOnboarding === true || metadata.isOnboarding === true;
+    // Here we can access tasks from metadata
+    const tasks = metadata.sessionConfig?.tasks || [];
 
     // console.log('[Onboarding] Backend Status:', isOnboarding ? 'Started' : 'Not in onboarding mode', {
     //   metadata: metadata, // Log the full metadata for debugging
@@ -222,7 +222,12 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
             content: [
               {
                 type: "input_text",
-                text: `User has completed onboarding. Please review their tasks and progress. Look at the tasks they've created, which ones have deadlines set, and which ones still need attention. Congratulate them on their progress and remind them you'll be here to help manage tasks and deadlines. Keep the tone friendly and encouraging.`
+                text: `Current tasks state: ${JSON.stringify(tasks, null, 2)}
+                       \nPlease tell a dad joke and review their latest task in data set passed to you and ask about the progress. 
+                       If user is done with task, encourage them to mark task as done and congratulate them. 
+                       If user is not done, use empathy and coaching psychology methods to figure out what is 
+                       stopping them and help them move forward, then encourage them to set a new deadline for task. 
+                       Keep the tone friendly and encouraging.`
               },
             ],
           });
