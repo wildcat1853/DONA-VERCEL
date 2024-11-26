@@ -137,8 +137,8 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
   try {
     const metadata = JSON.parse(participant.metadata || '{}');
     const config = parseSessionConfig(metadata);
-    // Here we can access tasks from metadata
-    const tasks = metadata.sessionConfig?.tasks || [];
+    // Remove tasks from metadata since we'll get it from data messages
+    let currentTasks = [];
 
     // console.log('[Onboarding] Backend Status:', isOnboarding ? 'Started' : 'Not in onboarding mode', {
     //   metadata: metadata, // Log the full metadata for debugging
@@ -212,22 +212,32 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
         const rawData = decoder.decode(payload);
         const data = JSON.parse(rawData);
         
-        // Handle onboarding control messages
+        // Handle task review
         if (data.type === 'onboardingControl') {
-          console.log('📥 Agent: Received onboarding control:', data);
+          console.log('📥 Agent: Received onboarding control:', {
+            type: data.type,
+            action: data.action,
+            tasksCount: data.tasks?.length
+          });
 
+          // Update currentTasks before creating conversation item
+          currentTasks = data.tasks || [];
+          
+          console.log('🔍 Tasks Debug:', {
+            receivedTasks: currentTasks.length,
+            firstTask: currentTasks[0],
+            lastTask: currentTasks[currentTasks.length - 1]
+          });
+
+          // Create conversation item with verified tasks
           await session.conversation.item.create({
             type: "message",
             role: "user",
             content: [
               {
                 type: "input_text",
-                text: `Current tasks state: ${JSON.stringify(tasks, null, 2)}
-                       \nPlease tell a dad joke and review their latest task in data set passed to you and ask about the progress. 
-                       If user is done with task, encourage them to mark task as done and congratulate them. 
-                       If user is not done, use empathy and coaching psychology methods to figure out what is 
-                       stopping them and help them move forward, then encourage them to set a new deadline for task. 
-                       Keep the tone friendly and encouraging.`
+                text: `Here's the latest task: ${JSON.stringify(currentTasks[currentTasks.length - 1], null, 2)}
+                       \nPlease tell a dad joke and review this latest task...`
               },
             ],
           });

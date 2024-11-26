@@ -71,7 +71,15 @@ type Props = {
 const avatarUrl = 'https://models.readyplayer.me/670c2238e4f39be58fe308ae.glb?morphTargets=mouthSmile,mouthOpen,mouthFunnel,browOuterUpLeft,browOuterUpRight,tongueOut,ARKit';
 
 // Update the OnboardingControls component to include both buttons
-const OnboardingControls = ({ userId, assistantData }: { userId: string, assistantData: any }) => {
+const OnboardingControls = ({ 
+  userId, 
+  assistantData,
+  tasks 
+}: { 
+  userId: string, 
+  assistantData: any,
+  tasks: Task[] 
+}) => {
   const { localParticipant } = useLocalParticipant();
   const room = useRoomContext();
 
@@ -106,6 +114,12 @@ const OnboardingControls = ({ userId, assistantData }: { userId: string, assista
         return;
       }
 
+      console.log('🔍 Disable Onboarding Debug:', {
+        tasksAvailable: !!tasks,
+        tasksLength: tasks?.length,
+        tasksList: tasks
+      });
+
       // Update database status
       await assistantData.updateOnboardingStatus(false);
 
@@ -114,7 +128,8 @@ const OnboardingControls = ({ userId, assistantData }: { userId: string, assista
         type: 'onboardingControl',
         action: 'disable',
         timestamp: Date.now(),
-        userId: userId
+        userId: userId,
+        tasks: tasks
       };
 
       console.log('📤 Sending disable onboarding message:', message);
@@ -362,7 +377,11 @@ const ClientAssistantProvider: React.FC<Props> = ({
                     <ConnectionState />
                   </div> */}
                 </div>
-                <OnboardingControls userId={userId} assistantData={assistantData} />
+                <OnboardingControls 
+                  userId={userId} 
+                  assistantData={assistantData} 
+                  tasks={tasks} 
+                />
               </AudioProvider>
             </div>
           </div>
