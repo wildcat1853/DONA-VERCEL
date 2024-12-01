@@ -54,7 +54,7 @@ import ProjectName from './ProjectName';
 import CircularProgress from './CircularProgress';
 import { onboardingInstructions } from '../config/onboardingInstructions';
 import { Badge } from "../ui/badge";
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, MessageCircle, ListTodo } from 'lucide-react';
 import { TaskTabsWithLiveKit } from './TaskTabs';
 import { SessionProvider } from "next-auth/react";
 import AccountDropdown from './AccountDropdown';
@@ -187,6 +187,9 @@ const ClientAssistantProvider: React.FC<Props> = ({
   const [audioAllowed, setAudioAllowed] = useState(false);
   const [showMicrophoneDialog, setShowMicrophoneDialog] = useState(false);
 
+  // Add state for mobile view control
+  const [showTasks, setShowTasks] = useState(true);
+
   useEffect(() => {
     const requestMediaPermissions = async () => {
       try {
@@ -268,6 +271,14 @@ const ClientAssistantProvider: React.FC<Props> = ({
   const completedTasks = tasks.filter(task => task.status === 'done').length;
   const progress = totalTasks === 0 ? 0 : (completedTasks / totalTasks) * 100;
 
+  // Get recent tasks
+  const recentTasks = tasks
+    .filter((task: Task) => task.status === 'in progress')
+    .sort((a: Task, b: Task) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+    .slice(0, 3);
+
   return (
     <SessionProvider>
       <Dialog open={showMicrophoneDialog} onOpenChange={setShowMicrophoneDialog}>
@@ -330,20 +341,16 @@ const ClientAssistantProvider: React.FC<Props> = ({
           className="bg-white"
         > 
           <ParticipantLogger />
-          <div className="fixed top-5 left-5 z-50">
-            <AccountDropdown />
-          </div>
-          <div className="flex bg-white">
-            {/* Left side */}
-            <div className="w-7/12 flex justify-center max-h-screen overflow-auto bg-white">
-              <div className="w-2/3 flex flex-col gap-9 mt-20">
-                <div className="scale-90 origin-left flex items-center gap-4">
-                  <ProjectName 
-                    initialName={"Project name"} 
-                    projectId={projectId}
-                    className="text-gray-900 text-3xl font-semibold"
-                  />
-                </div>
+          
+          <div className="flex flex-col md:flex-row bg-white min-h-screen">
+            {/* Desktop Tasks Section */}
+            <div className="hidden md:block w-7/12 max-h-screen overflow-auto bg-white">
+              <div className="w-2/3 mx-auto flex flex-col gap-9 mt-20">
+                <ProjectName 
+                  initialName={"Project name"} 
+                  projectId={projectId}
+                  className="text-gray-900 text-3xl font-semibold"
+                />
                 <Separator className="bg-gray-200" />
                 <TaskTabsWithLiveKit 
                   tasks={tasks} 
@@ -353,35 +360,50 @@ const ClientAssistantProvider: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* Right side */}
-            <div className="w-5/12 fixed right-0 top-0 h-screen">
+            {/* Assistant Section with Mobile Bottom Sheet */}
+            <div className="w-full md:w-5/12 fixed md:right-0 top-0 h-screen">
               <AudioProvider>
                 <RoomAudioRenderer />
                 <RoomEventListener />
+                
+                {/* Avatar and Background */}
                 <div className="absolute top-0 right-0 w-full h-full bg-F1F2F4">
                   <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE] animate-gradient-xy">
                     <div className="absolute inset-0 flex flex-col justify-end">
                       <AvatarScene avatarUrl={avatarUrl} />
-                      
                       <div className="absolute bottom-0 left-0 right-0 h-3/4 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
                     </div>
                   </div>
                 </div>
-    
-                <div className="absolute bottom-14 w-full z-10">
+
+                {/* Mobile Recent Tasks Panel */}
+                <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm rounded-t-3xl shadow-lg z-40">
+                  <div className="px-4 py-6">
+                    <div className="max-h-[40vh] overflow-y-auto">
+                      <TaskTabsWithLiveKit 
+                        tasks={tasks} 
+                        assistantData={assistantData} 
+                        projectId={projectId}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Desktop Controls */}
+                <div className="absolute bottom-14 w-full z-10 hidden md:block">
                   <VoiceAssistantControlBar />
                   <StartAudio label="Click to allow audio playback" />
-                 
                   <ConnectionStateToast />
-                  {/* <div className="text-center text-sm font-medium text-gray-600 mt-2"> 
-                    <ConnectionState />
-                  </div> */}
                 </div>
-                <OnboardingControls 
-                  userId={userId} 
-                  assistantData={assistantData} 
-                  tasks={tasks} 
-                />
+
+                {/* Onboarding Controls */}
+                <div className="md:absolute md:top-4 md:right-4 fixed bottom-24 right-4 flex items-center gap-3 z-50">
+                  <OnboardingControls 
+                    userId={userId} 
+                    assistantData={assistantData} 
+                    tasks={tasks} 
+                  />
+                </div>
               </AudioProvider>
             </div>
           </div>

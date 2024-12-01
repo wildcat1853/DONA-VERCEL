@@ -63,8 +63,8 @@ function TaskTabs({ tasks, assistantData, projectId }: Props) {
 
   return (
     <Tabs defaultValue="todo" className="w-full">
-      <div className="flex justify-between items-start h-[80px]">
-        <TabsList className="flex space-x-2 bg-gray-200 rounded-full p-1 w-[200px] h-[45px]">
+      <div className="flex justify-between items-start h-[80px] flex-wrap gap-4">
+        <TabsList className="flex space-x-2 bg-gray-200 rounded-full p-1 w-[200px] h-[45px] min-w-[200px]">
           <TabsTrigger
             value="todo"
             className="flex-1 px-4 py-2 rounded-full text-sm font-medium text-gray-700

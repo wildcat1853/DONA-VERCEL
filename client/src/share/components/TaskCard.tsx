@@ -350,7 +350,7 @@ function TaskCard(props: Props) {
                       })
                     );
                   }}
-                  className="flex items-center gap-2"
+                  className="hidden md:flex items-center gap-2"
                 >
                   <GoogleCalendarIcon className="h-4 w-4" />
                   Add to calendar
