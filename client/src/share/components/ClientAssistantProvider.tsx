@@ -355,6 +355,15 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
 
                 {/* Desktop Controls */}
                 <div className="absolute bottom-14 w-full z-10 hidden md:block">
+                  {/* Dona's Status Indicator */}
+                  <div className="flex justify-center mb-6">
+                    <div className="px-6 py-3 rounded-full bg-emerald-500/15 backdrop-blur-md border border-emerald-100/20">
+                      <span className="text-emerald-600 font-medium text-base">
+                        Good mood ✨
+                      </span>
+                    </div>
+                  </div>
+
                   <VoiceAssistantControlBar />
                   <StartAudio label="Click to allow audio playback" />
                   <ConnectionStateToast />

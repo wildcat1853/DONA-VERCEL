@@ -57,36 +57,72 @@ async function shutdownHook(roomName: string) {
 
 export default defineAgent({
   entry: async (ctx: JobContext) => {
-    console.log('🤖 Backend: Agent is starting...');
+    console.log('🤖 Agent starting...');
 
     try {
+      // 1. Simple connection
       await ctx.connect();
-      // console.log('🔗 Backend: Agent connected to LiveKit server');
-      // console.log('🏠 Backend: Current room:', ctx.room.name);
-      
-      // console.log('⏳ Backend: Waiting for participant...');
       const participant = await ctx.waitForParticipant();
       
-      // console.log('👤 Backend: Participant connected:', {
-      //   identity: participant.identity,
-      //   metadata: participant.metadata,
-      //   userId: JSON.parse(participant.metadata || '{}')?.sessionConfig?.metadata?.userId || 'No userId found'
-      // });
-
-      // Extract room name from participant metadata
+      // 2. Basic session setup
       const metadata = JSON.parse(participant.metadata || '{}');
-      const roomName: string = metadata.roomName || "default-room";
+      const config = parseSessionConfig(metadata);
+      
+      // 3. Initialize OpenAI model
+      const model = new openai.realtime.RealtimeModel({
+        apiKey: config.openaiApiKey,
+        model: config.model,
+        voice: config.voice,
+        temperature: config.temperature,
+        instructions: config.instructions,
+      });
 
-      // console.log('🎯 Backend: Extracted room name from metadata:', roomName);
+      const agent = new multimodal.MultimodalAgent({ model });
+      const session = await agent.start(ctx.room);
+
+      // 4. Simple data handler
+      ctx.room.on('dataReceived', async (payload: Uint8Array, sender?: RemoteParticipant) => {
+        if (sender?.identity.startsWith('agent-')) return;
+        
+        try {
+          const decoder = new TextDecoder();
+          const data = JSON.parse(decoder.decode(payload));
+          
+          switch (data.type) {
+            case 'initialTasks':
+            case 'taskUpdate':
+              const tasks = data.tasks || [];
+              const relevantTasks = tasks
+                .filter((t: { status: string }) => t.status !== 'done')
+                .slice(0, 5);
+                
+              await session.conversation.item.create({
+                type: "message",
+                role: "user",
+                content: [{
+                  type: "input_text",
+                  text: relevantTasks.length > 0 
+                    ? `Here are your current tasks:\n${relevantTasks.map((t: { name: string; deadline: string }) => 
+                        `- "${t.name}" (due: ${new Date(t.deadline).toLocaleDateString()})`
+                      ).join('\n')}`
+                    : "No active tasks. Let's create one!"
+                }]
+              });       
+              break;
+          }
+        } catch (error) {
+          console.error('Error processing message:', error);
+        }
+      });
 
       // Register the shutdown hook with the room name
-      ctx.addShutdownCallback(() => shutdownHook(roomName));
+      ctx.addShutdownCallback(() => shutdownHook(ctx.room.name));
 
-      await runMultimodalAgent(ctx, participant, roomName);
     } catch (error) {
-      console.error('💥 Backend: Error in agent:', error);
+      console.error('Error:', error);
+      process.exit(1);
     }
-  },
+  }
 });
 
 type TurnDetectionType = {
@@ -205,6 +241,14 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
     const config = parseSessionConfig(metadata);
     let currentTasks: Task[] = [];
     
+    // Keep room alive
+    let isProcessing = true;
+    const keepAliveInterval = setInterval(() => {
+      if (isProcessing && ctx.room) {
+        console.log('🔄 Keeping room alive while processing tasks...');
+      }
+    }, 10000); // Check every 10 seconds
+
     const model = new openai.realtime.RealtimeModel({
       apiKey: config.openaiApiKey,
       model: "gpt-4o-realtime-preview-2024-10-01",
@@ -221,51 +265,76 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
 
     // Get onboarding status from metadata
     const isOnboarding = metadata?.sessionConfig?.metadata?.isOnboarding || false;
-
-    // Wait for initial tasks data
+    
+    // Wait for initial tasks data with longer timeout
     if (!isOnboarding) {
       console.log('🔄 Waiting for initial tasks data...');
-      await new Promise<void>((resolve) => {
-        const handleInitialTasks = async (payload: Uint8Array, sender?: RemoteParticipant) => {
-          if (sender?.identity.startsWith('agent-')) return;
-          
-          const decoder = new TextDecoder();
-          const data = JSON.parse(decoder.decode(payload));
-          
-          if (data.type === 'initialTasks') {
-            currentTasks = data.tasks || [];
-            const relevantTasks = getRelevantTasks(currentTasks);
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const handleInitialTasks = async (payload: Uint8Array, sender?: RemoteParticipant) => {
+            if (sender?.identity.startsWith('agent-')) return;
             
-            console.log('📋 Received initial tasks:', {
-              total: currentTasks.length,
-              relevant: relevantTasks.length
-            });
-
-            await session.conversation.item.create({
-              type: "message",
-              role: "user",
-              content: [{
-                type: "input_text",
-                text: relevantTasks.length > 0 
-                  ? `Here are your most relevant tasks:\n${relevantTasks.map(task => `
+            try {
+              const decoder = new TextDecoder();
+              const data = JSON.parse(decoder.decode(payload));
+              
+              if (data.type === 'initialTasks') {
+                console.log('📥 Received initial tasks data');
+                currentTasks = data.tasks || [];
+                const relevantTasks = getRelevantTasks(currentTasks);
+                
+                await session.conversation.item.create({
+                  type: "message",
+                  role: "user",
+                  content: [{
+                    type: "input_text",
+                    text: relevantTasks.length > 0 
+                      ? `Here are your most relevant tasks:\n${relevantTasks.map(task => `
 - "${task.name}" (${task.status})
   Due: ${new Date(task.deadline).toLocaleDateString()}
   Description: ${task.description || 'No description'}`).join('\n')}\n\nPlease review these tasks. Focus on any tasks that are overdue or due today.`
-                  : "Let's create a new task."
-              }]
-            });
-            await session.response.create();
-            
+                      : "Let's create a new task."
+                  }]
+                });
+                await session.response.create();
+                
+                ctx.room.off('dataReceived', handleInitialTasks);
+                resolve();
+              }
+            } catch (error) {
+              console.error('❌ Error processing initial tasks:', error);
+              reject(error);
+            }
+          };
+          
+          ctx.room.on('dataReceived', handleInitialTasks);
+          
+          // Increase timeout to 30 seconds
+          setTimeout(() => {
             ctx.room.off('dataReceived', handleInitialTasks);
-            resolve();
-          }
-        };
-        
-        ctx.room.on('dataReceived', handleInitialTasks);
-        // Timeout after 5 seconds
-        setTimeout(resolve, 5000);
+            reject(new Error('Timeout waiting for initial tasks'));
+          }, 30000);
+        });
+      } catch (error) {
+        console.error('❌ Failed to process initial tasks:', error);
+        // Continue with the session even if initial tasks failed
+      }
+    } else {
+      // Send onboarding prompt immediately
+      await session.conversation.item.create({
+        type: "message",
+        role: "system",
+        content: [{
+          type: "input_text",
+          text: "Start with onboarding instructions: introduce yourself as Dona, explain how the app works with task creation and deadlines, and guide them through getting started.",
+        }]
       });
+      await session.response.create();
     }
+
+    // Clear the keep-alive interval
+    isProcessing = false;
+    clearInterval(keepAliveInterval);
 
     // Handle participant disconnection
     ctx.room.on(RoomEvent.ParticipantDisconnected, (disconnectedParticipant: Participant) => {
@@ -276,6 +345,7 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
         // Optionally exit or wait for reconnection
       }
     });
+
     // Handle data messages
     ctx.room.on('dataReceived', async (payload: Uint8Array, participant?: RemoteParticipant | undefined) => {
       if (participant && participant.identity.startsWith('agent-')) {
@@ -287,85 +357,6 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
         const rawData = decoder.decode(payload);
         const data = JSON.parse(rawData);
         
-        // Handle initial tasks
-        if (data.type === 'initialTasks') {
-          console.log('🔍 Debug Initial Tasks:', {
-            type: data.type,
-            isOnboarding: data.isOnboarding,
-            condition: data.isOnboarding ? 'ONBOARDING MODE' : 'TASK REVIEW MODE',
-            tasksCount: data.tasks?.length,
-            timestamp: new Date().toISOString()
-          });
-
-          if (!data.isOnboarding) {
-            console.log('📋 Executing Task Review Mode');
-            const relevantTasks = getRelevantTasks(data.tasks || []);
-            await session.conversation.item.create({
-              type: "message",
-              role: "user",
-              content: [
-                {
-                  type: "input_text",
-                  text: `Here are your most relevant tasks:
-${relevantTasks.map(task => `
-- "${task.name}" (${task.status})
-  Due: ${new Date(task.deadline).toLocaleDateString()}
-  Description: ${task.description || 'No description'}`).join('\n')}
-
-Please review these tasks. Focus on any tasks that are overdue or due today.`
-                },
-              ],
-            });
-          } else {
-            console.log('🎓 Executing Onboarding Mode');
-            await session.conversation.item.create({
-              type: "message",
-              role: "system",
-              content: [
-                {
-                  type: "input_text",
-                  text: "Start with onboarding instructions: introduce yourself as Dona, explain how the app works with task creation and deadlines, and guide them through getting started.",
-                },
-              ],
-            });
-          }
-          
-          await session.response.create();
-          return;
-        }
-
-        // Handle task review
-        if (data.type === 'onboardingControl') {
-          // console.log('📥 Agent: Received onboarding control:', {
-          //   type: data.type,
-          //   action: data.action,
-          //   tasksCount: data.tasks?.length
-          // });
-
-          currentTasks = data.tasks || [];
-          const relevantTasks = getRelevantTasks(currentTasks);
-
-          await session.conversation.item.create({
-            type: "message",
-            role: "user",
-            content: [
-              {
-                type: "input_text",
-                text: `Here are the 5 most relevant tasks based on deadlines:
-${relevantTasks.map(task => `
-- "${task.name}" (${task.status})
-  Due: ${new Date(task.deadline).toLocaleDateString()}
-  Description: ${task.description || 'No description'}`).join('\n')}
-
-Please review these tasks. Focus on any tasks that are overdue or due today.`
-              },
-            ],
-          });
-          
-          await session.response.create();
-          return;
-        }
-
         if (data.type === 'taskUpdate') {
           currentTasks = data.tasks || [];
           const relevantTasks = getRelevantTasks(currentTasks);
@@ -394,57 +385,25 @@ Please watch the latest task user created. Once user set name and description, c
       }
     });
 
-    // Remove the old participantAttributesChanged listener for tasks
-    // Keep the onboarding listener as is since it's not frequent
+    // Handle participant attribute changes
     ctx.room.on(
       "participantAttributesChanged",
       async (changedAttributes: Record<string, string>, changedParticipant: Participant) => {
-        // Log all attribute changes for debugging
-        console.log('🔄 Agent: Attributes changed:', {
-          attributes: changedAttributes,
-          participantId: changedParticipant.identity,
-          repeatOnboarding: changedAttributes.repeatOnboarding
-        });
-
-        // Only handle onboarding requests
         if (changedAttributes.repeatOnboarding === 'true') {
           console.log('🎯 Agent: Repeat onboarding request detected');
           try {
-            console.log('Creating new conversation item...');
             await session.conversation.item.create({
               type: "message",
               role: "system",
-              content: [
-                {
-                  type: "input_text",
-                  text: "User has requested to repeat onboarding. Start fresh with onboarding instructions: introduce yourself as Dona, explain how the app works with task creation and deadlines, and guide them through getting started.",
-                },
-              ],
+              content: [{
+                type: "input_text",
+                text: "User has requested to repeat onboarding. Start fresh with onboarding instructions: introduce yourself as Dona, explain how the app works with task creation and deadlines, and guide them through getting started.",
+              }],
             });
-            console.log('✅ Created conversation item');
-            
             await session.response.create();
-            console.log('✅ Response created');
-
-            // Reset the flag
-            // await changedParticipant.setAttributes({
-            //   ...changedAttributes,
-            //   repeatOnboarding: 'false'
-            // });
           } catch (error) {
-            console.error('❌ Agent: Error in onboarding sequence:', error);
+            console.error('❌ Agent: Error in manual onboarding sequence:', error);
           }
-          return;
-        }
-
-        // Log when onboarding is turned off
-        if (changedAttributes.repeatOnboarding === 'false') {
-          console.log('🔕 Agent: Onboarding turned off by user:', {
-            participant: changedParticipant.identity,
-            timestamp: new Date().toISOString()
-          });
-        } else {
-          console.log('❓ Agent: Unhandled repeatOnboarding value:', changedAttributes.repeatOnboarding);
         }
       }
     );
@@ -452,18 +411,13 @@ Please watch the latest task user created. Once user set name and description, c
     // Handle session close events
     session.on('close', async (code: number, reason: string) => {
       console.error(`OpenAI Realtime connection closed: [${code}] ${reason}`);
-      // Decide whether to restart the session or perform cleanup
-      // For now, we'll exit the agent
       process.exit(0);
     });
 
     // Handle session errors
     session.on('error', async (error: any) => {
       console.error('Session error:', error);
-      // Handle errors, possibly restart the session
     });
-
-    // Since you're using a predefined assistant, you might not need to send an initial message
 
   } catch (error) {
     console.error("Error in runMultimodalAgent:", error);
