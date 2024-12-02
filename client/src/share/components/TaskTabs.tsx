@@ -143,8 +143,50 @@ function TaskTabs({ tasks, assistantData, projectId }: Props) {
   );
 }
 
-// Modify ClientAssistantProvider to include TaskUpdater
+// Modify TaskTabsWithLiveKit to include task review functionality
 export function TaskTabsWithLiveKit(props: Props) {
+  const { localParticipant } = useLocalParticipant();
+  const room = useRoomContext();
+  const [isOnboarding] = useState(false);
+
+  // Add task review effect
+  useEffect(() => {
+    if (!room || !localParticipant) {
+      return; // Exit early if room context isn't ready
+    }
+
+    const sendTaskReviewData = async () => {
+      try {
+        if (room.state !== 'connected') {
+          console.warn('❌ Room not connected');
+          return;
+        }
+
+        const message = {
+          type: 'taskReview',
+          tasks: props.tasks,
+          timestamp: Date.now(),
+          userId: props.assistantData?.userId
+        };
+
+        console.log('📤 Sending task review data:', message);
+        const encoder = new TextEncoder();
+        const data = encoder.encode(JSON.stringify(message));
+        localParticipant.publishData(data, {
+          reliable: true,
+        });
+
+      } catch (error) {
+        console.error('❌ Error sending task data:', error);
+      }
+    };
+
+    // Only send if we have tasks
+    if (props.tasks.length > 0) {
+      sendTaskReviewData();
+    }
+  }, [props.tasks, localParticipant, room, props.assistantData?.userId]);
+
   return (
     <>
       <TaskTabs {...props} />

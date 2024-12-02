@@ -165,23 +165,18 @@ const OnboardingControls = ({
   );
 };
 
-const ClientAssistantProvider: React.FC<Props> = ({
-  projectId,
-  projectThreadId,
-  serverMessages,
-  tasks,
-  userId,
-}) => {
-  const assistantData = useAssistant({ projectId, projectThreadId, userId });
-  const { isOnboarding, isLoading } = assistantData
+const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) => {
+  const [isOnboarding, setIsOnboarding] = useState(false);
+  const assistantData = useAssistant({ projectId: props.projectId, projectThreadId: props.projectThreadId, userId });
+  const { isOnboarding: assistantIsOnboarding, isLoading } = assistantData
   const [token, setToken] = useState('');
   const [roomName, setRoomName] = useState('');
   const name = 'User';
   
   console.log('Debug Onboarding State:', {
-    isOnboarding,
+    isOnboarding: assistantIsOnboarding,
     isLoading,
-    projectId
+    projectId: props.projectId
   });
   
   const [audioAllowed, setAudioAllowed] = useState(false);
@@ -210,13 +205,6 @@ const ClientAssistantProvider: React.FC<Props> = ({
       try {
         const generatedRoomName = `room-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
         
-        console.log('🔄 ClientAssistant: Sending initial task data:', {
-          tasks,
-          userId,
-          isOnboarding,
-          timestamp: new Date().toISOString()
-        });
-
         const response = await fetch('/api/get-participant-token', {
           method: 'POST',
           headers: {
@@ -234,50 +222,22 @@ const ClientAssistantProvider: React.FC<Props> = ({
               instructions: assistantInstructions.join('\n'),
               metadata: {
                 userId: userId,
-                isOnboarding: isOnboarding,
+                isOnboarding: assistantIsOnboarding,
               }
             },
           }),
         });
 
-        if (!response.ok) {
-          let errorMsg = 'Failed to fetch token';
-          try {
-            const errorData = await response.json();
-            errorMsg = errorData.error || errorMsg;
-          } catch (e) {
-          }
-          throw new Error(errorMsg);
-        }
-
         const data = await response.json();
         setToken(data.accessToken);
         setRoomName(generatedRoomName);
-        console.log('✅ Frontend: Room setup complete:', {
-          roomName: generatedRoomName,
-          tokenReceived: !!data.accessToken,
-          serverUrl: process.env.NEXT_PUBLIC_LIVEKIT_URL
-        });
       } catch (error) {
         console.error('❌ Frontend: Error in room setup:', error);
       }
     };
 
     fetchToken();
-  }, [isOnboarding, userId, tasks]);
-
-  // Calculate progress
-  const totalTasks = tasks.length;
-  const completedTasks = tasks.filter(task => task.status === 'done').length;
-  const progress = totalTasks === 0 ? 0 : (completedTasks / totalTasks) * 100;
-
-  // Get recent tasks
-  const recentTasks = tasks
-    .filter((task: Task) => task.status === 'in progress')
-    .sort((a: Task, b: Task) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
-    .slice(0, 3);
+  }, [assistantIsOnboarding, userId]);
 
   return (
     <SessionProvider>
@@ -340,29 +300,33 @@ const ClientAssistantProvider: React.FC<Props> = ({
           onDisconnected={() => console.log('LiveKit disconnected')}
           className="bg-white"
         > 
-          <ParticipantLogger />
-          
-          <div className="flex flex-col md:flex-row bg-white min-h-screen">
-            {/* Desktop Tasks Section */}
-            <div className="hidden md:block w-7/12 max-h-screen overflow-auto bg-white">
-              <div className="w-2/3 mx-auto flex flex-col gap-9 mt-20">
-                <ProjectName 
-                  initialName={"Project name"} 
-                  projectId={projectId}
-                  className="text-gray-900 text-3xl font-semibold"
-                />
-                <Separator className="bg-gray-200" />
-                <TaskTabsWithLiveKit 
-                  tasks={tasks} 
-                  assistantData={assistantData} 
-                  projectId={projectId}
-                />
+          <AudioProvider>
+            <LiveKitStateManager 
+              tasks={tasks} 
+              userId={userId} 
+              isOnboarding={isOnboarding}
+              setIsOnboarding={setIsOnboarding}
+            />
+            <div className="flex flex-col md:flex-row h-screen">
+              {/* Desktop Tasks Section */}
+              <div className="hidden md:block w-7/12 max-h-screen overflow-auto bg-white">
+                <div className="w-2/3 mx-auto flex flex-col gap-9 mt-20">
+                  <ProjectName 
+                    initialName={"Project name"} 
+                    projectId={props.projectId}
+                    className="text-gray-900 text-3xl font-semibold"
+                  />
+                  <Separator className="bg-gray-200" />
+                  <TaskTabsWithLiveKit 
+                    tasks={tasks} 
+                    assistantData={assistantData} 
+                    projectId={props.projectId}
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Assistant Section with Mobile Bottom Sheet */}
-            <div className="w-full md:w-5/12 fixed md:right-0 top-0 h-screen">
-              <AudioProvider>
+              {/* Assistant Section with Mobile Bottom Sheet */}
+              <div className="w-full md:w-5/12 fixed md:right-0 top-0 h-screen">
                 <RoomAudioRenderer />
                 <RoomEventListener />
                 
@@ -383,7 +347,7 @@ const ClientAssistantProvider: React.FC<Props> = ({
                       <TaskTabsWithLiveKit 
                         tasks={tasks} 
                         assistantData={assistantData} 
-                        projectId={projectId}
+                        projectId={props.projectId}
                       />
                     </div>
                   </div>
@@ -404,9 +368,9 @@ const ClientAssistantProvider: React.FC<Props> = ({
                     tasks={tasks} 
                   />
                 </div>
-              </AudioProvider>
+              </div>
             </div>
-          </div>
+          </AudioProvider>
         </LiveKitRoom>
       ) : (
         <p>Loading...</p>
@@ -433,6 +397,50 @@ const AvatarScene = dynamic(() => import('./AvatarScene'), { ssr: false });
 const ParticipantLogger = () => {
   const participants = useParticipants();
   console.log('Connected participants:', participants.map(p => p.identity));
+  return null;
+};
+
+// New component to handle LiveKit state management
+const LiveKitStateManager = ({ 
+  tasks, 
+  userId, 
+  isOnboarding,
+  setIsOnboarding 
+}: { 
+  tasks: Task[], 
+  userId: string,
+  isOnboarding: boolean,
+  setIsOnboarding: (value: boolean) => void
+}) => {
+  const { localParticipant } = useLocalParticipant();
+  const room = useRoomContext();
+
+  // Send initial tasks data when connected
+  useEffect(() => {
+    if (!room || !localParticipant || room.state !== 'connected') {
+      return;
+    }
+
+    const sendInitialTasks = () => {
+      const message = {
+        type: 'initialTasks',
+        tasks: tasks,
+        timestamp: Date.now(),
+        userId: userId,
+        isOnboarding: isOnboarding
+      };
+
+      const encoder = new TextEncoder();
+      const data = encoder.encode(JSON.stringify(message));
+      localParticipant.publishData(data, {
+        reliable: true,
+      });
+      console.log('📤 Sent initial tasks data');
+    };
+
+    sendInitialTasks();
+  }, [room?.state, localParticipant, tasks, userId, isOnboarding]);
+
   return null;
 };
 

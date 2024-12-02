@@ -242,7 +242,6 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
     // Handle data messages
     ctx.room.on('dataReceived', async (payload: Uint8Array, participant?: RemoteParticipant | undefined) => {
       if (participant && participant.identity.startsWith('agent-')) {
-        // console.log('⏭️ Skipping message from agent');
         return;
       }
 
@@ -251,6 +250,53 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
         const rawData = decoder.decode(payload);
         const data = JSON.parse(rawData);
         
+        // Handle initial tasks
+        if (data.type === 'initialTasks') {
+          console.log('🔍 Debug Initial Tasks:', {
+            type: data.type,
+            isOnboarding: data.isOnboarding,
+            condition: data.isOnboarding ? 'ONBOARDING MODE' : 'TASK REVIEW MODE',
+            tasksCount: data.tasks?.length,
+            timestamp: new Date().toISOString()
+          });
+
+          if (!data.isOnboarding) {
+            console.log('📋 Executing Task Review Mode');
+            const relevantTasks = getRelevantTasks(data.tasks || []);
+            await session.conversation.item.create({
+              type: "message",
+              role: "user",
+              content: [
+                {
+                  type: "input_text",
+                  text: `Here are your most relevant tasks:
+${relevantTasks.map(task => `
+- "${task.name}" (${task.status})
+  Due: ${new Date(task.deadline).toLocaleDateString()}
+  Description: ${task.description || 'No description'}`).join('\n')}
+
+Please review these tasks and tell a dad joke to lighten the mood. Focus on any tasks that are overdue or due today.`
+                },
+              ],
+            });
+          } else {
+            console.log('🎓 Executing Onboarding Mode');
+            await session.conversation.item.create({
+              type: "message",
+              role: "system",
+              content: [
+                {
+                  type: "input_text",
+                  text: "Start with onboarding instructions: introduce yourself as Dona, explain how the app works with task creation and deadlines, and guide them through getting started.",
+                },
+              ],
+            });
+          }
+          
+          await session.response.create();
+          return;
+        }
+
         // Handle task review
         if (data.type === 'onboardingControl') {
           // console.log('📥 Agent: Received onboarding control:', {
@@ -274,7 +320,7 @@ ${relevantTasks.map(task => `
   Due: ${new Date(task.deadline).toLocaleDateString()}
   Description: ${task.description || 'No description'}`).join('\n')}
 
-Please review these tasks and tell a dad joke to lighten the mood. Focus on any tasks that are overdue or due today.`
+Please review these tasks. Focus on any tasks that are overdue or due today.`
               },
             ],
           });
