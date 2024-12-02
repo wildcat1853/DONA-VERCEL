@@ -166,15 +166,15 @@ function getRelevantTasks(tasks: Task[], limit: number = 5) {
     .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
     .slice(0, limit);
 
-  console.log('🔍 Relevant Tasks Debug:', {
-    totalTasks: tasks.length,
-    inProgressTasks: tasks.filter(t => t.status !== 'done').length,
-    relevantTasksCount: relevantTasks.length,
-    dateRanges: {
-      from: oneWeekAgo.toISOString(),
-      to: oneWeekAhead.toISOString()
-    }
-  });
+  // console.log('🔍 Relevant Tasks Debug:', {
+  //   totalTasks: tasks.length,
+  //   inProgressTasks: tasks.filter(t => t.status !== 'done').length,
+  //   relevantTasksCount: relevantTasks.length,
+  //   dateRanges: {
+  //     from: oneWeekAgo.toISOString(),
+  //     to: oneWeekAhead.toISOString()
+  //   }
+  // });
 
   return relevantTasks;
 }
@@ -212,30 +212,23 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
     const agent = new multimodal.MultimodalAgent({ model });
     let session = (await agent.start(ctx.room)) as openai.realtime.RealtimeSession;
 
-    // Simplify the conversation starter since instructions are now handled via config
+    // Get onboarding status from metadata
+    const isOnboarding = metadata?.sessionConfig?.metadata?.isOnboarding || false;
+    console.log('🔧 Backend: Onboarding status:', isOnboarding);
+    // Choose initial prompt based on onboarding status
     await session.conversation.item.create({
       type: "message",
       role: "user",
       content: [
         {
           type: "input_text",
-          text: "Start the conversation according to onboarding instructions.",
+          text: isOnboarding 
+            ? "Start with onboarding instructions: introduce yourself as Dona, explain how the app works with task creation and deadlines, and guide them through getting started."
+            : "Tell a joke to lighten the mood.",
         },
       ],
     });
     await session.response.create();
-
-    // await session.conversation.item.create({
-    //   type: "message",
-    //   role: "system",
-    //   content: [
-    //     {
-    //       type: "input_text",
-    //       text: "Do onboarding instructions.",
-    //     },
-    //   ],
-    // });
-    // await session.response.create();
 
     // Handle participant disconnection
     ctx.room.on(RoomEvent.ParticipantDisconnected, (disconnectedParticipant: Participant) => {
@@ -260,11 +253,11 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
         
         // Handle task review
         if (data.type === 'onboardingControl') {
-          console.log('📥 Agent: Received onboarding control:', {
-            type: data.type,
-            action: data.action,
-            tasksCount: data.tasks?.length
-          });
+          // console.log('📥 Agent: Received onboarding control:', {
+          //   type: data.type,
+          //   action: data.action,
+          //   tasksCount: data.tasks?.length
+          // });
 
           currentTasks = data.tasks || [];
           const relevantTasks = getRelevantTasks(currentTasks);
