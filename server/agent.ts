@@ -67,11 +67,11 @@ export default defineAgent({
       // console.log('⏳ Backend: Waiting for participant...');
       const participant = await ctx.waitForParticipant();
       
-      console.log('👤 Backend: Participant connected:', {
-        identity: participant.identity,
-        metadata: participant.metadata,
-        userId: JSON.parse(participant.metadata || '{}')?.sessionConfig?.metadata?.userId || 'No userId found'
-      });
+      // console.log('👤 Backend: Participant connected:', {
+      //   identity: participant.identity,
+      //   metadata: participant.metadata,
+      //   userId: JSON.parse(participant.metadata || '{}')?.sessionConfig?.metadata?.userId || 'No userId found'
+      // });
 
       // Extract room name from participant metadata
       const metadata = JSON.parse(participant.metadata || '{}');
@@ -183,21 +183,8 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
   try {
     const metadata = JSON.parse(participant.metadata || '{}');
     const config = parseSessionConfig(metadata);
-    // Remove tasks from metadata since we'll get it from data messages
-    let currentTasks = [];
-
-    // console.log('[Onboarding] Backend Status:', isOnboarding ? 'Started' : 'Not in onboarding mode', {
-    //   metadata: metadata, // Log the full metadata for debugging
-    //   isOnboarding: isOnboarding
-    // });
-    // console.log('🔧 Backend: Agent configuration:', {
-    //   roomName: roomName,
-    //   model: config.model,
-    //   voice: config.voice,
-    //   modalities: config.modalities,
-    //   isOnboarding: isOnboarding
-    // });
-
+    let currentTasks: Task[] = [];
+    
     const model = new openai.realtime.RealtimeModel({
       apiKey: config.openaiApiKey,
       model: "gpt-4o-realtime-preview-2024-10-01",
@@ -214,21 +201,51 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
 
     // Get onboarding status from metadata
     const isOnboarding = metadata?.sessionConfig?.metadata?.isOnboarding || false;
-    console.log('🔧 Backend: Onboarding status:', isOnboarding);
-    // Choose initial prompt based on onboarding status
-    await session.conversation.item.create({
-      type: "message",
-      role: "user",
-      content: [
-        {
-          type: "input_text",
-          text: isOnboarding 
-            ? "Start with onboarding instructions: introduce yourself as Dona, explain how the app works with task creation and deadlines, and guide them through getting started."
-            : "Tell a joke to lighten the mood.",
-        },
-      ],
-    });
-    await session.response.create();
+
+    // Wait for initial tasks data
+    if (!isOnboarding) {
+      console.log('🔄 Waiting for initial tasks data...');
+      await new Promise<void>((resolve) => {
+        const handleInitialTasks = async (payload: Uint8Array, sender?: RemoteParticipant) => {
+          if (sender?.identity.startsWith('agent-')) return;
+          
+          const decoder = new TextDecoder();
+          const data = JSON.parse(decoder.decode(payload));
+          
+          if (data.type === 'initialTasks') {
+            currentTasks = data.tasks || [];
+            const relevantTasks = getRelevantTasks(currentTasks);
+            
+            console.log('📋 Received initial tasks:', {
+              total: currentTasks.length,
+              relevant: relevantTasks.length
+            });
+
+            await session.conversation.item.create({
+              type: "message",
+              role: "user",
+              content: [{
+                type: "input_text",
+                text: relevantTasks.length > 0 
+                  ? `Here are your most relevant tasks:\n${relevantTasks.map(task => `
+- "${task.name}" (${task.status})
+  Due: ${new Date(task.deadline).toLocaleDateString()}
+  Description: ${task.description || 'No description'}`).join('\n')}\n\nPlease review these tasks and tell a dad joke to lighten the mood. Focus on any tasks that are overdue or due today.`
+                  : "Tell a joke to lighten the mood."
+              }]
+            });
+            await session.response.create();
+            
+            ctx.room.off('dataReceived', handleInitialTasks);
+            resolve();
+          }
+        };
+        
+        ctx.room.on('dataReceived', handleInitialTasks);
+        // Timeout after 5 seconds
+        setTimeout(resolve, 5000);
+      });
+    }
 
     // Handle participant disconnection
     ctx.room.on(RoomEvent.ParticipantDisconnected, (disconnectedParticipant: Participant) => {
