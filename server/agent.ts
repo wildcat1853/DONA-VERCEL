@@ -141,40 +141,60 @@ interface Task {
   createdAt: string;
 }
 
-function getRelevantTasks(tasks: Task[], limit: number = 5) {
-  const today = new Date();
-  const oneWeekAgo = new Date(today);
-  oneWeekAgo.setDate(today.getDate() - 7);
-  const oneWeekAhead = new Date(today);
-  oneWeekAhead.setDate(today.getDate() + 7);
+// function getRelevantTasks(tasks: Task[], limit: number = 5) {
+//   const relevantTasks = tasks
+//     .filter(task => {
+//       // Filter out completed tasks
+//       if (task.status === 'done') return false;
+      
+//       // Include all tasks with a deadline
+//       return task.deadline != null;
+//     })
+//     .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
+//     .slice(0, limit);
 
+//   console.log('📋 Filtered tasks:', {
+//     total: tasks.length,
+//     nonCompleted: tasks.filter(t => t.status !== 'done').length,
+//     relevant: relevantTasks.length
+//   });
+
+//   return relevantTasks;
+// }
+
+function getRelevantTasks(tasks: Task[], limit: number = 5) {
+  const now = new Date();
+  
   const relevantTasks = tasks
     .filter(task => {
-      // First filter out completed tasks
-      if (task.status === 'done') return false;
-      
-      const taskDeadline = new Date(task.deadline);
-      return (
-        // Tasks due today
-        taskDeadline.toDateString() === today.toDateString() ||
-        // Tasks from last week
-        (taskDeadline >= oneWeekAgo && taskDeadline < today) ||
-        // Tasks due in next week
-        (taskDeadline > today && taskDeadline <= oneWeekAhead)
-      );
+      // Skip completed tasks
+      if (task.status === 'done') {
+        console.log(`Task "${task.name}" skipped (status: done)`);
+        return false;
+      }
+      return true;
     })
-    .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
-    .slice(0, limit);
+    .map(task => ({
+      ...task,
+      // Calculate time difference in milliseconds
+      timeToDeadline: Math.abs(new Date(task.deadline).getTime() - now.getTime())
+    }))
+    // Sort by closest to current time (regardless if it's past or future)
+    .sort((a, b) => a.timeToDeadline - b.timeToDeadline)
+    // Take first 5
+    .slice(0, limit)
+    // Remove the timeToDeadline property we added for sorting
+    .map(({ timeToDeadline, ...task }) => task);
 
-  // console.log('🔍 Relevant Tasks Debug:', {
-  //   totalTasks: tasks.length,
-  //   inProgressTasks: tasks.filter(t => t.status !== 'done').length,
-  //   relevantTasksCount: relevantTasks.length,
-  //   dateRanges: {
-  //     from: oneWeekAgo.toISOString(),
-  //     to: oneWeekAhead.toISOString()
-  //   }
-  // });
+  console.log('📋 Filtered tasks:', {
+    total: tasks.length,
+    nonCompleted: tasks.filter(t => t.status !== 'done').length,
+    relevant: relevantTasks.length,
+    selectedTasks: relevantTasks.map(t => ({
+      name: t.name,
+      deadline: new Date(t.deadline).toLocaleDateString()
+    }))
+  });
 
   return relevantTasks;
 }
@@ -230,8 +250,8 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
                   ? `Here are your most relevant tasks:\n${relevantTasks.map(task => `
 - "${task.name}" (${task.status})
   Due: ${new Date(task.deadline).toLocaleDateString()}
-  Description: ${task.description || 'No description'}`).join('\n')}\n\nPlease review these tasks and tell a dad joke to lighten the mood. Focus on any tasks that are overdue or due today.`
-                  : "Tell a joke to lighten the mood."
+  Description: ${task.description || 'No description'}`).join('\n')}\n\nPlease review these tasks. Focus on any tasks that are overdue or due today.`
+                  : "Let's create a new task."
               }]
             });
             await session.response.create();
@@ -292,7 +312,7 @@ ${relevantTasks.map(task => `
   Due: ${new Date(task.deadline).toLocaleDateString()}
   Description: ${task.description || 'No description'}`).join('\n')}
 
-Please review these tasks and tell a dad joke to lighten the mood. Focus on any tasks that are overdue or due today.`
+Please review these tasks. Focus on any tasks that are overdue or due today.`
                 },
               ],
             });
