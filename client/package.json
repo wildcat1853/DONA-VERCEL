@@ -1,5 +1,5 @@
 {
-  "name": "hakaton",
+  "name": "client",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -48,7 +48,8 @@
     "cmu-pronouncing-dictionary": "^3.0.0",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.5",
-    "drizzle-orm": "latest",
+    "drizzle-orm": "^0.29.5",
+    "@vercel/postgres": "^0.7.2",
     "google-auth-library": "^9.15.0",
     "googleapis": "^144.0.0",
     "livekit-server-sdk": "^2.7.2",
@@ -86,7 +87,7 @@
     "@types/react-dom": "^18",
     "@types/uuid": "^10.0.0",
     "@vitest/runner": "^2.1.4",
-    "drizzle-kit": "^0.27.1",
+    "drizzle-kit": "^0.20.14",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.5",
     "object-hash": "^3.0.0",
