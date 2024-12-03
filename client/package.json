@@ -48,6 +48,7 @@
     "cmu-pronouncing-dictionary": "^3.0.0",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.5",
+    "drizzle-orm": "latest",
     "google-auth-library": "^9.15.0",
     "googleapis": "^144.0.0",
     "livekit-server-sdk": "^2.7.2",
@@ -67,6 +68,8 @@
     "shadcn-ui": "^0.9.2",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
+    "use-debounce": "latest",
+    "uuid": "latest",
     "ws": "^8.18.0"
   },
   "devDependencies": {
