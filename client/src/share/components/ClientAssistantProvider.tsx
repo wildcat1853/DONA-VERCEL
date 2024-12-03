@@ -295,6 +295,10 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
           audio={true}
           video={false}
           data-lk-theme="default"
+          connectOptions={{
+            autoSubscribe: true,
+            maxRetries: 3,
+          }}
           onError={(error) => console.error('LiveKit connection error:', error)}
           onConnected={() => console.log('LiveKit connected')}
           onDisconnected={() => console.log('LiveKit disconnected')}

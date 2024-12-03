@@ -55,6 +55,14 @@ async function shutdownHook(roomName: string) {
   }
 }
 
+// Add Task type at the top of the file
+interface Task {
+  name: string;
+  status: string;
+  deadline: string;
+  description?: string;
+}
+
 export default defineAgent({
   entry: async (ctx: JobContext) => {
     console.log('🤖 Agent starting...');
@@ -82,20 +90,40 @@ export default defineAgent({
 
       // 4. Simple data handler
       ctx.room.on('dataReceived', async (payload: Uint8Array, sender?: RemoteParticipant) => {
-        if (sender?.identity.startsWith('agent-')) return;
+        if (sender?.identity.startsWith('agent-')) {
+          console.log('👻 Ignoring message from agent:', sender.identity);
+          return;
+        }
         
         try {
           const decoder = new TextDecoder();
           const data = JSON.parse(decoder.decode(payload));
+          console.log('📨 Received message type:', data.type);
           
           switch (data.type) {
             case 'initialTasks':
-            case 'taskUpdate':
-              const tasks = data.tasks || [];
+              console.log('📋 Processing initial tasks');
+              const tasks = (data.tasks || []) as Task[];
+              console.log('📊 Raw tasks count:', tasks.length);
+              
               const relevantTasks = tasks
-                .filter((t: { status: string }) => t.status !== 'done')
+                .filter((task: Task) => {
+                  const isNotDone = task.status !== 'done';
+                  console.log(`Task "${task.name}": status=${task.status}, included=${isNotDone}`);
+                  return isNotDone;
+                })
                 .slice(0, 5);
-                
+              
+              console.log('✅ Filtered tasks:', {
+                total: tasks.length,
+                filtered: relevantTasks.length,
+                tasks: relevantTasks.map(task => ({
+                  name: task.name,
+                  status: task.status,
+                  deadline: new Date(task.deadline).toLocaleDateString()
+                }))
+              });
+              
               await session.conversation.item.create({
                 type: "message",
                 role: "user",
@@ -111,7 +139,7 @@ export default defineAgent({
               break;
           }
         } catch (error) {
-          console.error('Error processing message:', error);
+          console.error('❌ Error processing message:', error);
         }
       });
 
