@@ -70,7 +70,10 @@
     "tailwindcss-animate": "^1.0.7",
     "use-debounce": "latest",
     "uuid": "latest",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "resend": "latest",
+    "pg": "latest",
+    "nanoid": "latest"
   },
   "devDependencies": {
     "@jridgewell/trace-mapping": "^0.3.25",
