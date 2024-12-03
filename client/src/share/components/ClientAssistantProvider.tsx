@@ -49,7 +49,7 @@ import useAssistant from '@/hooks/useAssistant';
 import { Task } from '@/../.../../../../define';
 import RoomEventListener from './RoomEventListener';
 import { AudioProvider } from '../context/AudioContext';
-import { getAssistantInstructions } from '../config/assistantInstructions';
+import { assistantInstructions as instructions } from '../config/assistantInstructions';
 import ProjectName from './ProjectName';
 import CircularProgress from './CircularProgress';
 import { onboardingInstructions } from '../config/onboardingInstructions';
