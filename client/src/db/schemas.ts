@@ -6,10 +6,9 @@ import {
   pgEnum,
   json,
   uuid,
+  sql,
 } from "drizzle-orm/pg-core";
 import { Task } from "@/define/define";
-import { sql } from "drizzle-orm";
-
 
 export type User = typeof user.$inferSelect;
 export const user = pgTable("users", {
