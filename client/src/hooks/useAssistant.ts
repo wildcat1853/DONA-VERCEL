@@ -1,39 +1,14 @@
-import { useAssistant as _useAssistant, CreateMessage, Message } from "ai/react";
 import { useState, useCallback, useEffect } from 'react';
 
 interface UseAssistantReturn {
-    append: (message: Message | CreateMessage, requestOptions?: { data?: Record<string, string> }) => Promise<void>;
-    status: 'idle' | 'in_progress' | 'complete';
     isOnboarding: boolean | undefined;
     isLoading: boolean;
     updateOnboardingStatus: (isOnboarding: boolean) => Promise<void>;
 }
 
 function useAssistant({ projectId, projectThreadId, userId }: { projectThreadId: string | undefined, projectId: string, userId: string }) {
-    const [status, setStatus] = useState<'idle' | 'in_progress' | 'complete'>('idle');
     const [isOnboarding, setIsOnboarding] = useState<boolean | undefined>(undefined);
     const [isLoading, setIsLoading] = useState(true);
-
-    const ass = _useAssistant({
-        api: "/api/chat",
-        threadId: projectThreadId,
-        body: { projectId },
-    });
-
-    const _append = ass.append;
-    const append = useCallback(async (message: Message | CreateMessage, requestOptions?: {
-        data?: Record<string, string>;
-    }) => {
-        setStatus('in_progress');
-        try {
-            await _append({
-                ...message,
-                content: JSON.stringify({ message: message.content, role: message.role })
-            }, requestOptions);
-        } finally {
-            setStatus('complete');
-        }
-    }, [_append]);
 
     useEffect(() => {
         const checkOnboardingStatus = async () => {
@@ -49,7 +24,6 @@ function useAssistant({ projectId, projectThreadId, userId }: { projectThreadId:
                 const data = await response.json();
                 console.log('Raw onboarding API response:', data);
                 
-                // Convert string 'true'/'false' to boolean if necessary
                 const onboardingValue = data.isOnboarding === 'true' || data.isOnboarding === true;
                 setIsOnboarding(onboardingValue);
                 console.log('Set isOnboarding state to:', onboardingValue);
@@ -88,8 +62,6 @@ function useAssistant({ projectId, projectThreadId, userId }: { projectThreadId:
 
             const data = await response.json();
             console.log('[Onboarding] Status updated:', data);
-            
-            // Update local state immediately
             setIsOnboarding(data.isOnboarding);
             
         } catch (error) {
@@ -98,9 +70,6 @@ function useAssistant({ projectId, projectThreadId, userId }: { projectThreadId:
     };
 
     return {
-        ...ass,
-        append,
-        status,
         isOnboarding,
         isLoading,
         updateOnboardingStatus
