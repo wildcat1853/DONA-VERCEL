@@ -4,14 +4,13 @@ import { ENV } from "@/lib/env";
 import { AssistantResponse } from "ai";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import * as Ably from 'ably';
+
 
 const openai = new OpenAI({
   apiKey: ENV.OPENAI_API_KEY || "",
 });
 
-const ably = new Ably.Realtime({ key: process.env.NEXT_PUBLIC_ABLY_API_KEY });
-const channel = ably.channels.get('audio-channel');
+
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
@@ -106,17 +105,9 @@ export async function POST(req: Request, res: NextResponse) {
           console.log(`Splitting audio into ${chunks.length} chunks`);
 
           // Publish chunks
-          for (let i = 0; i < chunks.length; i++) {
-            await channel.publish('audio_chunk', {
-              data: chunks[i],
-              chunkIndex: i,
-              totalChunks: chunks.length,
-              isLast: i === chunks.length - 1
-            });
-            console.log(`Published chunk ${i + 1} of ${chunks.length}`);
-          }
+          
 
-          console.log('All audio chunks published to Ably channel');
+
         } catch (error) {
           console.error('Failed to generate or send speech:', error);
         }
