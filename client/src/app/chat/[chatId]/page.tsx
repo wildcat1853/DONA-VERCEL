@@ -1,4 +1,4 @@
-import { db, message } from "@/../../../db";
+import { db, message } from "@/db/db";
 import React from "react";
 import AccountButton from "@/share/components/AccountButton";
 import getServerUser from "@/hooks/getServerUser";

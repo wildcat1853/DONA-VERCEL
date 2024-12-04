@@ -4,8 +4,8 @@ import { authConfig } from "../api/auth/[...nextauth]/authConfig";
 import ClientAuth from "./ClientAuth";
 import { redirect } from "next/navigation";
 import getServerUser from "@/hooks/getServerUser";
-import { db } from "@/../../../db";
-import { project } from "@/../../../schemas";
+import { db } from "@/db/db";
+import { project } from "@/db/schemas";
 
 type Props = {};
 

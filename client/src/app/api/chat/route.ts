@@ -1,10 +1,9 @@
-import { db, message, task } from "@/../../../db";
-import { Message } from "@/../../../define";
+import { db, message, task } from "@/db/db";
+import { Message } from "@/define/define";
 import { ENV } from "@/lib/env";
 import { AssistantResponse } from "ai";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { RunSubmitToolOutputsParams } from "openai/resources/beta/threads/runs/runs.mjs";
 import * as Ably from 'ably';
 
 const openai = new OpenAI({
@@ -59,9 +58,9 @@ export async function POST(req: Request, res: NextResponse) {
       // Run the assistant on the thread
       const runStream = openai.beta.threads.runs.stream(threadId, {
         assistant_id:
-          ENV.ASSISTANT_ID ??
+          ENV.OPENAI_ASSISTANT_ID ??
           (() => {
-            throw new Error("ASSISTANT_ID is not set");
+            throw new Error("OPENAI_ASSISTANT_ID is not set");
           })(),
       });
 
@@ -185,7 +184,7 @@ export async function POST(req: Request, res: NextResponse) {
                     return {
                       tool_call_id: toolCall.id,
                       output: "done",
-                    } satisfies RunSubmitToolOutputsParams.ToolOutput;
+                    };
                   })();
                   break;
                 // case 'updateTask': return (async () => {

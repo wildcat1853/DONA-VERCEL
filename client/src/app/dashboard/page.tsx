@@ -1,4 +1,4 @@
-import { db, project } from "@/../../../db";
+import { db, project } from "@/db/db";
 import CreateProjectButton from "@/share/components/CreateProjectButton";
 // Add this import
 import { Card } from "@/share/ui/card";

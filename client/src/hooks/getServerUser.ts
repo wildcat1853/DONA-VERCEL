@@ -1,9 +1,9 @@
 "use server";
 import { authConfig } from "@/app/api/auth/[...nextauth]/authConfig";
-import { db } from "@/../../../db";
+import { db } from "@/db/db";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { user } from "@/../../../schemas";
+import { user } from "@/db/schemas";
 import { sql } from "drizzle-orm";
 
 export default async function getServerUser() {
