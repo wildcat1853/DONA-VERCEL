@@ -49,7 +49,7 @@ import useAssistant from '@/hooks/useAssistant';
 import { Task } from '@/../.../../../../define';
 import RoomEventListener from './RoomEventListener';
 import { AudioProvider } from '../context/AudioContext';
-import { assistantInstructions as instructions } from '../config/assistantInstructions';
+import { assistantInstructions } from '../config/assistantInstructions';
 import ProjectName from './ProjectName';
 import CircularProgress from './CircularProgress';
 import { onboardingInstructions } from '../config/onboardingInstructions';
@@ -219,7 +219,7 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
               turnDetection: "server_vad",
               modalities: "text_and_audio",
               voice: "sage",
-              instructions: instructions.join('\n'),
+              instructions: assistantInstructions.join('\n'),
               metadata: {
                 userId: userId,
                 isOnboarding: assistantIsOnboarding,
