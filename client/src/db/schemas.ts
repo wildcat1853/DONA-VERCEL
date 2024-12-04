@@ -5,6 +5,7 @@ import {
   pgTable,
   pgEnum,
   json,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { Task } from "@/define/define";
 import { sql } from "drizzle-orm";
