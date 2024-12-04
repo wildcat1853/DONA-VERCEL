@@ -12,10 +12,11 @@ if (process.env.NODE_ENV === 'development') {
   config({ path: path.resolve(process.cwd(), '../.env') });
 }
 
-// Ensure DATABASE_URL is set
+// Use POSTGRES_URL in production (Vercel), fallback to DATABASE_URL in development
 if (!process.env.POSTGRES_URL && !process.env.DATABASE_URL) {
-  throw new Error('Database URL is not set');
+  throw new Error('No database connection string available');
 }
 
+// Vercel automatically sets POSTGRES_URL in production
 export const db = drizzle(sql, { schema });
 export { project, task, message };
