@@ -1,57 +1,42 @@
 "use server";
-import { authConfig } from "@/app/api/auth/[...nextauth]/authConfig";
 import { db } from "@/db/db";
+import { user } from "@/db/schemas";
+import { eq } from "drizzle-orm";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { user } from "@/db/schemas";
-import { sql } from "drizzle-orm";
 
 export default async function getServerUser() {
   try {
-    const session = await getServerSession(authConfig);
-    if (!session?.user) redirect("/auth")
+    const session = await getServerSession();
     
-    const sessionUser = session.user;
-    if (!sessionUser.email) throw new Error("no email");
-    if (!sessionUser.name) throw new Error("no name");
-    
-    const email = sessionUser.email;
-
-    // Add a health check query first
-    try {
-      await db.execute(sql`SELECT 1`);
-    } catch (dbError: any) {
-      console.error('Database connection error details:', {
-        message: dbError.message,
-        code: dbError.code,
-        stack: dbError.stack
-      });
-      throw new Error(`Database connection failed: ${dbError.message}`);
+    if (!session?.user?.email) {
+      console.log('No session or email, redirecting to auth');
+      redirect('/auth');
     }
 
     // Try to find the user
     let userData = await db.query.user.findFirst({
-      where: (user, { eq }) => eq(user.email, email),
+      where: (user, { eq }) => eq(user.email, session.user.email!),
     });
 
-    // If user doesn't exist, create new user
+    // If user doesn't exist, create one
     if (!userData) {
-      try {
-        userData = (await db.insert(user).values({
-          email: sessionUser.email,
-          name: sessionUser.name,
-          image: sessionUser.image,
-        }).returning())[0];
-      } catch (insertError) {
-        console.error('Error creating new user:', insertError);
-        throw new Error('Failed to create new user');
-      }
+      console.log('User not found, creating new user');
+      userData = (
+        await db
+          .insert(user)
+          .values({
+            email: session.user.email,
+            name: session.user.name || 'Anonymous',
+            image: session.user.image || '',
+          })
+          .returning()
+      )[0];
     }
 
     return userData;
-    
   } catch (error) {
-    console.error('getServerUser error:', error);
-    throw error;
+    console.error('Database connection error:', error);
+    redirect('/auth');
   }
 }
