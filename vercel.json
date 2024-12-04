@@ -1,4 +1,0 @@
-{
-  "buildCommand": "cd client && npm run db:push && npm run build",
-  "outputDirectory": "client/.next"
-} 
