@@ -5,13 +5,9 @@ import { AssistantResponse } from "ai";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
-// Validate OpenAI configuration
+// Only validate OpenAI API key
 if (!ENV.OPENAI_API_KEY || !ENV.OPENAI_API_KEY.startsWith('sk-')) {
   throw new Error('Invalid OpenAI API key');
-}
-
-if (!ENV.OPENAI_ASSISTANT_ID || !ENV.OPENAI_ASSISTANT_ID.startsWith('asst_')) {
-  throw new Error('Invalid OpenAI Assistant ID');
 }
 
 const openai = new OpenAI({
