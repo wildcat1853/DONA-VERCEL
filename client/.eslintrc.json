@@ -1,4 +1,6 @@
 {
   "extends": ["next/core-web-vitals"],
-  "rules": {}
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "root": true
 } 

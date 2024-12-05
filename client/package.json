@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "clean": "rm -rf .next",
-    "build": "npm run clean && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "drizzle-kit generate:pg --config=drizzle.config.ts",
@@ -67,9 +67,9 @@
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.5",
     "drizzle-kit": "^0.20.14",
-    "drizzle-orm": "0.29.5",
-    "eslint": "^8.57.1",
-    "eslint-config-next": "^14.2.5",
+    "drizzle-orm": "latest",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
     "google-auth-library": "^9.15.0",
     "googleapis": "^144.0.0",
     "livekit-server-sdk": "^2.7.2",
@@ -106,7 +106,5 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "devDependencies": {
-    "ts-node": "^10.9.2"
-  }
+  "ts-node": "^10.9.2"
 }
