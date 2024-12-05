@@ -3,18 +3,6 @@ const nextConfig = {
   experimental: {
     serverActions: true,
   },
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        crypto: require.resolve('crypto-browserify'),
-        stream: require.resolve('stream-browserify'),
-        buffer: require.resolve('buffer/'),
-        util: require.resolve('util/'),
-      };
-    }
-    return config;
-  },
   async headers() {
     return [
       {
