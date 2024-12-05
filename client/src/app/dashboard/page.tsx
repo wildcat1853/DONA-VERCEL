@@ -6,6 +6,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import getServerUser from "@/hooks/getServerUser";
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
+
 export default async function DashboardPage() {
   try {
     const userData = await getServerUser();

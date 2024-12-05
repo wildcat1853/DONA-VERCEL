@@ -2,11 +2,15 @@ import { db } from "@/db/db";
 import { user } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { headers } from 'next/headers';
+
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    const url = new URL(request.url);
+    const userId = url.searchParams.get('userId');
 
     if (!userId) {
       console.error('Missing userId in request');
