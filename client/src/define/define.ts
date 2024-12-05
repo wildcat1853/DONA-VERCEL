@@ -1,5 +1,5 @@
 import { InferSelectModel } from "drizzle-orm";
-import { message, project, task, user } from "../db/schemas";
+import { message, project, task, user } from "@/db/schemas";
 
 export type User = InferSelectModel<typeof user>;
 
