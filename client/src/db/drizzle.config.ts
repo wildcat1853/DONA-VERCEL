@@ -1,19 +1,19 @@
 import { defineConfig } from "drizzle-kit";
 import * as dotenv from "dotenv";
+import path from 'path';
 
-dotenv.config({ path: '.env.local' });
+// Explicitly load .env.local
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
-const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
-
-if (!connectionString) {
-  throw new Error('No database connection string available');
+if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL is not set in environment variables");
 }
 
 export default defineConfig({
-  schema: "./src/db/schemas.ts",
-  out: "./drizzle",
-  driver: 'pg',
-  dbCredentials: {
-    connectionString: connectionString,
-  },
+    dialect: "postgresql",
+    schema: "./schemas.ts",
+    out: "./drizzle",
+    dbCredentials: {
+        url: process.env.DATABASE_URL,
+    },
 });

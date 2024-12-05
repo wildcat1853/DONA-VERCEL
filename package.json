@@ -19,7 +19,6 @@
     "@livekit/rtc-node": "^0.10.4",
     "crypto-browserify": "^3.12.1",
     "dotenv": "^16.4.5",
-    "drizzle-orm": "^0.33.0",
     "drizzle-zod": "^0.5.1",
     "googleapis": "^144.0.0",
     "knex": "^3.1.0",

@@ -19,10 +19,15 @@ if (!connectionString) {
 export default defineConfig({
   schema: "./src/db/schemas.ts",
   out: "./drizzle",
-  driver: 'pg',
+  dialect: "postgresql",
   dbCredentials: {
-    connectionString: connectionString,
+    host: process.env.POSTGRES_HOST || 'localhost',
+    port: parseInt(process.env.POSTGRES_PORT || '5432'),
+    user: process.env.POSTGRES_USER,
+    password: process.env.POSTGRES_PASSWORD,
+    database: process.env.POSTGRES_DATABASE || 'postgres',
+    ssl: process.env.POSTGRES_SSL === 'true'
   },
-  verbose: true, // Add this to help debug connection issues
-  strict: true,  // Enforce schema validation
+  verbose: true,
+  strict: true,
 }); 
