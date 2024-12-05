@@ -4,24 +4,22 @@ import { user } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
+import { authConfig } from "@/app/api/auth/[...nextauth]/authConfig";
 
 export default async function getServerUser() {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authConfig);
     
     if (!session?.user?.email) {
-      console.log('No session or email, redirecting to auth');
+      console.log('No authenticated session, redirecting to auth');
       redirect('/auth');
     }
 
-    // Try to find the user
     let userData = await db.query.user.findFirst({
-      where: (user, { eq }) => eq(user.email, session.user.email!),
+      where: (user, { eq }) => eq(user.email, session.user.email),
     });
 
-    // If user doesn't exist, create one
     if (!userData) {
-      console.log('User not found, creating new user');
       userData = (
         await db
           .insert(user)
@@ -36,7 +34,7 @@ export default async function getServerUser() {
 
     return userData;
   } catch (error) {
-    console.error('Database connection error:', error);
+    console.error('Auth or database error:', error);
     redirect('/auth');
   }
 }

@@ -18,5 +18,21 @@ if (!dbUrl) {
   throw new Error('Database configuration is missing');
 }
 
+// Add this check to verify database connection
+const checkConnection = async () => {
+  try {
+    await sql`SELECT 1`;
+    console.log('✅ Database connected successfully');
+  } catch (error) {
+    console.error('❌ Database connection failed:', error);
+    throw error;
+  }
+};
+
+// Run the check in non-production environments
+if (process.env.NODE_ENV !== 'production') {
+  checkConnection();
+}
+
 export const db = drizzle(sql, { schema });
 export * from "./schemas";
