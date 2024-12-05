@@ -19,8 +19,8 @@ export const EmailTemplate: React.FC<Readonly<EmailTemplateProps>> = ({
       <>
         <h2 style={{ color: '#2D3748' }}>Hey from Dona</h2>
         <p>Hey {userEmail}!</p>
-        <p>I hope you didn't forget about our session today. Don't worry, you just need to check in and give update about your progress.</p>
-        <p>Don't worry if you didn't get much done - I'm here to help, not judge!</p>
+        <p>I hope you didn&apos;t forget about our session today. Don&apos;t worry, you just need to check in and give update about your progress.</p>
+        <p>Don&apos;t worry if you didn&apos;t get much done - I&apos;m here to help, not judge!</p>
         <div style={{ 
           display: 'flex', 
           gap: '24px',
@@ -71,7 +71,7 @@ export const EmailTemplate: React.FC<Readonly<EmailTemplateProps>> = ({
         }}>
           {scheduledDate}
         </p>
-        <p>During this session, we'll discuss your progress and help you stay on track with your goals.</p>
+        <p>We&apos;ll discuss your progress and help you stay on track with your goals.</p>
         <p>The calendar invitation has been sent to your email. You can manage the event directly from your calendar.</p>
         <div style={{ 
           display: 'flex', 
