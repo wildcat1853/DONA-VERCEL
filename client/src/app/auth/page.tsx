@@ -8,7 +8,6 @@ import { db } from "@/db/db";
 import { project } from "@/db/schemas";
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 type Props = {};
 

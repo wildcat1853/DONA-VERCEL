@@ -311,6 +311,9 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
               isOnboarding={isOnboarding}
               setIsOnboarding={setIsOnboarding}
             />
+            <div className="fixed top-4 left-4 z-50">
+              <AccountDropdown />
+            </div>
             <div className="flex flex-col md:flex-row h-screen">
               {/* Desktop Tasks Section */}
               <div className="hidden md:block w-7/12 max-h-screen overflow-auto bg-white">
