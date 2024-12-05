@@ -12,13 +12,18 @@ type Props = {
 
 async function page({ params }: Props) {
   const userData = await getServerUser();
+  
+  if (!userData) {
+    redirect("/auth");
+  }
+
   const projectData = await db.query.project.findFirst({
     where: (project, { eq, and }) =>
       and(eq(project.id, params.chatId), eq(project.userId, userData.id)),
   });
 
   if (!projectData) {
-    redirect("/dashboard");
+    redirect("/auth");
   }
 
   const tasksPromise = db.query.task.findMany({
@@ -39,9 +44,7 @@ async function page({ params }: Props) {
       <AccountButton user={userData} />
       <ClientAssistantProvider
         projectId={params.chatId}
-        projectThreadId={
-          projectData.threadId ? projectData.threadId : undefined
-        }
+        projectThreadId={projectData.threadId ? projectData.threadId : undefined}
         serverMessages={serverMessages}
         tasks={tasks}
         userId={userData.id}
