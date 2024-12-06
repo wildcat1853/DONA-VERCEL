@@ -46,7 +46,7 @@ import '@livekit/components-styles';
 import { Track, TrackEvent, RoomEvent, Participant, Room, ParticipantEvent, TrackPublication } from 'livekit-client';
 import useAssistant from '@/hooks/useAssistant';
 
-import { Task } from '@/../.../../../../define';
+import { Task } from '@/define/define';
 import RoomEventListener from './RoomEventListener';
 import { AudioProvider } from '../context/AudioContext';
 import { assistantInstructions } from '../config/assistantInstructions';
