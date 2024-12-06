@@ -9,7 +9,7 @@ import {
 } from "../ui/dropdown-menu";
 import { signOut } from "next-auth/react";
 import { LogOut } from "lucide-react";
-import { User } from "@/../../../schemas";
+import { User } from "@/db/schemas";
 
 type Props = { user: User };
 
