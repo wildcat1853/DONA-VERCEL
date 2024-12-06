@@ -41,6 +41,7 @@ export const project = pgTable("projects", {
 });
 
 export const statusEnum = pgEnum("status", ["done", "in progress"]);
+type StatusType = "done" | "in progress";
 
 export const task = pgTable("tasks", {
   id: text("id")
@@ -49,13 +50,14 @@ export const task = pgTable("tasks", {
     .$defaultFn(() => nanoid(8)),
   name: text("name").notNull(),
   description: text("description"),
-  status: statusEnum("status").$type<"done" | "in progress">().notNull().default('in progress'),
+  status: statusEnum("status").notNull().default('in progress') as unknown as StatusType,
   deadline: timestamp("deadline").default(rawSql`CURRENT_TIMESTAMP`),
   projectId: text("projectId")
     .notNull()
     .references(() => project.id), createdAt: timestamp("created_at")
       .$default(() => new Date())
       .notNull(),
+  toolInvocations: json("toolInvocations") as unknown as Task[],
 });
 
 export const roleEnum = pgEnum("role", ["user", "assistant", 'data', 'system']);
@@ -72,5 +74,5 @@ export const message = pgTable("messages", {
   projectId: text("projectId")
     .notNull()
     .references(() => project.id),
-  toolInvocations: json("toolInvocations").$type<Task[]>(),
+  toolInvocations: json("toolInvocations") as unknown as Task[],
 });

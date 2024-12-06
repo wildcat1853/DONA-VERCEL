@@ -30,15 +30,20 @@ export default async function AuthPage() {
 
       if (!projectData) {
         console.log('Auth Page - Creating new project');
-        projectData = (
-          await db
-            .insert(project)
-            .values({
-              name: "My Project",
-              userId: userData.id,
-            })
-            .returning()
-        )[0];
+        const insertResult = await db
+          .insert(project)
+          .values({
+            name: "My Project",
+            userId: userData.id,
+          })
+          .returning({
+            id: project.id,
+            name: project.name,
+            userId: project.userId,
+            threadId: project.threadId,
+            createdAt: project.createdAt
+          });
+        projectData = insertResult[0];
         console.log('Auth Page - New Project Created:', projectData.id);
       }
 
