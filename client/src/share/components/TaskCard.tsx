@@ -13,7 +13,7 @@ import { createEventURL } from "@/app/actions/calendar";
 import { format, isToday, isTomorrow, isYesterday } from "date-fns";
 import { useDebounce } from "use-debounce";
 import { saveTask } from "@/app/actions/task";
-import { Task } from "../../../../define";
+import { Task } from "@/define/define";
 import { Input } from "../ui/input";
 import confetti from "canvas-confetti";
 import { LocalizationProvider } from "@mui/x-date-pickers";
