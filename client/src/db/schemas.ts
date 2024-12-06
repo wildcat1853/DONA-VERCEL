@@ -8,7 +8,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { sql as rawSql } from "drizzle-orm";
-import { Task } from "@/define/define";
+import type { Task } from "../define/define"; 
 
 export type User = typeof user.$inferSelect;
 export const user = pgTable("users", {
