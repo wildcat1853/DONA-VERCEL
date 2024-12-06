@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authConfig } from "@/app/api/auth/[...nextauth]/authConfig";
+import { User } from "@/define/define";
 
 export default async function getServerUser() {
   try {
@@ -20,16 +21,22 @@ export default async function getServerUser() {
     });
 
     if (!userData) {
-      userData = (
-        await db
-          .insert(user)
-          .values({
-            email: session.user.email,
-            name: session.user.name || 'Anonymous',
-            image: session.user.image || '',
-          })
-          .returning()
-      )[0];
+      const insertResult = await db
+        .insert(user)
+        .values({
+          email: session.user.email,
+          name: session.user.name || 'Anonymous',
+          image: session.user.image || '',
+        })
+        .returning({
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+          isOnboarding: user.isOnboarding,
+          createdAt: user.createdAt
+        });
+      userData = insertResult[0];
     }
 
     return userData;
