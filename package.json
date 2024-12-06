@@ -7,7 +7,8 @@
     "start:connect": "tsx ./server/agent.ts connect",
     "generate": "drizzle-kit generate",
     "push": "drizzle-kit push",
-    "test": "vitest"
+    "test": "vitest",
+    "postbuild": "drizzle-kit generate:pg && drizzle-kit push:pg"
   },
   "keywords": [],
   "type": "module",
