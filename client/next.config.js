@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: false,
   transpilePackages: ['drizzle-orm'],
   webpack: (config) => {
     config.resolve.fallback = {
@@ -8,6 +9,6 @@ const nextConfig = {
     };
     return config;
   },
-}
+};
 
-module.exports = nextConfig 
+module.exports = nextConfig;

@@ -3,7 +3,7 @@
 import { db, task } from "@/db/db"
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { Task } from "../../../../define";
+import { Task } from "@/define/define";
 
 interface TaskDataWithEmail extends Partial<Task> {
     id: string;
