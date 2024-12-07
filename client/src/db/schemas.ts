@@ -57,7 +57,7 @@ export const task = pgTable("tasks", {
     .references(() => project.id), createdAt: timestamp("created_at")
       .$default(() => new Date())
       .notNull(),
-  toolInvocations: json("toolInvocations") as unknown as Task[],
+  toolInvocations: json("toolInvocations").default(null),
 });
 
 export const roleEnum = pgEnum("role", ["user", "assistant", 'data', 'system']);
@@ -74,5 +74,5 @@ export const message = pgTable("messages", {
   projectId: text("projectId")
     .notNull()
     .references(() => project.id),
-  toolInvocations: json("toolInvocations") as unknown as Task[],
+  toolInvocations: json("toolInvocations").default(null),
 });

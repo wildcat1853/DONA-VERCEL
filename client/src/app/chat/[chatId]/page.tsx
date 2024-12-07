@@ -28,18 +28,27 @@ async function page({ params }: Props) {
 
   const tasksPromise = db.query.task.findMany({
     where: (tasks, { eq }) => eq(tasks.projectId, projectData.id),
-  }).then(tasks => tasks.map(task => ({
-    id: task.id,
-    name: task.name,
-    description: task.description,
-    status: task.status,
-    deadline: task.deadline,
-    projectId: task.projectId,
-    createdAt: task.createdAt
-  })));
+    columns: {
+      id: true,
+      name: true,
+      description: true,
+      status: true,
+      deadline: true,
+      projectId: true,
+      createdAt: true
+    }
+  });
+
   const serverMessagesPromise = db.query.message.findMany({
     where: (messages, { eq }) => eq(messages.projectId, params.chatId),
     orderBy: message.createdAt,
+    columns: {
+      id: true,
+      content: true,
+      role: true,
+      createdAt: true,
+      projectId: true
+    }
   });
 
   const [tasks, serverMessages] = await Promise.all([
