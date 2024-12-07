@@ -112,11 +112,13 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
   };
 
   const sendAudioData = (audioData: Float32Array) => {
-    // Convert Float32Array to ArrayBuffer
-    const audioArrayBuffer = audioData.buffer;
+    // Convert Float32Array to regular ArrayBuffer
+    const buffer = new ArrayBuffer(audioData.length * 4); // 4 bytes per float32
+    const view = new Float32Array(buffer);
+    view.set(audioData);
 
-    // Use the onAudioCapture callback to send audio data
-    onAudioCapture(audioArrayBuffer);
+    // Now we're sure it's a regular ArrayBuffer
+    onAudioCapture(buffer);
   };
 
   const float32ToInt16 = (buffer: Float32Array) => {
