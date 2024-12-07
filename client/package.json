@@ -10,7 +10,6 @@
     "lint": "next lint",
     "db:generate": "drizzle-kit generate:pg",
     "db:push": "drizzle-kit push:pg --config=./drizzle.config.ts",
-    "postbuild": "NODE_OPTIONS='--loader ts-node/esm' drizzle-kit push:pg",
     "migrate": "drizzle-kit push:pg"
   },
   "dependencies": {
