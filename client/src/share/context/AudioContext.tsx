@@ -37,18 +37,26 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (!ctx) {
             ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
             setAudioContext(ctx);
-          } else if (ctx.state === 'suspended') {
+          }
+
+          // Always try to resume the context when setting up audio
+          if (ctx.state === 'suspended') {
             await ctx.resume();
           }
 
           console.log('AudioContext state:', ctx.state);
 
           const analyserNode = ctx.createAnalyser();
-          analyserNode.fftSize = 2048; // Ensure consistent FFT size
+          analyserNode.fftSize = 2048;
+          analyserNode.smoothingTimeConstant = 0.8; // Add smoothing
           
           const mediaStream = new MediaStream([audioTrack.mediaStreamTrack]);
           const source = ctx.createMediaStreamSource(mediaStream);
+          
+          // Connect the source to both analyser and destination
           source.connect(analyserNode);
+          // Don't connect analyser to destination to prevent echo
+          // analyserNode.connect(ctx.destination);
           
           setAnalyser(analyserNode);
           setIsPlaying(true);
@@ -59,12 +67,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           };
 
           return () => {
-            console.log('Cleanup triggered');
-            audioTrack.mediaStreamTrack.onended = null;
             source.disconnect();
             analyserNode.disconnect();
             setAnalyser(null);
             setIsPlaying(false);
+            // Don't close the audio context, just clean up connections
           };
         } catch (error) {
           console.error('Error in audio setup:', error);
@@ -73,6 +80,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       } else {
         setIsPlaying(false);
+        setAnalyser(null);
       }
     };
 
