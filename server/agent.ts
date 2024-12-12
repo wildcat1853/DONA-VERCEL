@@ -89,9 +89,14 @@ export default defineAgent({
       const session = await agent.start(ctx.room);
 
       // 4. Simple data handler
-      ctx.room.on('dataReceived', async (payload: Uint8Array, sender?: RemoteParticipant) => {
-        if (sender?.identity.startsWith('agent-')) {
-          console.log('👻 Ignoring message from agent:', sender.identity);
+      ctx.room.on('dataReceived', async (
+        payload: Uint8Array,
+        participant?: RemoteParticipant,
+        kind?: DataPacketKind,
+        topic?: string
+      ) => {
+        if (participant?.identity.startsWith('agent-')) {
+          console.log('👻 Ignoring message from agent:', participant.identity);
           return;
         }
         
@@ -365,8 +370,8 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
     clearInterval(keepAliveInterval);
 
     // Handle participant disconnection
-    ctx.room.on(RoomEvent.ParticipantDisconnected, (disconnectedParticipant: Participant) => {
-      if (disconnectedParticipant.identity === participant.identity) {
+    ctx.room.on(RoomEvent.ParticipantDisconnected, (participant: RemoteParticipant) => {
+      if (participant.identity === participant.identity) {
         console.log(`Participant ${participant.identity} disconnected.`);
         // Close the session and clean up
         session.close();

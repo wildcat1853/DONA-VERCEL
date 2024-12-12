@@ -1,35 +1,17 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "ESNext",
-    "moduleResolution": "node",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "outDir": "dist",
-    "rootDir": "./",
-    "resolveJsonModule": true
+    "outDir": "./dist",
+    "rootDir": ".",
+    "jsx": "react"
   },
-  "include": ["**/*.ts"],
+  "include": ["./**/*.ts", "./**/*.tsx"],
   "exclude": ["node_modules"]
 }
-
-// {
-//   "compilerOptions": {
-//     "target": "ES2020",                   // Specify ECMAScript target version
-//     "module": "ESNext",                   // Changed from "NodeNext" to "ESNext"
-//     "moduleResolution": "node",           // Changed from "NodeNext" to "node"
-//     "strict": true,   
-//     "jsx": "react-jsx",                   // Updated to "react-jsx"
-//     "esModuleInterop": true,              // Enables interoperability between CommonJS and ES Modules
-//     "allowSyntheticDefaultImports": true, // Allow default imports from modules with no default export
-//     "forceConsistentCasingInFileNames": true,
-//     "skipLibCheck": true,
-//     "noEmit": true,                       // No files will be emitted; ts-node handles this
-//     "isolatedModules": true
-//   },
-//   "include": ["**/*.ts"],
-//   "exclude": ["node_modules"]
-// }
 
