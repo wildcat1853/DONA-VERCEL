@@ -3,13 +3,12 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsx agent.ts start",
-    "dev": "tsx agent.ts dev",
-    "connect": "tsx agent.ts connect",
-    "heroku-postbuild": "npm run build"
-    
-  },
+  "build": "tsc",
+  "start": "node dist/agent.js start",
+  "dev": "node dist/agent.js dev",
+  "connect": "node dist/agent.js connect",
+  "heroku-postbuild": "npm run build"
+},
   "keywords": [],
   "author": "",
   "type": "module",
