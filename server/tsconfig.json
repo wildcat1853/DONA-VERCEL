@@ -9,9 +9,22 @@
     "skipLibCheck": true,
     "outDir": "./dist",
     "rootDir": ".",
-    "jsx": "react"
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
+    }
   },
-  "include": ["./**/*.ts", "./**/*.tsx"],
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx",
+    "./**/*.js",
+    "./**/*.jsx"
+  ],
   "exclude": ["node_modules"]
 }
 

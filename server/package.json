@@ -16,11 +16,19 @@
     "@livekit/agents": "0.3.4",
     "@livekit/agents-plugin-openai": "0.3.4",
     "@livekit/rtc-node": "0.10.4",
+    "@types/react": "^18.2.0",
     "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.29.3",
+    "drizzle-zod": "^0.5.1",
+    "pg": "^8.11.3",
+    "react": "^18.2.0",
+    "resend": "^2.0.0",
     "tsx": "^4.7.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0"
+    "@types/node": "^20.11.0",
+    "@types/pg": "^8.10.9"
   }
 }
