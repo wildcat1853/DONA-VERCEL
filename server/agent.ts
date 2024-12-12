@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Load environment variables from .env.local in the root directory
-dotenv.config({ path: join(__dirname, "../.env.local") });
+dotenv.config({ path: join(__dirname, ".env.local") });
 
 // Destructure environment variables
 const LIVEKIT_URL = process.env.LIVEKIT_URL;
