@@ -16,11 +16,13 @@
     "incremental": true
   },
   "include": [
-    "agent.ts"
+    "agent.ts",
+    "*.ts",
+    "*.tsx"
   ],
   "exclude": [
     "node_modules",
-    "../**/*"
+    "dist"
   ]
 }
 
