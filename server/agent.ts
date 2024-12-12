@@ -12,6 +12,9 @@ const __dirname = dirname(__filename);
 // Load environment variables from .env.local only in development
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config({ path: join(__dirname, ".env.local") });
+  console.log('Development mode: Loading .env.local');
+} else {
+  console.log('Production mode: Using Heroku environment variables');
 }
 
 // Destructure environment variables
@@ -66,6 +69,11 @@ interface Task {
   description?: string;
 }
 
+if (!OPENAI_API_KEY) {
+  console.error('❌ Error: OPENAI_API_KEY environment variable is not set');
+  process.exit(1);
+}
+
 export default defineAgent({
   entry: async (ctx: JobContext) => {
     console.log('🤖 Agent starting...');
@@ -80,79 +88,93 @@ export default defineAgent({
       const config = parseSessionConfig(metadata);
       
       // 3. Initialize OpenAI model
-      const model = new openai.realtime.RealtimeModel({
-        apiKey: config.openaiApiKey,
-        model: config.model,
-        voice: config.voice,
-        temperature: config.temperature,
-        instructions: config.instructions,
-      });
+      try {
+        const model = new openai.realtime.RealtimeModel({
+          apiKey: OPENAI_API_KEY,
+          model: config.model,
+          voice: config.voice,
+          temperature: config.temperature,
+          instructions: config.instructions,
+        });
 
-      const agent = new multimodal.MultimodalAgent({ model });
-      const session = await agent.start(ctx.room);
+        const agent = new multimodal.MultimodalAgent({ model });
+        const session = await agent.start(ctx.room);
 
-      // 4. Simple data handler
-      ctx.room.on('dataReceived', async (
-        payload: Uint8Array,
-        participant?: RemoteParticipant,
-        kind?: DataPacketKind,
-        topic?: string
-      ) => {
-        if (participant?.identity.startsWith('agent-')) {
-          console.log('👻 Ignoring message from agent:', participant.identity);
-          return;
-        }
-        
-        try {
-          const decoder = new TextDecoder();
-          const data = JSON.parse(decoder.decode(payload));
-          console.log('📨 Received message type:', data.type);
-          
-          switch (data.type) {
-            case 'initialTasks':
-              console.log('📋 Processing initial tasks');
-              const tasks = (data.tasks || []) as Task[];
-              console.log('📊 Raw tasks count:', tasks.length);
-              
-              const relevantTasks = tasks
-                .filter((task: Task) => {
-                  const isNotDone = task.status !== 'done';
-                  console.log(`Task "${task.name}": status=${task.status}, included=${isNotDone}`);
-                  return isNotDone;
-                })
-                .slice(0, 5);
-              
-              console.log('✅ Filtered tasks:', {
-                total: tasks.length,
-                filtered: relevantTasks.length,
-                tasks: relevantTasks.map(task => ({
-                  name: task.name,
-                  status: task.status,
-                  deadline: new Date(task.deadline).toLocaleDateString()
-                }))
-              });
-              
-              await session.conversation.item.create({
-                type: "message",
-                role: "user",
-                content: [{
-                  type: "input_text",
-                  text: relevantTasks.length > 0 
-                    ? `Here are your current tasks:\n${relevantTasks.map((t: { name: string; deadline: string }) => 
-                        `- "${t.name}" (due: ${new Date(t.deadline).toLocaleDateString()})`
-                      ).join('\n')}`
-                    : "No active tasks. Let's create one!"
-                }]
-              });       
-              break;
+        // 4. Simple data handler
+        ctx.room.on('dataReceived', async (
+          payload: Uint8Array,
+          participant?: RemoteParticipant,
+          kind?: DataPacketKind,
+          topic?: string
+        ) => {
+          if (participant?.identity.startsWith('agent-')) {
+            console.log('👻 Ignoring message from agent:', participant.identity);
+            return;
           }
-        } catch (error) {
-          console.error('❌ Error processing message:', error);
-        }
-      });
+          
+          try {
+            const decoder = new TextDecoder();
+            const data = JSON.parse(decoder.decode(payload));
+            console.log('📨 Received message type:', data.type);
+            
+            switch (data.type) {
+              case 'initialTasks':
+                console.log('📋 Processing initial tasks');
+                const tasks = (data.tasks || []) as Task[];
+                console.log('📊 Raw tasks count:', tasks.length);
+                
+                const relevantTasks = tasks
+                  .filter((task: Task) => {
+                    const isNotDone = task.status !== 'done';
+                    console.log(`Task "${task.name}": status=${task.status}, included=${isNotDone}`);
+                    return isNotDone;
+                  })
+                  .slice(0, 5);
+                
+                console.log('✅ Filtered tasks:', {
+                  total: tasks.length,
+                  filtered: relevantTasks.length,
+                  tasks: relevantTasks.map(task => ({
+                    name: task.name,
+                    status: task.status,
+                    deadline: new Date(task.deadline).toLocaleDateString()
+                  }))
+                });
+                
+                await session.conversation.item.create({
+                  type: "message",
+                  role: "user",
+                  content: [{
+                    type: "input_text",
+                    text: relevantTasks.length > 0 
+                      ? `Here are your current tasks:\n${relevantTasks.map((t: { name: string; deadline: string }) => 
+                          `- "${t.name}" (due: ${new Date(t.deadline).toLocaleDateString()})`
+                        ).join('\n')}`
+                      : "No active tasks. Let's create one!"
+                  }]
+                });       
+                break;
+            }
+          } catch (error) {
+            console.error('❌ Error processing message:', error);
+          }
+        });
 
-      // Register the shutdown hook with the room name
-      ctx.addShutdownCallback(() => shutdownHook(ctx.room.name));
+        // Register the shutdown hook with the room name
+        ctx.addShutdownCallback(() => shutdownHook(ctx.room.name));
+
+        // Handle session errors
+        session.on('error', async (error: any) => {
+          console.error('Session error:', error);
+          if (error.message?.includes('invalid_api_key')) {
+            console.error('❌ Invalid OpenAI API key. Please check your environment variables.');
+            process.exit(1);
+          }
+        });
+      } catch (error) {
+        console.error('❌ Error initializing OpenAI model:', error);
+        process.exit(1);
+      }
 
     } catch (error) {
       console.error('Error:', error);
@@ -453,6 +475,10 @@ Please watch the latest task user created. Once user set name and description, c
     // Handle session errors
     session.on('error', async (error: any) => {
       console.error('Session error:', error);
+      if (error.message?.includes('invalid_api_key')) {
+        console.error('❌ Invalid OpenAI API key. Please check your environment variables.');
+        process.exit(1);
+      }
     });
 
   } catch (error) {
