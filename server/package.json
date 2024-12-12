@@ -7,7 +7,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/agent.js",
+    "start": "node dist/agent.js start",
     "dev": "tsx agent.ts dev",
     "connect": "tsx agent.ts connect"
   },

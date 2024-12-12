@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// Load environment variables from .env.local
+// Load environment variables from .env.local only in development
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -9,8 +9,10 @@ import { dirname, join } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load environment variables from .env.local in the root directory
-dotenv.config({ path: join(__dirname, ".env.local") });
+// Load environment variables from .env.local only in development
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config({ path: join(__dirname, ".env.local") });
+}
 
 // Destructure environment variables
 const LIVEKIT_URL = process.env.LIVEKIT_URL;
