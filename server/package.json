@@ -4,9 +4,11 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsx agent.ts",
+    "start": "tsx agent.ts start",
     "dev": "tsx agent.ts dev",
-    "connect": "tsx agent.ts connect"
+    "connect": "tsx agent.ts connect",
+    "heroku-postbuild": "npm run build"
+    
   },
   "keywords": [],
   "author": "",
