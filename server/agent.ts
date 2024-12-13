@@ -23,7 +23,10 @@ const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID;
-const PORT = process.env.PORT || 8081;
+
+// Get port from environment variable or use default
+const port = parseInt(process.env.PORT || '8081', 10);
+console.log(`Configuring server to listen on port ${port}`);
 
 // Validate required LiveKit environment variables
 if (!LIVEKIT_URL || !LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
@@ -488,5 +491,6 @@ Please watch the latest task user created. Once user set name and description, c
 
 cli.runApp(new WorkerOptions({
   agent: fileURLToPath(import.meta.url),
-  port: parseInt(PORT.toString(), 10)
+  port: port,
+  host: '0.0.0.0'
 }));
