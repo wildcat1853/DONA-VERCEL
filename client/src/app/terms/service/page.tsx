@@ -4,12 +4,12 @@ export default function TermsOfService() {
   return (
     <div className="max-w-4xl mx-auto py-12 px-4">
       <h1 className="text-3xl font-bold mb-6">Terms of Service for Dona AI</h1>
-      <p className="text-gray-600 mb-8">Effective Date: 20.10.24</p>
+      <p className="text-gray-600 mb-8">Effective Date: [Insert Date]</p>
 
       <div className="prose prose-gray max-w-none">
         <p className="mb-6">
-          Welcome to Dona AI! By accessing or using Dona AI (the "App"), you agree to the following 
-          terms and conditions (the "Terms"). If you do not agree, do not use our services.
+          Welcome to Dona AI! By accessing or using Dona AI (the &ldquo;App&rdquo;), you agree to the following 
+          terms and conditions (the &ldquo;Terms&rdquo;). If you do not agree, do not use our services.
         </p>
 
         <section className="mb-8">
@@ -80,14 +80,14 @@ export default function TermsOfService() {
           </p>
         </section>
 
-        {/* <section className="mb-8">
+        <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">9. Contact Us</h2>
           <p>If you have any questions about these Terms, please contact us at:</p>
           <ul className="list-none pl-6 space-y-2">
             <li>Email: [your_email@example.com]</li>
             <li>Mail: [Your Company Name, Address, City, State, Zip]</li>
           </ul>
-        </section> */}
+        </section>
       </div>
     </div>
   );
