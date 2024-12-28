@@ -20,10 +20,10 @@
     "@google-cloud/text-to-speech": "^5.4.0",
     "@hookform/resolvers": "^3.9.0",
     "@jridgewell/trace-mapping": "^0.3.25",
-    "@livekit/agents": "^2.0.0",
-    "@livekit/agents-plugin-openai": "^2.0.0",
+    "@livekit/agents": "0.6.0",
+    "@livekit/agents-plugin-openai": "0.7.3",
     "@livekit/components-react": "2.6.10",
-    "@livekit/components-styles": "^2.0.0",
+    "@livekit/components-styles": "1.1.4",
     "@mui/material": "^6.1.6",
     "@mui/x-date-pickers": "^7.22.1",
     "@nanostores/react": "github:ai/react",
@@ -102,7 +102,7 @@
     "uuid": "latest",
     "vitest": "^2.1.4",
     "ws": "^8.18.0",
-    "livekit-client": "^2.0.0"
+    "livekit-client": "2.7.5"
   },
   "description": "This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).",
   "main": "index.js",

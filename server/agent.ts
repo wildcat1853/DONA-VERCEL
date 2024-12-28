@@ -82,16 +82,27 @@ export default defineAgent({
     console.log('🤖 Agent starting...');
 
     try {
-      // 1. Simple connection
       await ctx.connect();
       const participant = await ctx.waitForParticipant();
       
-      // 2. Basic session setup
-      const metadata = JSON.parse(participant.metadata || '{}');
-      const config = parseSessionConfig(metadata);
-      
-      // 3. Initialize OpenAI model
+      console.log('👤 Participant connected:', {
+        identity: participant.identity,
+        hasMetadata: !!participant.metadata,
+        rawMetadata: participant.metadata
+      });
+
       try {
+        const metadata = JSON.parse(participant.metadata || '{}');
+        console.log('📦 Parsed metadata:', metadata);
+        
+        const config = parseSessionConfig(metadata);
+        console.log('⚙️ Parsed config:', {
+          model: config.model,
+          voice: config.voice,
+          temperature: config.temperature,
+          hasInstructions: !!config.instructions
+        });
+      
         const model = new openai.realtime.RealtimeModel({
           apiKey: OPENAI_API_KEY,
           model: config.model,
@@ -100,87 +111,69 @@ export default defineAgent({
           instructions: config.instructions,
         });
 
+        console.log('🤖 Creating MultimodalAgent...');
         const agent = new multimodal.MultimodalAgent({ model });
+        
+        console.log('🚀 Starting session...');
         const session = await agent.start(ctx.room);
+
+        console.log('💬 Creating initial message...');
+        await session.conversation.item.create({
+          type: "message",
+          role: "user",
+          content: [{
+            type: "input_text",
+            text: "Please begin the interaction with the user in a manner consistent with your instructions."
+          }]
+        });
+
+        // Onboarding message
+        await session.conversation.item.create({
+          type: "message",
+          role: "system",
+          content: [{
+            type: "input_text",
+            text: "Start with onboarding instructions: introduce yourself as Dona, explain how the app works with task creation and deadlines, and guide them through getting started."
+          }]
+        });
+
+        // Task update message
+//         await session.conversation.item.create({
+//           role: "user",
+//           content: `Here are your most relevant tasks:
+// ${relevantTasks.map(task => `
+// - "${task.name}" (${task.status})
+//   Due: ${new Date(task.deadline).toLocaleDateString()}
+//   Description: ${task.description || 'No description'}`).join('\n')}
+
+// Please watch the latest task user created. Once user set name and description, congratulate them and encourage them to input deadlines for task. Explain that deadline is important for Dona to follow up on task.`
+//         });
+
+        // Repeat onboarding message
+        await session.conversation.item.create({
+          type: "message",
+          role: "system",
+          content: [{
+            type: "input_text",
+            text: "User has requested to repeat onboarding. Start fresh with onboarding instructions: introduce yourself as Dona, explain how the app works with task creation and deadlines, and guide them through getting started."
+          }]
+        });
+
+        // Keep the session alive
+       
 
         // Comment out the shutdown hook registration
         // ctx.addShutdownCallback(() => shutdownHook(ctx.room.name));
 
-        // 4. Simple data handler
-        ctx.room.on('dataReceived', async (
-          payload: Uint8Array,
-          participant?: RemoteParticipant,
-          kind?: DataPacketKind,
-          topic?: string
-        ) => {
-          if (participant?.identity.startsWith('agent-')) {
-            console.log('👻 Ignoring message from agent:', participant.identity);
-            return;
-          }
-          
-          try {
-            const decoder = new TextDecoder();
-            const data = JSON.parse(decoder.decode(payload));
-            console.log('📨 Received message type:', data.type);
-            
-            switch (data.type) {
-              case 'initialTasks':
-                console.log('📋 Processing initial tasks');
-                const tasks = (data.tasks || []) as Task[];
-                console.log('📊 Raw tasks count:', tasks.length);
-                
-                const relevantTasks = tasks
-                  .filter((task: Task) => {
-                    const isNotDone = task.status !== 'done';
-                    console.log(`Task "${task.name}": status=${task.status}, included=${isNotDone}`);
-                    return isNotDone;
-                  })
-                  .slice(0, 5);
-                
-                console.log('✅ Filtered tasks:', {
-                  total: tasks.length,
-                  filtered: relevantTasks.length,
-                  tasks: relevantTasks.map(task => ({
-                    name: task.name,
-                    status: task.status,
-                    deadline: new Date(task.deadline).toLocaleDateString()
-                  }))
-                });
-                
-                await session.conversation.item.create({
-                  type: "message",
-                  role: "user",
-                  content: [{
-                    type: "input_text",
-                    text: relevantTasks.length > 0 
-                      ? `Here are your current tasks:\n${relevantTasks.map((t: { name: string; deadline: string }) => 
-                          `- "${t.name}" (due: ${new Date(t.deadline).toLocaleDateString()})`
-                        ).join('\n')}`
-                      : "No active tasks. Let's create one!"
-                  }]
-                });       
-                break;
-            }
-          } catch (error) {
-            console.error('❌ Error processing message:', error);
-          }
-        });
+        // ... rest of commented out code ...
 
-        // Handle session errors
-        session.on('error', async (error: any) => {
-          console.error('Session error:', error);
-          if (error.message?.includes('invalid_api_key')) {
-            console.error('❌ Invalid OpenAI API key. Please check your environment variables.');
-            process.exit(1);
-          }
-        });
       } catch (error) {
-        console.error('❌ Error initializing OpenAI model:', error);
+        console.error('❌ Error in session setup:', error);
         process.exit(1);
       }
 
     } catch (error) {
-      console.error('Error:', error);
+      console.error('❌ Error in agent entry:', error);
       process.exit(1);
     }
   }
@@ -322,8 +315,11 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
     });
 
     const agent = new multimodal.MultimodalAgent({ model });
-    let session = (await agent.start(ctx.room)) as openai.realtime.RealtimeSession;
+    const session = await agent.start(ctx.room);
+    
 
+    console.log('💬 Creating initial message...');
+    
     // Get onboarding status from metadata
     const isOnboarding = metadata?.sessionConfig?.metadata?.isOnboarding || false;
     
@@ -357,7 +353,7 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
                       : "Let's create a new task."
                   }]
                 });
-                await session.response.create();
+               
                 
                 ctx.room.off('dataReceived', handleInitialTasks);
                 resolve();
@@ -383,14 +379,12 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
     } else {
       // Send onboarding prompt immediately
       await session.conversation.item.create({
-        type: "message",
         role: "system",
         content: [{
-          type: "input_text",
-          text: "Start with onboarding instructions: introduce yourself as Dona, explain how the app works with task creation and deadlines, and guide them through getting started.",
+          text: "Start with onboarding instructions: introduce yourself as Dona, explain how the app works with task creation and deadlines, and guide them through getting started."
         }]
       });
-      await session.response.create();
+      
     }
 
     // Clear the keep-alive interval
@@ -402,7 +396,7 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
       if (participant.identity === participant.identity) {
         console.log(`Participant ${participant.identity} disconnected.`);
         // Close the session and clean up
-        session.close();
+        // session.close();
         // Optionally exit or wait for reconnection
       }
     });
@@ -425,21 +419,19 @@ async function runMultimodalAgent(ctx: JobContext, participant: Participant, roo
           await session.conversation.item.create({
             type: "message",
             role: "user",
-            content: [
-              {
-                type: "input_text",
-                text: `Here are your most relevant tasks:
+            content: [{
+              type: "input_text",
+              text: `Here are your most relevant tasks:
 ${relevantTasks.map(task => `
 - "${task.name}" (${task.status})
   Due: ${new Date(task.deadline).toLocaleDateString()}
   Description: ${task.description || 'No description'}`).join('\n')}
 
 Please watch the latest task user created. Once user set name and description, congratulate them and encourage them to input deadlines for task. Explain that deadline is important for Dona to follow up on task.`
-              },
-            ],
+            }]
           });
           
-          await session.response.create();
+        
         }
       } catch (error) {
         console.error('❌ Agent: Error processing data message:', error);
@@ -459,9 +451,9 @@ Please watch the latest task user created. Once user set name and description, c
               content: [{
                 type: "input_text",
                 text: "User has requested to repeat onboarding. Start fresh with onboarding instructions: introduce yourself as Dona, explain how the app works with task creation and deadlines, and guide them through getting started.",
-              }],
+              }]
             });
-            await session.response.create();
+          
           } catch (error) {
             console.error('❌ Agent: Error in manual onboarding sequence:', error);
           }
