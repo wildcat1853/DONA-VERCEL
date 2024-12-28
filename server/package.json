@@ -13,9 +13,9 @@
   },
   "type": "module",
   "dependencies": {
-    "@livekit/agents": "0.3.4",
-    "@livekit/agents-plugin-openai": "0.3.4",
-    "@livekit/rtc-node": "0.10.4",
+    "@livekit/agents": "^2.0.0",
+    "@livekit/agents-plugin-openai": "^2.0.0",
+    "@livekit/rtc-node": "^2.0.0",
     "@types/react": "^18.2.0",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.29.3",
