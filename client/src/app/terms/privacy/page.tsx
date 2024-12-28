@@ -2,7 +2,7 @@ export default function PrivacyPolicy() {
   return (
     <div className="max-w-4xl mx-auto py-12 px-4">
       <h1 className="text-3xl font-bold mb-6">Privacy Policy for Dona AI</h1>
-      <p className="text-gray-600 mb-8">Effective Date: [Insert Date]</p>
+      <p className="text-gray-600 mb-8">Effective Date: 20.10.24</p>
 
       <div className="prose prose-gray max-w-none">
         <p className="mb-6">
@@ -68,14 +68,7 @@ export default function PrivacyPolicy() {
           <p>We may update this policy from time to time. We will notify you of any changes by updating the &ldquo;Effective Date&rdquo; above.</p>
         </section>
 
-        <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">8. Contact Us</h2>
-          <p>If you have any questions about this Privacy Policy, please contact us at:</p>
-          <ul className="list-none pl-6 space-y-2">
-            <li>Email: [your_email@example.com]</li>
-            <li>Mail: [Your Company Name, Address, City, State, Zip]</li>
-          </ul>
-        </section>
+      
       </div>
     </div>
   );

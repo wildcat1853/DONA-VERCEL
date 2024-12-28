@@ -4,7 +4,7 @@ export default function TermsOfService() {
   return (
     <div className="max-w-4xl mx-auto py-12 px-4">
       <h1 className="text-3xl font-bold mb-6">Terms of Service for Dona AI</h1>
-      <p className="text-gray-600 mb-8">Effective Date: [Insert Date]</p>
+      <p className="text-gray-600 mb-8">Effective Date:  20.10.2024</p>
 
       <div className="prose prose-gray max-w-none">
         <p className="mb-6">
@@ -72,22 +72,9 @@ export default function TermsOfService() {
           </p>
         </section>
 
-        <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">8. Governing Law</h2>
-          <p>
-            These Terms are governed by the laws of [Your State/Country], without regard to its 
-            conflict of laws provisions.
-          </p>
-        </section>
+       
 
-        <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">9. Contact Us</h2>
-          <p>If you have any questions about these Terms, please contact us at:</p>
-          <ul className="list-none pl-6 space-y-2">
-            <li>Email: [your_email@example.com]</li>
-            <li>Mail: [Your Company Name, Address, City, State, Zip]</li>
-          </ul>
-        </section>
+       
       </div>
     </div>
   );

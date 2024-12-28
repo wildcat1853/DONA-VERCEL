@@ -36,21 +36,24 @@ export async function POST(request: Request) {
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
     const openaiAPIKey = process.env.OPENAI_API_KEY;
-    const livekitUrl = process.env.LIVEKIT_URL;
 
     // Validate environment variables
-    if (!apiKey || !apiSecret || !openaiAPIKey || !livekitUrl) {
+    if (!apiKey || !apiSecret || !openaiAPIKey) {
       console.error("Missing environment variables:", {
         apiKey: !!apiKey,
         apiSecret: !!apiSecret,
         openaiAPIKey: !!openaiAPIKey,
-        livekitUrl: !!livekitUrl,
       });
       return NextResponse.json(
         { error: "Server misconfigured. Missing API keys." },
         { status: 500 }
       );
     }
+
+    // Use development URL in local environment
+    const livekitUrl = process.env.NODE_ENV === 'development' 
+      ? 'ws://localhost:8081'  // Local development server
+      : process.env.LIVEKIT_URL;  // Production LiveKit URL
 
     // Create an access token
     const at = new AccessToken(apiKey, apiSecret, {

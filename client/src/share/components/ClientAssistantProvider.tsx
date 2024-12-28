@@ -165,6 +165,16 @@ const OnboardingControls = ({
   );
 };
 
+const getServerUrl = () => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔧 Development mode: connecting to localhost:8081');
+    return 'ws://localhost:8081';
+  } else {
+    console.log('🚀 Production mode: connecting to LiveKit cloud');
+    return process.env.NEXT_PUBLIC_LIVEKIT_URL;
+  }
+};
+
 const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) => {
   const [isOnboarding, setIsOnboarding] = useState(false);
   const assistantData = useAssistant({ projectId: props.projectId, projectThreadId: props.projectThreadId, userId });
@@ -290,7 +300,7 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
       {token ? (
         <LiveKitRoom
           token={token}
-          serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
+          serverUrl={getServerUrl()}
           connect={true}
           audio={true}
           video={false}
@@ -299,9 +309,12 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
             autoSubscribe: true,
             maxRetries: 3,
           }}
-          onError={(error) => console.error('LiveKit connection error:', error)}
-          onConnected={() => console.log('LiveKit connected')}
-          onDisconnected={() => console.log('LiveKit disconnected')}
+          onError={(error) => {
+            console.error('LiveKit connection error:', error);
+            console.log('Current server URL:', getServerUrl());
+          }}
+          onConnected={() => console.log('LiveKit connected to:', getServerUrl())}
+          onDisconnected={() => console.log('LiveKit disconnected from:', getServerUrl())}
           className="bg-white"
         > 
           <AudioProvider>
