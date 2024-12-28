@@ -166,13 +166,8 @@ const OnboardingControls = ({
 };
 
 const getServerUrl = () => {
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔧 Development mode: connecting to localhost:8081');
-    return 'ws://localhost:8081';
-  } else {
-    console.log('🚀 Production mode: connecting to LiveKit cloud');
-    return process.env.NEXT_PUBLIC_LIVEKIT_URL;
-  }
+  console.log('🔧 Connecting to:', process.env.NEXT_PUBLIC_LIVEKIT_URL);
+  return process.env.NEXT_PUBLIC_LIVEKIT_URL;
 };
 
 const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) => {

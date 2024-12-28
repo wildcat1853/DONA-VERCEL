@@ -54,15 +54,15 @@ function safeLogConfig(config: SessionConfig): string {
   return JSON.stringify(safeConfig);
 }
 
-// Define shutdown hook
-async function shutdownHook(roomName: string) {
-  try {
-    await roomService.deleteRoom(roomName);
-    console.log(`Room '${roomName}' has been deleted successfully.`);
-  } catch (error) {
-    console.error(`Failed to delete room '${roomName}':`, error);
-  }
-}
+// Comment out the shutdown hook function
+// async function shutdownHook(roomName: string) {
+//   try {
+//     await roomService.deleteRoom(roomName);
+//     console.log(`Room '${roomName}' has been deleted successfully.`);
+//   } catch (error) {
+//     console.error(`Failed to delete room '${roomName}':`, error);
+//   }
+// }
 
 // Add Task type at the top of the file
 interface Task {
@@ -102,6 +102,9 @@ export default defineAgent({
 
         const agent = new multimodal.MultimodalAgent({ model });
         const session = await agent.start(ctx.room);
+
+        // Comment out the shutdown hook registration
+        // ctx.addShutdownCallback(() => shutdownHook(ctx.room.name));
 
         // 4. Simple data handler
         ctx.room.on('dataReceived', async (
@@ -162,9 +165,6 @@ export default defineAgent({
             console.error('❌ Error processing message:', error);
           }
         });
-
-        // Register the shutdown hook with the room name
-        ctx.addShutdownCallback(() => shutdownHook(ctx.room.name));
 
         // Handle session errors
         session.on('error', async (error: any) => {
