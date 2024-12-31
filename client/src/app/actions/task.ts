@@ -12,6 +12,11 @@ interface TaskDataWithEmail extends Partial<Task> {
 
 export async function toggleTaskStatus(taskId: string) {
     let taskData = await db.query.task.findFirst({
+        columns: {
+            id: true,
+            status: true,
+            projectId: true
+        },
         where: (task, { eq }) => eq(task.id, taskId)
     });
     
