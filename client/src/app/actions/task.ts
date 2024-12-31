@@ -72,8 +72,7 @@ export async function createOrUpdateTask(taskData: TaskDataWithEmail) {
         where: (task, { eq }) => eq(task.id, taskData.id)
     });
 
-    const currentDate = new Date();
-    const deadline = taskData.deadline || currentDate;
+    const deadline = taskData.deadline || null; // Use null instead of current date
     console.log('⏰ Using deadline:', {
         final: deadline,
         wasProvided: !!taskData.deadline
@@ -105,7 +104,7 @@ export async function createOrUpdateTask(taskData: TaskDataWithEmail) {
             status: taskData.status || 'in progress',
             description: taskData.description || null,
             deadline,
-            createdAt: currentDate
+            createdAt: new Date()
         });
     }
     
