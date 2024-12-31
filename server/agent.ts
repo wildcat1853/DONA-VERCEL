@@ -60,6 +60,36 @@ const worker = defineAgent({
 
     console.log('💬 Waiting for initial tasks data...');
     
+    let lastMessageTime = Date.now();
+    const SILENCE_THRESHOLD = 50000; // 15 seconds in milliseconds
+    
+    // Track when messages are sent/received
+    session.on('message', () => {
+      lastMessageTime = Date.now();
+    });
+
+    // Check for silence periodically
+    const silenceChecker = setInterval(() => {
+      const timeSinceLastMessage = Date.now() - lastMessageTime;
+      
+      if (timeSinceLastMessage > SILENCE_THRESHOLD) {
+        console.log('📢 Silence detected, prompting agent...');
+        
+        session.conversation.item.create(llm.ChatMessage.create({
+          role: llm.ChatRole.ASSISTANT,
+          text: "User has been silent for a moment. Continue the conversation?"
+        }));
+        
+        session.response.create();
+        lastMessageTime = Date.now(); // Reset timer
+      }
+    }, 5000); // Check every 5 seconds
+
+    // Clean up interval on session close
+    session.on('close', () => {
+      clearInterval(silenceChecker);
+    });
+
     try {
       await new Promise<void>((resolve, reject) => {
         const handleInitialTasks = async (payload: Uint8Array, sender?: RemoteParticipant) => {
