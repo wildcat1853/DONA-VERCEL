@@ -60,36 +60,7 @@ const worker = defineAgent({
 
     console.log('💬 Waiting for initial tasks data...');
     
-    let lastMessageTime = Date.now();
-    const SILENCE_THRESHOLD = 50000; // 15 seconds in milliseconds
-    
-    // Track when messages are sent/received
-    session.on('message', () => {
-      lastMessageTime = Date.now();
-    });
-
-    // Check for silence periodically
-    const silenceChecker = setInterval(() => {
-      const timeSinceLastMessage = Date.now() - lastMessageTime;
-      
-      if (timeSinceLastMessage > SILENCE_THRESHOLD) {
-        console.log('📢 Silence detected, prompting agent...');
-        
-        session.conversation.item.create(llm.ChatMessage.create({
-          role: llm.ChatRole.ASSISTANT,
-          text: "User has been silent for a moment. Continue the conversation?"
-        }));
-        
-        session.response.create();
-        lastMessageTime = Date.now(); // Reset timer
-      }
-    }, 5000); // Check every 5 seconds
-
-    // Clean up interval on session close
-    session.on('close', () => {
-      clearInterval(silenceChecker);
-    });
-
+    // First handle initial conversation
     try {
       await new Promise<void>((resolve, reject) => {
         const handleInitialTasks = async (payload: Uint8Array, sender?: RemoteParticipant) => {
@@ -106,16 +77,16 @@ const worker = defineAgent({
               if (tasks.length > 0) {
                 const relevantTasks = getRelevantTasks(tasks);
                 session.conversation.item.create(llm.ChatMessage.create({
-                  role: llm.ChatRole.USER,
-                  text: `Please talk according to scenario 2 per instruction. Here is the context of tasks:\n${relevantTasks.map(task => `
+                  role: llm.ChatRole.ASSISTANT,
+                  text: `Here are your most relevant tasks:\n${relevantTasks.map(task => `
 - "${task.name}" (${task.status})
   Due: ${new Date(task.deadline).toLocaleDateString()}
-  Description: ${task.description || 'No description'}`).join('\n')}\n\n`
+  Description: ${task.description || 'No description'}`).join('\n')}\n\nPlease review these tasks. Focus on any tasks that are overdue or due today.`
                 }));
               } else {
                 session.conversation.item.create(llm.ChatMessage.create({
-                  role: llm.ChatRole.USER,
-                  text: "Please talk according to scenario 1 per instruction"
+                  role: llm.ChatRole.ASSISTANT,
+                  text: "Hello! I'm Dona, your AI task assistant. I'll help you stay organized by managing your tasks and deadlines. Let's start by creating your first task - would you like to try that?"
                 }));
               }
               
@@ -138,6 +109,51 @@ const worker = defineAgent({
     } catch (error) {
       console.error('❌ Failed to process initial tasks:', error);
     }
+
+    // Then set up silence detection
+    let lastMessageTime = Date.now();
+    let isAgentSpeaking = false;
+    const SILENCE_THRESHOLD = 605000; // 15 seconds
+
+    session.on('message', () => {
+      lastMessageTime = Date.now();
+    });
+
+    session.on('speaking', (speaking: boolean) => {
+      isAgentSpeaking = speaking;
+      if (speaking) {
+        lastMessageTime = Date.now();
+      }
+    });
+
+    session.on('responseStart', () => {
+      isAgentSpeaking = true;
+    });
+
+    session.on('responseEnd', () => {
+      isAgentSpeaking = false;
+      lastMessageTime = Date.now();
+    });
+
+    const silenceChecker = setInterval(() => {
+      const timeSinceLastMessage = Date.now() - lastMessageTime;
+      
+      if (timeSinceLastMessage > SILENCE_THRESHOLD && !isAgentSpeaking) {
+        console.log('📢 Silence detected, prompting agent...');
+        
+        session.conversation.item.create(llm.ChatMessage.create({
+          role: llm.ChatRole.ASSISTANT,
+          text: "I notice we've been quiet for a moment. Would you like to discuss your tasks or is there something specific I can help you with?"
+        }));
+        
+        session.response.create();
+        lastMessageTime = Date.now();
+      }
+    }, 5000);
+
+    session.on('close', () => {
+      clearInterval(silenceChecker);
+    });
 
     // Keep the session alive
     await new Promise(() => {});
