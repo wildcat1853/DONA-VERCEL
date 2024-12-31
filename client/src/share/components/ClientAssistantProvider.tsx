@@ -146,22 +146,22 @@ const OnboardingControls = ({
 
   return (
     <div className="fixed top-4 right-4 flex items-center gap-3 z-50">
-      <button
+      {/* <button
         onClick={() => handleRepeatOnboarding()}
         className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 hover:bg-white/90 border border-gray-200 transition-colors shadow-sm"
         title="Repeat Onboarding"
       >
         <HelpCircle className="w-5 h-5 text-gray-600" />
         <span className="text-sm text-gray-600">How it works</span>
-      </button>
+      </button> */}
       
-      <button
+      {/* <button
         onClick={() => handleDisableOnboarding()}
         className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 hover:bg-white/90 border border-gray-200 transition-colors shadow-sm"
         title="Turn Off Onboarding"
       >
         <span className="text-sm text-gray-600">Turn off onboarding</span>
-      </button>
+      </button> */}
     </div>
   );
 };
