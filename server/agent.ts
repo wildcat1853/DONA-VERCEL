@@ -77,16 +77,16 @@ const worker = defineAgent({
               if (tasks.length > 0) {
                 const relevantTasks = getRelevantTasks(tasks);
                 session.conversation.item.create(llm.ChatMessage.create({
-                  role: llm.ChatRole.ASSISTANT,
-                  text: `Here are your most relevant tasks:\n${relevantTasks.map(task => `
+                  role: llm.ChatRole.SYSTEM,
+                  text: `Use instructions per scenario 2 - Review instructions. Here are your most relevant tasks:\n${relevantTasks.map(task => `
 - "${task.name}" (${task.status})
   Due: ${new Date(task.deadline).toLocaleDateString()}
   Description: ${task.description || 'No description'}`).join('\n')}\n\nPlease review these tasks. Focus on any tasks that are overdue or due today.`
                 }));
               } else {
                 session.conversation.item.create(llm.ChatMessage.create({
-                  role: llm.ChatRole.ASSISTANT,
-                  text: "Hello! I'm Dona, your AI task assistant. I'll help you stay organized by managing your tasks and deadlines. Let's start by creating your first task - would you like to try that?"
+                  role: llm.ChatRole.SYSTEM,
+                  text: "Use instructions per scenario 1 - Onboarding instructions."
                 }));
               }
               
@@ -109,6 +109,35 @@ const worker = defineAgent({
     } catch (error) {
       console.error('❌ Failed to process initial tasks:', error);
     }
+
+    // Only after initial tasks are handled, set up other listeners
+    ctx.room.on('dataReceived', async (payload: Uint8Array, participant?: RemoteParticipant) => {
+      if (participant?.identity.startsWith('agent-')) return;
+
+      try {
+        const decoder = new TextDecoder();
+        const data = JSON.parse(decoder.decode(payload));
+        
+        if (data.type === 'taskUpdate') {
+          const tasks = data.tasks || [];
+          const relevantTasks = getRelevantTasks(tasks);
+
+          session.conversation.item.create(llm.ChatMessage.create({
+            role: llm.ChatRole.SYSTEM,
+            text: `Use instructions per scenario 3 - Task creation instructions. Here is the context of task in the process of creation:\n${relevantTasks.map(task => `
+- "${task.name}" (${task.status})
+  Due: ${new Date(task.deadline).toLocaleDateString()}
+  Description: ${task.description || 'No description'}`).join('\n')}
+
+Please watch the latest task user created. Once user set name and description, congratulate them and encourage them to input deadlines for task. Explain that deadline is important for Dona to follow up on task.`
+          }));
+          
+          session.response.create();
+        }
+      } catch (error) {
+        console.error('❌ Error processing task update:', error);
+      }
+    });
 
     // Then set up silence detection
     let lastMessageTime = Date.now();
