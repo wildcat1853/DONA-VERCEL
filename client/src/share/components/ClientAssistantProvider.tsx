@@ -39,7 +39,8 @@ import {
   useEnsureParticipant,
   useIsSpeaking,
   useParticipants,
-  Chat
+  Chat,
+  useEnsureRoom
 } from '@livekit/components-react';
 
 import '@livekit/components-styles';
@@ -436,34 +437,25 @@ const LiveKitStateManager = ({
   isOnboarding: boolean,
   setIsOnboarding: (value: boolean) => void
 }) => {
+  const room = useEnsureRoom();
   const { localParticipant } = useLocalParticipant();
-  const room = useRoomContext();
 
-  // Send initial tasks data when connected
   useEffect(() => {
-    if (!room || !localParticipant || room.state !== 'connected') {
-      return;
-    }
-
-    const sendInitialTasks = () => {
+    if (room.state === 'connected' && localParticipant) {
       const message = {
         type: 'initialTasks',
         tasks: tasks,
         timestamp: Date.now(),
-        userId: userId,
-        isOnboarding: isOnboarding
+        userId: userId
       };
 
       const encoder = new TextEncoder();
-      const data = encoder.encode(JSON.stringify(message));
-      localParticipant.publishData(data, {
+      localParticipant.publishData(encoder.encode(JSON.stringify(message)), {
         reliable: true,
       });
       console.log('📤 Sent initial tasks data');
-    };
-
-    sendInitialTasks();
-  }, [room?.state, localParticipant, tasks, userId, isOnboarding]);
+    }
+  }, [room.state, localParticipant, tasks, userId]);
 
   return null;
 };
