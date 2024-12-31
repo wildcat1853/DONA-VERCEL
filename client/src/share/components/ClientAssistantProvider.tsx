@@ -175,6 +175,7 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
   const [isOnboarding, setIsOnboarding] = useState(false);
   const assistantData = useAssistant({ projectId: props.projectId, projectThreadId: props.projectThreadId, userId });
   const { isOnboarding: assistantIsOnboarding, isLoading } = assistantData
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const [token, setToken] = useState('');
   const [roomName, setRoomName] = useState('');
   const name = 'User';
@@ -195,11 +196,10 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
     const requestMediaPermissions = async () => {
       try {
         await navigator.mediaDevices.getUserMedia({ audio: true });
-        setAudioAllowed(true);
-        setShowMicrophoneDialog(false);
-      } catch (error: any) {
+        setShowPermissionDialog(false);
+      } catch (error) {
         console.error('Error requesting media permissions:', error);
-        setShowMicrophoneDialog(true);
+        setShowPermissionDialog(true);
       }
     };
   
@@ -243,11 +243,11 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
     };
 
     fetchToken();
-  }, [assistantIsOnboarding, userId]);
+  }, []);
 
   return (
     <SessionProvider>
-      <Dialog open={showMicrophoneDialog} onOpenChange={setShowMicrophoneDialog}>
+      <Dialog open={showPermissionDialog} onOpenChange={setShowPermissionDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Enable Microphone Access</DialogTitle>
