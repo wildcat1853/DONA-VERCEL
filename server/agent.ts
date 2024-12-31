@@ -120,7 +120,23 @@ const worker = defineAgent({
         
         if (data.type === 'taskUpdate') {
           const tasks = data.tasks || [];
+          
+          // Log raw task data with focus on deadline
+          tasks.forEach((task: any, index: number) => {
+            console.log(`Task ${index + 1} deadline:`, {
+              raw: task.deadline,
+              parsed: task.deadline ? new Date(task.deadline) : 'no deadline',
+              taskName: task.name,
+              allData: task
+            });
+          });
+          
           const relevantTasks = getRelevantTasks(tasks);
+          console.log('Relevant tasks with deadlines:', relevantTasks.map(task => ({
+            name: task.name,
+            deadline: task.deadline,
+            parsedDeadline: new Date(task.deadline).toLocaleDateString()
+          })));
 
           session.conversation.item.create(llm.ChatMessage.create({
             role: llm.ChatRole.SYSTEM,

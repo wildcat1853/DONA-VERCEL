@@ -51,12 +51,13 @@ export const task = pgTable("tasks", {
   name: text("name").notNull(),
   description: text("description"),
   status: statusEnum("status").notNull().default('in progress') as unknown as StatusType,
-  deadline: timestamp("deadline").default(rawSql`CURRENT_TIMESTAMP`),
+  deadline: timestamp("deadline"),
   projectId: text("projectId")
     .notNull()
-    .references(() => project.id), createdAt: timestamp("created_at")
-      .$default(() => new Date())
-      .notNull(),
+    .references(() => project.id), 
+  createdAt: timestamp("created_at")
+    .$default(() => new Date())
+    .notNull(),
   toolInvocations: json("toolInvocations").default(null),
 });
 

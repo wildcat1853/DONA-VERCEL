@@ -42,7 +42,12 @@ export async function saveTask(taskData: Partial<Task> & { id: string }) {
 }
 
 export async function createOrUpdateTask(taskData: TaskDataWithEmail) {
-    console.log('Received taskData:', taskData);
+    console.log('📥 Task creation/update - received data:', {
+        taskId: taskData.id,
+        name: taskData.name,
+        deadline: taskData.deadline,
+        rawDeadline: taskData.deadline ? new Date(taskData.deadline) : 'no deadline'
+    });
 
     if (!taskData.name?.trim()) {
         return;
@@ -53,22 +58,46 @@ export async function createOrUpdateTask(taskData: TaskDataWithEmail) {
         throw new Error("Project ID is required");
     }
 
+    // Only select the columns we need
     const existingTask = await db.query.task.findFirst({
+        columns: {
+            id: true,
+            name: true,
+            description: true,
+            status: true,
+            deadline: true,
+            projectId: true,
+            createdAt: true
+        },
         where: (task, { eq }) => eq(task.id, taskData.id)
     });
 
     const currentDate = new Date();
     const deadline = taskData.deadline || currentDate;
+    console.log('⏰ Using deadline:', {
+        final: deadline,
+        wasProvided: !!taskData.deadline
+    });
 
     if (existingTask) {
+        console.log('🔄 Updating existing task:', {
+            id: existingTask.id,
+            oldDeadline: existingTask.deadline,
+            newDeadline: deadline
+        });
+        
         await db.update(task)
             .set({
-                ...taskData,
+                name: taskData.name,
+                description: taskData.description,
                 status: taskData.status || 'in progress',
                 deadline,
+                projectId: taskData.projectId
             })
             .where(eq(task.id, taskData.id));
     } else {
+        console.log('➕ Creating new task with deadline:', deadline);
+        
         await db.insert(task).values({
             id: taskData.id,
             name: taskData.name,
@@ -79,6 +108,18 @@ export async function createOrUpdateTask(taskData: TaskDataWithEmail) {
             createdAt: currentDate
         });
     }
+    
+    // Verify the save worked
+    const savedTask = await db.query.task.findFirst({
+        columns: {
+            id: true,
+            name: true,
+            deadline: true
+        },
+        where: (task, { eq }) => eq(task.id, taskData.id)
+    });
+    
+    console.log('💾 Saved task verification:', savedTask);
     
     revalidatePath('/chat/' + taskData.projectId);
 }
