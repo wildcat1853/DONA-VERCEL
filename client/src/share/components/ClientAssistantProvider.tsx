@@ -17,6 +17,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../ui/dialog";
+import { Button } from "../ui/button";
+import { Mic, Settings } from "lucide-react";
 
 import {
   ControlBar,
@@ -191,108 +193,126 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
   // Add state for mobile view control
   const [showTasks, setShowTasks] = useState(true);
 
+  const [microphonePermission, setMicrophonePermission] = useState<PermissionState | null>(null);
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+
   useEffect(() => {
-    const requestMediaPermissions = async () => {
-      try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-        setAudioAllowed(true);
-        setShowMicrophoneDialog(false);
-      } catch (error: any) {
-        console.error('Error requesting media permissions:', error);
-        setShowMicrophoneDialog(true);
-      }
-    };
-  
-    requestMediaPermissions();
+    checkMicrophonePermission();
   }, []);
 
-  useEffect(() => {
-    const fetchToken = async () => {
-      try {
-        const generatedRoomName = `room-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-        
-        const response = await fetch('/api/get-participant-token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            room: generatedRoomName,
-            username: name,
-            sessionConfig: {
-              model: "gpt-4o-realtime-preview-2024-10-01",
-              transcriptionModel: "whisper1",
-              turnDetection: "server_vad",
-              modalities: "text_and_audio",
-              voice: "sage",
-              instructions: assistantInstructions.join('\n'),
-              metadata: {
-                userId: userId,
-                isOnboarding: assistantIsOnboarding,
-              }
-            },
-          }),
-        });
+  const checkMicrophonePermission = async () => {
+    try {
+      // First check if permissions are already granted
+      const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+      setMicrophonePermission(permission.state);
 
-        const data = await response.json();
-        setToken(data.accessToken);
-        setRoomName(generatedRoomName);
-      } catch (error) {
-        console.error('❌ Frontend: Error in room setup:', error);
+      if (permission.state === 'denied') {
+        setShowPermissionDialog(true);
+        return;
       }
-    };
 
-    fetchToken();
-  }, [assistantIsOnboarding, userId]);
+      // If not granted, try to request access
+      if (permission.state === 'prompt') {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop()); // Clean up
+        setMicrophonePermission('granted');
+      }
+
+      permission.addEventListener('change', (e) => {
+        setMicrophonePermission((e.target as PermissionStatus).state);
+        if ((e.target as PermissionStatus).state === 'denied') {
+          setShowPermissionDialog(true);
+        }
+      });
+    } catch (error) {
+      console.error('Microphone permission error:', error);
+      setShowPermissionDialog(true);
+    }
+  };
+
+  const handleRetryPermission = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+      setMicrophonePermission('granted');
+      setShowPermissionDialog(false);
+    } catch (error) {
+      console.error('Retry permission error:', error);
+    }
+  };
+
+  const openBrowserSettings = () => {
+    // Different instructions for different browsers
+    if (navigator.userAgent.includes('Chrome')) {
+      window.open('chrome://settings/content/microphone');
+    } else if (navigator.userAgent.includes('Firefox')) {
+      window.open('about:preferences#privacy');
+    } else {
+      // Generic settings instructions
+      alert('Please open your browser settings and enable microphone access for this site.');
+    }
+  };
 
   return (
     <SessionProvider>
-      <Dialog open={showMicrophoneDialog} onOpenChange={setShowMicrophoneDialog}>
+      {/* Permission Dialog */}
+      <Dialog open={showPermissionDialog} onOpenChange={setShowPermissionDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Enable Microphone Access</DialogTitle>
-            <DialogDescription>
-              Voice interaction requires microphone access to work properly.
+            <DialogTitle className="flex items-center gap-2">
+              <Mic className="h-5 w-5" />
+              Microphone Access Required
+            </DialogTitle>
+            <DialogDescription className="space-y-3">
+              <p>
+                This app needs microphone access to enable voice interaction with the AI assistant.
+                Without microphone access, you won't be able to:
+              </p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Use voice commands</li>
+                <li>Interact with the AI assistant</li>
+                <li>Get real-time voice responses</li>
+              </ul>
             </DialogDescription>
           </DialogHeader>
+
           <div className="space-y-4 py-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-blue-100">
-                <svg
-                  className="w-6 h-12 text-blue-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                  />
-                </svg>
+            <div className="flex items-center gap-4 p-4 bg-yellow-50 rounded-lg">
+              <div className="p-2 rounded-full bg-yellow-100">
+                <Settings className="h-5 w-5 text-yellow-600" />
               </div>
               <div className="flex-1">
-                <h4 className="text-sm font-medium">How to enable:</h4>
-                <ol className="mt-2 text-sm text-gray-500 list-decimal list-inside space-y-1">
+                <h4 className="text-sm font-medium text-yellow-900">How to enable:</h4>
+                <ol className="mt-1 text-sm text-yellow-700 list-decimal list-inside space-y-1">
                   <li>Click the camera icon in your browser&apos;s address bar</li>
                   <li>Select &quot;Allow&quot; for microphone access</li>
                   <li>Refresh this page</li>
                 </ol>
               </div>
             </div>
-            <div className="flex justify-end">
-              <button
-                onClick={() => window.location.reload()}
-                className="w-full mt-4 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition-colors"
-              >
-                Refresh Page
-              </button>
-            </div>
           </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={openBrowserSettings}
+              className="flex items-center gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              Open Browser Settings
+            </Button>
+            <Button 
+              onClick={handleRetryPermission}
+              className="flex items-center gap-2"
+            >
+              <Mic className="h-4 w-4" />
+              Try Again
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Main Content */}
       {token ? (
         <LiveKitRoom
           token={token}
