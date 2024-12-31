@@ -24,6 +24,10 @@ import { Popper, Paper } from "@mui/material";
 import { StaticDateTimePicker } from "@mui/x-date-pickers/StaticDateTimePicker";
 import { createOrUpdateTask } from "@/app/actions/task";
 import { useSession } from "next-auth/react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+
+import { TimeField } from '@mui/x-date-pickers/TimeField';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 
 type Props = {
   name: string;
@@ -81,6 +85,13 @@ function TaskCard(props: Props) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [tempDate, setTempDate] = useState<DateTime | null>(null);
+  const [showDateModal, setShowDateModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<DateTime | null>(
+    props.deadline ? DateTime.fromJSDate(props.deadline) : null
+  );
+  const [selectedTime, setSelectedTime] = useState<DateTime | null>(
+    props.deadline ? DateTime.fromJSDate(props.deadline) : null
+  );
 
   const saveTimeout = useRef<NodeJS.Timeout>();
 
@@ -198,169 +209,160 @@ function TaskCard(props: Props) {
     }, 500);
   };
 
+  const handleSaveDateTime = () => {
+    if (selectedDate) {
+      const finalDate = selectedDate.set({
+        hour: selectedTime?.hour || 0,
+        minute: selectedTime?.minute || 0
+      }).toJSDate();
+      
+      setDate(finalDate);
+      handleAccept();
+    }
+    setShowDateModal(false);
+  };
+
   return (
-    <Card
-      className={`px-5 py-3 bg-gray-100 flex items-start gap-4 transition-all duration-500 ${
-        isLeaving ? "opacity-0 transform translate-x-full" : "opacity-100"
-      }`}
-    >
-      <Checkbox
-        className="mt-2 w-6 h-6 hover:border-blue-500 transition-colors"
-        checked={status === "done"}
-        onClick={async () => {
-          if (status === "in progress") {
-            triggerConfetti();
-            setIsLeaving(true);
-            setTimeout(async () => {
-              await toggleTaskStatus(id);
-              props.onCheckBoxClick();
-            }, 500);
-          }
-        }}
-      />
-      <div className="w-full">
-        <Input
-          value={localName}
-          onChange={handleNameChange}
-          placeholder="Task name"
-          className="font-semibold text-xl focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-transparent border-none shadow-none bg-transparent"
+    <>
+      <Card
+        className={`px-5 py-3 bg-gray-100 flex items-start gap-4 transition-all duration-500 ${
+          isLeaving ? "opacity-0 transform translate-x-full" : "opacity-100"
+        }`}
+      >
+        <Checkbox
+          className="mt-2 w-6 h-6 hover:border-blue-500 transition-colors"
+          checked={status === "done"}
+          onClick={async () => {
+            if (status === "in progress") {
+              triggerConfetti();
+              setIsLeaving(true);
+              setTimeout(async () => {
+                await toggleTaskStatus(id);
+                props.onCheckBoxClick();
+              }, 500);
+            }
+          }}
         />
-        <Input
-          value={localDescription}
-          onChange={(e) => setLocalDescription(e.target.value)}
-          placeholder="Task description"
-          className="mt-1 text-sm text-gray-500 focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-transparent border-none shadow-none bg-transparent"
-        />
-        <div className="w-full flex items-center justify-between mt-6">
-          {status === "in progress" && (
-            <div className="flex gap-2 w-full flex-wrap">
-              <LocalizationProvider dateAdapter={AdapterLuxon}>
-                {date ? (
-                  <div>
-                    <button
-                      className="cursor-pointer border-0 p-0 bg-transparent"
-                      onClick={handleButtonClick}
-                    >
-                      <Badge
+        <div className="w-full">
+          <Input
+            value={localName}
+            onChange={handleNameChange}
+            placeholder="Task name"
+            className="font-semibold text-xl focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-transparent border-none shadow-none bg-transparent"
+          />
+          <Input
+            value={localDescription}
+            onChange={(e) => setLocalDescription(e.target.value)}
+            placeholder="Task description"
+            className="mt-1 text-sm text-gray-500 focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-transparent border-none shadow-none bg-transparent"
+          />
+          <div className="w-full flex items-center justify-between mt-6">
+            {status === "in progress" && (
+              <div className="flex gap-2 w-full flex-wrap">
+                <LocalizationProvider dateAdapter={AdapterLuxon}>
+                  {date ? (
+                    <div>
+                      <button
+                        className="cursor-pointer border-0 p-0 bg-transparent"
+                        onClick={() => setShowDateModal(true)}
+                      >
+                        <Badge
+                          variant="outline"
+                          className={`flex items-center ${date ? getDeadlineStyling(date) : ''}`}
+                        >
+                          <AlarmCheck className="size-4 mr-1" />
+                          {date ? formatDeadline(date) : 'Set deadline'}
+                        </Badge>
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <Button
                         variant="outline"
-                        className={`flex items-center ${getDeadlineStyling(
-                          date
-                        )}`}
+                        size="sm"
+                        className="rounded-full"
+                        onClick={handleButtonClick}
                       >
-                        <AlarmCheck className="size-4 mr-1" />
-                        {formatDeadline(date)}
-                      </Badge>
-                    </button>
-                    <Popper
-                      open={isPickerOpen}
-                      anchorEl={anchorEl}
-                      placement="bottom-start"
-                      style={{ zIndex: 9999 }}
-                    >
-                      <Paper
-                        elevation={3}
-                        sx={{
-                          borderRadius: 2,
-                          bgcolor: 'background.paper',
-                          '& .MuiStaticDateTimePicker-root': {
-                            borderRadius: 2,
-                          }
-                        }}
-                      >
-                        <StaticDateTimePicker
-                          defaultValue={DateTime.now()}
-                          value={tempDate || (date ? DateTime.fromJSDate(date) : DateTime.now())}
-                          onChange={handleDateSelect}
-                          onAccept={handleAccept}
-                          onClose={() => setIsPickerOpen(false)}
-                          slotProps={{
-                            actionBar: {
-                              actions: ['cancel', 'accept']
-                            },
-                            toolbar: {
-                              hidden: false
-                            }
-                          }}
-                        />
-                      </Paper>
-                    </Popper>
-                  </div>
-                ) : (
-                  <div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-full"
-                      onClick={handleButtonClick}
-                    >
-                      <AlarmCheck className="h-4 w-4 mr-2" />
-                      Set deadline
-                    </Button>
-                    <Popper
-                      open={isPickerOpen}
-                      anchorEl={anchorEl}
-                      placement="bottom-start"
-                      style={{ zIndex: 9999 }}
-                    >
-                      <Paper
-                        elevation={3}
-                        sx={{
-                          borderRadius: 2,
-                          bgcolor: 'background.paper',
-                          '& .MuiStaticDateTimePicker-root': {
-                            borderRadius: 2,
-                          }
-                        }}
-                      >
-                        <StaticDateTimePicker
-                          defaultValue={DateTime.now()}
-                          value={tempDate}
-                          onChange={handleDateSelect}
-                          onAccept={handleAccept}
-                          onClose={() => setIsPickerOpen(false)}
-                          slotProps={{
-                            actionBar: {
-                              actions: ['cancel', 'accept']
-                            },
-                            toolbar: {
-                              hidden: false
-                            }
-                          }}
-                        />
-                      </Paper>
-                    </Popper>
-                  </div>
+                        <AlarmCheck className="h-4 w-4 mr-2" />
+                        Set deadline
+                      </Button>
+                    </div>
+                  )}
+                </LocalizationProvider>
+
+                {date && (
+                  <Button
+                    onClick={async () => {
+                      // Create an end time 15 minutes after the start time
+                      const endTime = new Date(date.getTime());
+                      endTime.setMinutes(endTime.getMinutes() + 15);
+
+                      window.open(
+                        await createEventURL({
+                          title: `Sync with Dona: ${name}`,
+                          description: description || '',
+                          start: date,
+                          end: endTime, // 15 minutes after start time
+                          location: '',
+                        })
+                      );
+                    }}
+                    className="hidden md:flex items-center gap-2"
+                  >
+                    <GoogleCalendarIcon className="h-4 w-4" />
+                    Add to calendar
+                  </Button>
                 )}
-              </LocalizationProvider>
-
-              {date && (
-                <Button
-                  onClick={async () => {
-                    // Create an end time 15 minutes after the start time
-                    const endTime = new Date(date.getTime());
-                    endTime.setMinutes(endTime.getMinutes() + 15);
-
-                    window.open(
-                      await createEventURL({
-                        title: `Sync with Dona: ${name}`,
-                        description: description || '',
-                        start: date,
-                        end: endTime, // 15 minutes after start time
-                        location: '',
-                      })
-                    );
-                  }}
-                  className="hidden md:flex items-center gap-2"
-                >
-                  <GoogleCalendarIcon className="h-4 w-4" />
-                  Add to calendar
-                </Button>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </Card>
+      </Card>
+
+      <Dialog open={showDateModal} onOpenChange={setShowDateModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Set due date</DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <LocalizationProvider dateAdapter={AdapterLuxon}>
+              <DatePicker
+                value={selectedDate}
+                onChange={(newDate) => setSelectedDate(newDate)}
+                slotProps={{
+                  textField: {
+                    variant: "outlined",
+                    fullWidth: true
+                  }
+                }}
+              />
+              
+              <TimeField
+                value={selectedTime}
+                onChange={(newTime) => setSelectedTime(newTime)}
+                format="hh:mm a"
+                slotProps={{
+                  textField: {
+                    variant: "outlined",
+                    fullWidth: true
+                  }
+                }}
+              />
+            </LocalizationProvider>
+
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setShowDateModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveDateTime}>
+                Save
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
