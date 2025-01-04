@@ -21,6 +21,16 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
 
+  // Cleanup function for audio context
+  useEffect(() => {
+    return () => {
+      if (audioContext) {
+        audioContext.close().catch(console.error);
+        setAudioContext(null);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     console.log('AudioContext useEffect triggered with track:', {
       hasTrack: !!audioTrack,
@@ -32,46 +42,34 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     let cleanup: (() => void) | undefined;
 
     const setupAudio = async () => {
-      // Clean up previous connections first
+      // Clean up previous connections
       if (cleanup) {
         cleanup();
       }
 
+      // Close previous context if it exists
+      if (audioContext) {
+        await audioContext.close();
+        setAudioContext(null);
+      }
+
       if (audioTrack?.mediaStreamTrack) {
         try {
-          // Create or resume AudioContext
-          let ctx = audioContext;
-          if (!ctx) {
-            ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-            setAudioContext(ctx);
-          }
-
-          // Always try to resume the context when setting up audio
-          if (ctx.state === 'suspended') {
-            await ctx.resume();
-          }
-
-          console.log('AudioContext state:', ctx.state);
+          // Create new AudioContext for each setup
+          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          setAudioContext(ctx);
 
           const analyserNode = ctx.createAnalyser();
           analyserNode.fftSize = 2048;
-          analyserNode.smoothingTimeConstant = 0.8; // Add smoothing
+          analyserNode.smoothingTimeConstant = 0.8;
           
           const mediaStream = new MediaStream([audioTrack.mediaStreamTrack]);
           const source = ctx.createMediaStreamSource(mediaStream);
           
-          // Connect the source to both analyser and destination
           source.connect(analyserNode);
-          // Don't connect analyser to destination to prevent echo
-          // analyserNode.connect(ctx.destination);
           
           setAnalyser(analyserNode);
           setIsPlaying(true);
-
-          audioTrack.mediaStreamTrack.onended = () => {
-            console.log('Audio track ended');
-            setIsPlaying(false);
-          };
 
           cleanup = () => {
             console.log('Cleaning up audio connections');
@@ -79,6 +77,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             analyserNode.disconnect();
             setAnalyser(null);
             setIsPlaying(false);
+            ctx.close().catch(console.error);
           };
 
           return cleanup;
@@ -95,7 +94,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setupAudio();
 
-    // Return cleanup function
     return () => {
       if (cleanup) {
         cleanup();

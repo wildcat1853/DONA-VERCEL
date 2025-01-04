@@ -348,7 +348,8 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
                 <div className="absolute top-0 right-0 w-full h-full bg-F1F2F4">
                   <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE] animate-gradient-xy">
                     <div className="absolute inset-0 flex flex-col justify-end">
-                      <AvatarScene avatarUrl={avatarUrl} />
+                      <AvatarScene avatarUrl={avatarUrl} ></AvatarScene>
+                     
                       <div className="absolute bottom-0 left-0 right-0 h-3/4 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
                     </div>
                   </div>
@@ -378,7 +379,8 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
                     </div>
                   </div>
 
-                  <VoiceAssistantControlBar />
+                  {/* <VoiceAssistantControlBar /> */}
+                  {/* <AudioVisualizer /> */}
                   <StartAudio label="Click to allow audio playback" />
                   <ConnectionStateToast />
                 </div>
