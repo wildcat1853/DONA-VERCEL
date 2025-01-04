@@ -29,7 +29,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       audioContextState: audioContext?.state
     });
 
+    let cleanup: (() => void) | undefined;
+
     const setupAudio = async () => {
+      // Clean up previous connections first
+      if (cleanup) {
+        cleanup();
+      }
+
       if (audioTrack?.mediaStreamTrack) {
         try {
           // Create or resume AudioContext
@@ -66,13 +73,15 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             setIsPlaying(false);
           };
 
-          return () => {
+          cleanup = () => {
+            console.log('Cleaning up audio connections');
             source.disconnect();
             analyserNode.disconnect();
             setAnalyser(null);
             setIsPlaying(false);
-            // Don't close the audio context, just clean up connections
           };
+
+          return cleanup;
         } catch (error) {
           console.error('Error in audio setup:', error);
           setIsPlaying(false);
@@ -85,6 +94,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     setupAudio();
+
+    // Return cleanup function
+    return () => {
+      if (cleanup) {
+        cleanup();
+      }
+    };
   }, [audioTrack]);
 
   return (
