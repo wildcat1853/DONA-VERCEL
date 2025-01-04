@@ -316,9 +316,7 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
           <AudioProvider>
             <LiveKitStateManager 
               tasks={tasks} 
-              userId={userId} 
-              isOnboarding={isOnboarding}
-              setIsOnboarding={setIsOnboarding}
+              userId={userId}
             />
             <div className="fixed top-4 left-4 z-50">
               <AccountDropdown />
@@ -429,13 +427,9 @@ const ParticipantLogger = () => {
 const LiveKitStateManager = ({ 
   tasks, 
   userId, 
-  isOnboarding,
-  setIsOnboarding 
 }: { 
   tasks: Task[], 
   userId: string,
-  isOnboarding: boolean,
-  setIsOnboarding: (value: boolean) => void
 }) => {
   const room = useEnsureRoom();
   const { localParticipant } = useLocalParticipant();

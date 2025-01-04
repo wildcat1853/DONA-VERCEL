@@ -210,13 +210,6 @@ function getRelevantTasks(tasks: Task[], limit: number = 5) {
   const now = new Date();
   
   const relevantTasks = tasks
-    .filter(task => {
-      if (task.status === 'done') {
-        console.log(`Task "${task.name}" skipped (status: done)`);
-        return false;
-      }
-      return true;
-    })
     .map(task => ({
       ...task,
       timeToDeadline: Math.abs(new Date(task.deadline).getTime() - now.getTime())
@@ -225,12 +218,13 @@ function getRelevantTasks(tasks: Task[], limit: number = 5) {
     .slice(0, limit)
     .map(({ timeToDeadline, ...task }) => task);
 
-  console.log('📋 Filtered tasks:', {
+  console.log('📋 All tasks:', {
     total: tasks.length,
-    nonCompleted: tasks.filter(t => t.status !== 'done').length,
-    relevant: relevantTasks.length,
-    selectedTasks: relevantTasks.map(t => ({
+    inProgress: tasks.filter(t => t.status === 'in progress').length,
+    completed: tasks.filter(t => t.status === 'done').length,
+    selected: relevantTasks.map(t => ({
       name: t.name,
+      status: t.status,
       deadline: new Date(t.deadline).toLocaleDateString()
     }))
   });
