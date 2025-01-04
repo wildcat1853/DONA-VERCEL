@@ -60,6 +60,7 @@ function TaskTabs({ tasks, assistantData, projectId }: Props) {
 
   // Calculate number of done tasks
   const doneTasksCount = localTasks.filter(task => task.status === "done").length;
+  const inProgressTasks = localTasks.filter(task => task.status === "in progress");
 
   return (
     <Tabs defaultValue="todo" className="w-full">
@@ -92,12 +93,22 @@ function TaskTabs({ tasks, assistantData, projectId }: Props) {
       </div>
 
       <TabsContent value="todo" className="mt-6 mb-2 space-y-4">
-        {localTasks
-          .filter(
-            (el): el is Task & { status: "in progress" } =>
-              el.status == "in progress"
-          )
-          .map((el) => (
+        {inProgressTasks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 space-y-6 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/50">
+            <div className="text-gray-500 text-center space-y-2">
+              <h3 className="text-2xl font-semibold">No tasks yet</h3>
+              <p className="text-sm">Create your first task to get started</p>
+            </div>
+            <Button
+              onClick={addEmptyTask}
+              className="flex items-center gap-2 bg-white text-blue-500 hover:text-blue-600 hover:bg-blue-50 shadow-sm"
+            >
+              <Plus className="h-4 w-4" />
+              Add your first task
+            </Button>
+          </div>
+        ) : (
+          inProgressTasks.map((el) => (
             <TaskCard
               description={el.description}
               name={el.name}
@@ -119,25 +130,34 @@ function TaskTabs({ tasks, assistantData, projectId }: Props) {
                 ));
               }}
             />
-          ))}
+          ))
+        )}
       </TabsContent>
       
       <TabsContent value="done" className="mt-6 mb-2 space-y-4">
-        {tasks
-          .filter((el): el is Task & { status: "done" } => el.status == "done")
-          .map((el) => (
-            <TaskCard
-              description={el.description}
-              name={el.name}
-              id={el.id}
-              key={el.id}
-              projectId={el.projectId}
-              createdAt={el.createdAt}
-              status={el.status}
-              assistantStatus={status}
-              deadline={el.deadline}
-            />
-          ))}
+        {tasks.filter((el) => el.status === "done").length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/50">
+            <p className="text-gray-500 text-center text-lg">
+              Completed tasks will appear here
+            </p>
+          </div>
+        ) : (
+          tasks
+            .filter((el): el is Task & { status: "done" } => el.status === "done")
+            .map((el) => (
+              <TaskCard
+                description={el.description}
+                name={el.name}
+                id={el.id}
+                key={el.id}
+                projectId={el.projectId}
+                createdAt={el.createdAt}
+                status={el.status}
+                assistantStatus={status}
+                deadline={el.deadline}
+              />
+            ))
+        )}
       </TabsContent>
     </Tabs>
   );

@@ -1,6 +1,6 @@
 // components/AvatarScene.tsx
 
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import ReadyPlayerMeAvatar from './ReadyPlayerMeAvatar';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';

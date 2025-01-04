@@ -184,18 +184,26 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
 
   // Helper function to update mouth-related morph targets
   const updateMouthMorphsForSpeech = useCallback(() => {
-    if (
-      !analyser ||
-      !dataArrayRef.current ||
-      !avatarMeshRef.current ||
-      !isMeshReadyRef.current
-    ) {
+    if (!analyser || !dataArrayRef.current || !avatarMeshRef.current || !isMeshReadyRef.current) {
       return;
     }
 
     try {
-      // Get audio data
+      // Check if analyser is still valid
+      if (analyser.context.state === 'closed') {
+        console.warn('AudioContext is closed');
+        return;
+      }
+
       analyser.getFloatTimeDomainData(dataArrayRef.current);
+      
+      // Add validation for audio data
+      const hasAudioData = dataArrayRef.current.some(val => val !== 0);
+      if (!hasAudioData) {
+        return;
+      }
+
+      // Get audio data
       const currentAmplitude =
         Array.from(dataArrayRef.current).reduce((sum, val) => sum + Math.abs(val), 0) /
         dataArrayRef.current.length;
@@ -225,7 +233,7 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
         }
       });
     } catch (error) {
-      // Handle error if needed
+      console.error('Error in updateMouthMorphsForSpeech:', error);
     }
   }, [analyser, audioThreshold, smoothingFactor]);
 
