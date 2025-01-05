@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Track } from 'livekit-client';
 
 interface AudioContextType {
@@ -19,86 +19,62 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [audioTrack, setAudioTrack] = useState<Track | null>(null);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
 
-  // Cleanup function for audio context
+  // Initialize AudioContext once
   useEffect(() => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    
     return () => {
-      if (audioContext) {
-        audioContext.close().catch(console.error);
-        setAudioContext(null);
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(console.error);
+        audioContextRef.current = null;
       }
     };
   }, []);
 
   useEffect(() => {
-    console.log('AudioContext useEffect triggered with track:', {
-      hasTrack: !!audioTrack,
-      trackSid: audioTrack?.sid,
-      hasMediaStreamTrack: !!audioTrack?.mediaStreamTrack,
-      audioContextState: audioContext?.state
-    });
+    if (!audioContextRef.current || !audioTrack?.mediaStreamTrack) {
+      setIsPlaying(false);
+      setAnalyser(null);
+      return;
+    }
 
-    let cleanup: (() => void) | undefined;
-
-    const setupAudio = async () => {
-      // Clean up previous connections
-      if (cleanup) {
-        cleanup();
+    try {
+      // Clean up previous source if it exists
+      if (sourceRef.current) {
+        sourceRef.current.disconnect();
+        sourceRef.current = null;
       }
 
-      // Close previous context if it exists
-      if (audioContext) {
-        await audioContext.close();
-        setAudioContext(null);
-      }
+      const analyserNode = audioContextRef.current.createAnalyser();
+      analyserNode.fftSize = 2048;
+      analyserNode.smoothingTimeConstant = 0.8;
+      
+      const mediaStream = new MediaStream([audioTrack.mediaStreamTrack]);
+      sourceRef.current = audioContextRef.current.createMediaStreamSource(mediaStream);
+      sourceRef.current.connect(analyserNode);
+      
+      setAnalyser(analyserNode);
+      setIsPlaying(true);
 
-      if (audioTrack?.mediaStreamTrack) {
-        try {
-          // Create new AudioContext for each setup
-          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-          setAudioContext(ctx);
-
-          const analyserNode = ctx.createAnalyser();
-          analyserNode.fftSize = 2048;
-          analyserNode.smoothingTimeConstant = 0.8;
-          
-          const mediaStream = new MediaStream([audioTrack.mediaStreamTrack]);
-          const source = ctx.createMediaStreamSource(mediaStream);
-          
-          source.connect(analyserNode);
-          
-          setAnalyser(analyserNode);
-          setIsPlaying(true);
-
-          cleanup = () => {
-            console.log('Cleaning up audio connections');
-            source.disconnect();
-            analyserNode.disconnect();
-            setAnalyser(null);
-            setIsPlaying(false);
-            ctx.close().catch(console.error);
-          };
-
-          return cleanup;
-        } catch (error) {
-          console.error('Error in audio setup:', error);
-          setIsPlaying(false);
-          setAnalyser(null);
+      return () => {
+        if (sourceRef.current) {
+          sourceRef.current.disconnect();
+          sourceRef.current = null;
         }
-      } else {
-        setIsPlaying(false);
+        analyserNode.disconnect();
         setAnalyser(null);
-      }
-    };
-
-    setupAudio();
-
-    return () => {
-      if (cleanup) {
-        cleanup();
-      }
-    };
+        setIsPlaying(false);
+      };
+    } catch (error) {
+      console.error('Error in audio setup:', error);
+      setIsPlaying(false);
+      setAnalyser(null);
+    }
   }, [audioTrack]);
 
   return (

@@ -435,6 +435,10 @@ const LiveKitStateManager = ({
   const { localParticipant } = useLocalParticipant();
 
   useEffect(() => {
+    console.log('Room state:', room.state);
+    console.log('Local participant:', localParticipant);
+    console.log('Tasks:', tasks);
+    
     if (room.state === 'connected' && localParticipant) {
       const message = {
         type: 'initialTasks',
