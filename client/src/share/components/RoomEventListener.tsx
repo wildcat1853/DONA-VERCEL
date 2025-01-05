@@ -4,7 +4,7 @@ import { Track, Participant } from 'livekit-client';
 import { useAudio } from '../context/AudioContext';
 
 const RoomEventListener: React.FC = () => {
-  const { setAudioTrack } = useAudio();
+  const { setAudioTrack, ensureAudioContext } = useAudio();
   const participants = useParticipants();
   const [aiAgentIdentity, setAiAgentIdentity] = useState<string | null>(null);
 
@@ -55,22 +55,33 @@ const RoomEventListener: React.FC = () => {
       return;
     }
 
+    const setupAudioTrack = async () => {
+      try {
+        // Ensure AudioContext is running before setting up track
+        await ensureAudioContext();
+        
+        if (!audioTrack.isMuted && audioTrack.mediaStreamTrack) {
+          console.log('Setting up AI agent audio track');
+          setAudioTrack(audioTrack);
+        }
+      } catch (error) {
+        console.error('Error setting up audio track:', error);
+      }
+    };
+
     const handleMuted = () => {
       console.log('AI agent track muted');
       setAudioTrack(null);
     };
 
-    const handleUnmuted = () => {
+    const handleUnmuted = async () => {
       console.log('AI agent track unmuted');
       if (audioTrack.mediaStreamTrack) {
-        setAudioTrack(audioTrack);
+        await setupAudioTrack();
       }
     };
 
-    if (!audioTrack.isMuted && audioTrack.mediaStreamTrack) {
-      console.log('Setting up initial AI agent audio track');
-      setAudioTrack(audioTrack);
-    }
+    setupAudioTrack();
 
     audioTrack.on('muted', handleMuted);
     audioTrack.on('unmuted', handleUnmuted);
@@ -80,7 +91,7 @@ const RoomEventListener: React.FC = () => {
       audioTrack.off('muted', handleMuted);
       audioTrack.off('unmuted', handleUnmuted);
     };
-  }, [tracks, setAudioTrack, aiAgentIdentity]);
+  }, [tracks, setAudioTrack, aiAgentIdentity, ensureAudioContext]);
 
   return null;
 };

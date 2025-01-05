@@ -154,7 +154,7 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
     // Update the animation mixer
     if (mixer) mixer.update(delta);
 
-    if (analyser) {
+    if (analyser && isPlaying) {
       updateMouthMorphsForSpeech();
     }
 
@@ -185,21 +185,46 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   // Helper function to update mouth-related morph targets
   const updateMouthMorphsForSpeech = useCallback(() => {
     if (!analyser || !dataArrayRef.current || !avatarMeshRef.current || !isMeshReadyRef.current) {
+      console.log('Missing required references:', {
+        hasAnalyser: !!analyser,
+        hasDataArray: !!dataArrayRef.current,
+        hasAvatarMesh: !!avatarMeshRef.current,
+        isMeshReady: isMeshReadyRef.current
+      });
       return;
     }
 
     try {
-      // Check if analyser is still valid
-      if (analyser.context.state === 'closed') {
-        console.warn('AudioContext is closed');
+      if (analyser.context.state !== 'running') {
+        console.warn('AudioContext is not running:', {
+          state: analyser.context.state,
+          timestamp: Date.now()
+        });
         return;
       }
 
       analyser.getFloatTimeDomainData(dataArrayRef.current);
       
-      // Add validation for audio data
+      // Debug audio data
+      const maxAmplitude = Math.max(...Array.from(dataArrayRef.current).map(Math.abs));
+      const avgAmplitude = Array.from(dataArrayRef.current).reduce((sum, val) => sum + Math.abs(val), 0) / dataArrayRef.current.length;
+      
+      if (maxAmplitude > 0) {
+        console.log('Audio data stats:', {
+          maxAmplitude,
+          avgAmplitude,
+          timestamp: Date.now()
+        });
+      }
+
+      // Validate audio data
       const hasAudioData = dataArrayRef.current.some(val => val !== 0);
       if (!hasAudioData) {
+        console.log('No audio data detected', {
+          analyserState: analyser.context.state,
+          fftSize: analyser.fftSize,
+          timestamp: Date.now()
+        });
         return;
       }
 
@@ -233,9 +258,13 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
         }
       });
     } catch (error) {
-      console.error('Error in updateMouthMorphsForSpeech:', error);
+      console.error('Error in updateMouthMorphsForSpeech:', {
+        error,
+        analyserState: analyser?.context?.state,
+        timestamp: Date.now()
+      });
     }
-  }, [analyser, audioThreshold, smoothingFactor]);
+  }, [analyser]);
 
   // Function to animate idle smile smoothly
   const animateIdleSmile = (elapsedTime: number) => {
@@ -311,6 +340,15 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
       1
     );
   };
+
+  // Add debug effect for prop changes
+  useEffect(() => {
+    console.log('Avatar props changed:', {
+      hasAnalyser: !!analyser,
+      isPlaying,
+      timestamp: Date.now()
+    });
+  }, [analyser, isPlaying]);
 
   return <primitive object={scene} dispose={null} {...props} />;
 };
