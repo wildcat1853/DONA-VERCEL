@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useGLTF, useAnimations } from '@react-three/drei';
-import { useFrame, GroupProps } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-interface ReadyPlayerMeAvatarProps extends GroupProps {
+interface ReadyPlayerMeAvatarProps {
   avatarUrl: string;
   analyser?: AnalyserNode | null;
   isPlaying: boolean;
