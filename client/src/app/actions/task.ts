@@ -8,6 +8,7 @@ import { Task } from "@/define/define";
 interface TaskDataWithEmail extends Partial<Task> {
     id: string;
     userEmail?: string;
+    toolInvocations?: any;
 }
 
 export async function toggleTaskStatus(taskId: string) {
@@ -63,7 +64,6 @@ export async function createOrUpdateTask(taskData: TaskDataWithEmail) {
         throw new Error("Project ID is required");
     }
 
-    // Only select the columns we need
     const existingTask = await db.query.task.findFirst({
         columns: {
             id: true,
@@ -77,11 +77,7 @@ export async function createOrUpdateTask(taskData: TaskDataWithEmail) {
         where: (task, { eq }) => eq(task.id, taskData.id)
     });
 
-    const deadline = taskData.deadline || null; // Use null instead of current date
-    console.log('⏰ Using deadline:', {
-        final: deadline,
-        wasProvided: !!taskData.deadline
-    });
+    const deadline = taskData.deadline || null;
 
     if (existingTask) {
         console.log('🔄 Updating existing task:', {
@@ -113,7 +109,6 @@ export async function createOrUpdateTask(taskData: TaskDataWithEmail) {
         });
     }
     
-    // Verify the save worked
     const savedTask = await db.query.task.findFirst({
         columns: {
             id: true,

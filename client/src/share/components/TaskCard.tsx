@@ -100,8 +100,7 @@ function TaskCard(props: Props) {
   const saveTimeout = useRef<NodeJS.Timeout>();
   const { data: session } = useSession();
 
-  // Whenever name/desc/date changes, we call the parent's onUpdate
-  // plus your "saveTask"
+  // Restore the critical useEffect for updates
   useEffect(() => {
     // If they've changed from original, let's push an update
     if (
@@ -160,6 +159,23 @@ function TaskCard(props: Props) {
 
       setDate(finalDate);
       setIsEditingDeadline(false);
+
+      // Create updated task object
+      const updatedTask: Task = {
+        id,
+        name: localName,
+        description: localDescription,
+        status,
+        deadline: finalDate,
+        projectId,
+        createdAt,
+      };
+
+      // Save to server
+      saveTask(updatedTask);
+
+      // Notify parent (this triggers the LiveKit update)
+      onUpdate?.(updatedTask);
     }
   };
 

@@ -120,35 +120,32 @@ const worker = defineAgent({
         
         if (data.type === 'taskUpdate') {
           const tasks = data.tasks || [];
-          
-          // Log raw task data with focus on deadline
-          tasks.forEach((task: any, index: number) => {
-            console.log(`Task ${index + 1} deadline:`, {
-              raw: task.deadline,
-              parsed: task.deadline ? new Date(task.deadline) : 'no deadline',
-              taskName: task.name,
-              allData: task
-            });
-          });
-          
           const relevantTasks = getRelevantTasks(tasks);
-          console.log('Relevant tasks with deadlines:', relevantTasks.map(task => ({
-            name: task.name,
-            deadline: task.deadline,
-            parsedDeadline: new Date(task.deadline).toLocaleDateString()
-          })));
-
-          session.conversation.item.create(llm.ChatMessage.create({
-            role: llm.ChatRole.SYSTEM,
-            text: `Use instructions per scenario 3 - Task creation instructions. Here is the context of task in the process of creation:\n${relevantTasks.map(task => `
-- "${task.name}" (${task.status})
-  Due: ${new Date(task.deadline).toLocaleDateString()}
-  Description: ${task.description || 'No description'}`).join('\n')}
-
-Please watch the latest task user created. Once user set name and description, congratulate them and encourage them to input deadlines for task. Explain that deadline is important for Dona to follow up on task.`
-          }));
           
-          session.response.create();
+          // Only proceed if there are tasks in progress
+          if (relevantTasks.length > 0) {
+            const latestTask = relevantTasks[0]; // Most recent task in progress
+            
+            let prompt = `Use instructions per scenario 3 - Task creation instructions. Here is the latest task in progress:\n
+- "${latestTask.name}" (${latestTask.status})
+  Description: ${latestTask.description || 'No description'}
+  Due: ${latestTask.deadline ? new Date(latestTask.deadline).toLocaleDateString() : 'No deadline set'}\n`;
+
+            if (!latestTask.deadline) {
+              prompt += "\nI notice this task doesn't have a deadline. Would you like me to help you set one? Having a deadline helps me follow up and ensure the task gets completed on time.";
+            } else if (!latestTask.description) {
+              prompt += "\nWould you like to add a description to provide more context for this task?";
+            } else {
+              prompt += "\nThe task looks well-defined with both a deadline and description. Is there anything else you'd like me to help you with?";
+            }
+
+            session.conversation.item.create(llm.ChatMessage.create({
+              role: llm.ChatRole.SYSTEM,
+              text: prompt
+            }));
+            
+            session.response.create();
+          }
         }
       } catch (error) {
         console.error('❌ Error processing task update:', error);
@@ -209,23 +206,26 @@ Please watch the latest task user created. Once user set name and description, c
 function getRelevantTasks(tasks: Task[], limit: number = 5) {
   const now = new Date();
   
-  const relevantTasks = tasks
+  // First prioritize tasks in progress
+  const tasksInProgress = tasks.filter(t => t.status === 'in progress');
+  
+  const relevantTasks = tasksInProgress
     .map(task => ({
       ...task,
-      timeToDeadline: Math.abs(new Date(task.deadline).getTime() - now.getTime())
+      timeToDeadline: task.deadline ? Math.abs(new Date(task.deadline).getTime() - now.getTime()) : Infinity
     }))
     .sort((a, b) => a.timeToDeadline - b.timeToDeadline)
     .slice(0, limit)
     .map(({ timeToDeadline, ...task }) => task);
 
-  console.log('📋 All tasks:', {
+  console.log('📋 Tasks Status:', {
     total: tasks.length,
-    inProgress: tasks.filter(t => t.status === 'in progress').length,
+    inProgress: tasksInProgress.length,
     completed: tasks.filter(t => t.status === 'done').length,
-    selected: relevantTasks.map(t => ({
+    currentlyProcessing: relevantTasks.map(t => ({
       name: t.name,
       status: t.status,
-      deadline: new Date(t.deadline).toLocaleDateString()
+      deadline: t.deadline ? new Date(t.deadline).toLocaleDateString() : 'no deadline'
     }))
   });
 
