@@ -75,13 +75,27 @@ const worker = defineAgent({
               console.log(`📊 Received ${tasks.length} tasks`);
               
               if (tasks.length > 0) {
-                const relevantTasks = getRelevantTasks(tasks);
+                const { relevantTasks, recentlyCompleted } = getRelevantTasks(tasks);
+                
+                let prompt = '';
+                if (relevantTasks.length > 0) {
+                  prompt = `Use instructions per scenario 2 - Review instructions. Here are your most relevant tasks:\n${relevantTasks.map(task => `
+- "${task.name}" (${task.status})
+  Due: ${task.deadline ? new Date(task.deadline).toLocaleDateString() : 'No deadline'}
+  Description: ${task.description || 'No description'}`).join('\n')}`;
+
+                  if (recentlyCompleted.length > 0) {
+                    prompt += `\n\nI see you recently completed: "${recentlyCompleted[0].name}". Great work! Let's focus on your remaining tasks.`;
+                  }
+                  
+                  prompt += '\n\nPlease review these tasks. Focus on any tasks that are overdue or due today.';
+                } else if (recentlyCompleted.length > 0) {
+                  prompt = `I see you just completed "${recentlyCompleted[0].name}". Great work! Would you like to start a new task?`;
+                }
+
                 session.conversation.item.create(llm.ChatMessage.create({
                   role: llm.ChatRole.SYSTEM,
-                  text: `Use instructions per scenario 2 - Review instructions. Here are your most relevant tasks:\n${relevantTasks.map(task => `
-- "${task.name}" (${task.status})
-  Due: ${new Date(task.deadline).toLocaleDateString()}
-  Description: ${task.description || 'No description'}`).join('\n')}\n\nPlease review these tasks. Focus on any tasks that are overdue or due today.`
+                  text: prompt || "Use instructions per scenario 1 - Onboarding instructions."
                 }));
               } else {
                 session.conversation.item.create(llm.ChatMessage.create({
@@ -123,8 +137,8 @@ const worker = defineAgent({
           const relevantTasks = getRelevantTasks(tasks);
           
           // Only proceed if there are tasks in progress
-          if (relevantTasks.length > 0) {
-            const latestTask = relevantTasks[0]; // Most recent task in progress
+          if (relevantTasks.relevantTasks.length > 0) {
+            const latestTask = relevantTasks.relevantTasks[0]; // Most recent task in progress
             
             let prompt = `Use instructions per scenario 3 - Task creation instructions. Here is the latest task in progress:\n
 - "${latestTask.name}" (${latestTask.status})
@@ -203,19 +217,30 @@ const worker = defineAgent({
 });
 
 // Keep original getRelevantTasks function
-function getRelevantTasks(tasks: Task[], limit: number = 5) {
+function getRelevantTasks(tasks: Task[]) {
   const now = new Date();
   
-  // First prioritize tasks in progress
+  // Get tasks in progress for active management
   const tasksInProgress = tasks.filter(t => t.status === 'in progress');
   
+  // Get recently completed tasks, sort by deadline if available
+  const recentlyCompleted = tasks
+    .filter(t => t.status === 'done')
+    .sort((a, b) => {
+      const dateA = b.deadline ? new Date(b.deadline).getTime() : 0;
+      const dateB = a.deadline ? new Date(a.deadline).getTime() : 0;
+      return dateA - dateB;
+    })
+    .slice(0, 1); // Just get the most recent one
+
+  // For active management, prioritize by deadline
   const relevantTasks = tasksInProgress
     .map(task => ({
       ...task,
       timeToDeadline: task.deadline ? Math.abs(new Date(task.deadline).getTime() - now.getTime()) : Infinity
     }))
     .sort((a, b) => a.timeToDeadline - b.timeToDeadline)
-    .slice(0, limit)
+    .slice(0, 5)
     .map(({ timeToDeadline, ...task }) => task);
 
   console.log('📋 Tasks Status:', {
@@ -226,10 +251,17 @@ function getRelevantTasks(tasks: Task[], limit: number = 5) {
       name: t.name,
       status: t.status,
       deadline: t.deadline ? new Date(t.deadline).toLocaleDateString() : 'no deadline'
+    })),
+    recentlyCompleted: recentlyCompleted.map(t => ({
+      name: t.name,
+      deadline: t.deadline ? new Date(t.deadline).toLocaleDateString() : 'no deadline'
     }))
   });
 
-  return relevantTasks;
+  return {
+    relevantTasks,
+    recentlyCompleted
+  };
 }
 
 console.log('📡 Starting server...');
