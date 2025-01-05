@@ -20,6 +20,7 @@ dotenv.config({ path: envPath });
 
 // Add Task interface
 interface Task {
+  id: string;
   name: string;
   status: string;
   deadline: string;
@@ -34,6 +35,13 @@ function parseSessionConfig(data: any) {
     temperature: parseFloat(data.temperature || "0.8"),
     instructions: data.instructions || '',
   };
+}
+
+// Add TaskUpdate interface
+interface TaskUpdate {
+  type: string;
+  tasks: Task[];
+  timestamp: number;
 }
 
 const worker = defineAgent({
@@ -124,42 +132,63 @@ const worker = defineAgent({
       console.error('❌ Failed to process initial tasks:', error);
     }
 
+    // Add this variable at the entry level to track previous state
+    let previousTasks: Task[] = [];
+
     // Only after initial tasks are handled, set up other listeners
     ctx.room.on('dataReceived', async (payload: Uint8Array, participant?: RemoteParticipant) => {
       if (participant?.identity.startsWith('agent-')) return;
 
       try {
         const decoder = new TextDecoder();
-        const data = JSON.parse(decoder.decode(payload));
+        const data = JSON.parse(decoder.decode(payload)) as TaskUpdate;
         
         if (data.type === 'taskUpdate') {
-          const tasks = data.tasks || [];
-          const relevantTasks = getRelevantTasks(tasks);
+          const currentTasks = data.tasks || [];
           
-          // Only proceed if there are tasks in progress
-          if (relevantTasks.relevantTasks.length > 0) {
-            const latestTask = relevantTasks.relevantTasks[0]; // Most recent task in progress
+          // Find newly completed tasks
+          const newlyCompletedTask = previousTasks.find(prevTask => {
+            const currentTask = currentTasks.find(t => t.id === prevTask.id);
+            return prevTask.status === 'in progress' && currentTask?.status === 'done';
+          });
+
+          if (newlyCompletedTask) {
+            // Task was just completed, acknowledge it
+            session.conversation.item.create(llm.ChatMessage.create({
+              role: llm.ChatRole.SYSTEM,
+              text: `Great job completing "${newlyCompletedTask.name}"! 🎉 Would you like to start working on another task?`
+            }));
+            session.response.create();
+          } else {
+            // Handle regular task updates as before
+            const { relevantTasks, recentlyCompleted } = getRelevantTasks(currentTasks);
             
-            let prompt = `Use instructions per scenario 3 - Task creation instructions. Here is the latest task in progress:\n
+            if (relevantTasks.length > 0) {
+              const latestTask = relevantTasks[0];
+              
+              let prompt = `Use instructions per scenario 3 - Task creation instructions. Here is the latest task in progress:\n
 - "${latestTask.name}" (${latestTask.status})
   Description: ${latestTask.description || 'No description'}
   Due: ${latestTask.deadline ? new Date(latestTask.deadline).toLocaleDateString() : 'No deadline set'}\n`;
 
-            if (!latestTask.deadline) {
-              prompt += "\nI notice this task doesn't have a deadline. Would you like me to help you set one? Having a deadline helps me follow up and ensure the task gets completed on time.";
-            } else if (!latestTask.description) {
-              prompt += "\nWould you like to add a description to provide more context for this task?";
-            } else {
-              prompt += "\nThe task looks well-defined with both a deadline and description. Is there anything else you'd like me to help you with?";
-            }
+              if (!latestTask.deadline) {
+                prompt += "\nI notice this task doesn't have a deadline. Would you like me to help you set one?";
+              } else if (!latestTask.description) {
+                prompt += "\nWould you like to add a description to provide more context for this task?";
+              } else {
+                prompt += "\nThe task looks well-defined with both a deadline and description. Is there anything else you'd like me to help you with?";
+              }
 
-            session.conversation.item.create(llm.ChatMessage.create({
-              role: llm.ChatRole.SYSTEM,
-              text: prompt
-            }));
-            
-            session.response.create();
+              session.conversation.item.create(llm.ChatMessage.create({
+                role: llm.ChatRole.SYSTEM,
+                text: prompt
+              }));
+              session.response.create();
+            }
           }
+
+          // Update previous tasks for next comparison
+          previousTasks = currentTasks;
         }
       } catch (error) {
         console.error('❌ Error processing task update:', error);
