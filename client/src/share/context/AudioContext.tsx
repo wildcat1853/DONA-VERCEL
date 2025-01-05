@@ -27,24 +27,37 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
 
   const ensureAudioContext = async () => {
-    if (!audioContextRef.current || audioContextRef.current.state === 'suspended') {
-      console.log('AudioContext status:', {
-        exists: !!audioContextRef.current,
-        state: audioContextRef.current?.state,
-        timestamp: Date.now()
-      });
-    }
+    try {
+      // Force create new context if none exists or if current one is closed
+      if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+        console.log('Creating new AudioContext (previous state:', audioContextRef.current?.state, ')');
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
 
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
+      // Always try to resume the context
+      if (audioContextRef.current.state !== 'running') {
+        console.log('Resuming AudioContext from state:', audioContextRef.current.state);
+        await audioContextRef.current.resume();
+      }
 
-    if (audioContextRef.current.state === 'suspended') {
-      await audioContextRef.current.resume();
-      console.log('AudioContext resumed:', audioContextRef.current.state);
-    }
+      if (audioContextRef.current.state !== 'running') {
+        throw new Error(`Failed to start AudioContext. Current state: ${audioContextRef.current.state}`);
+      }
 
-    return audioContextRef.current;
+      return audioContextRef.current;
+    } catch (error) {
+      console.error('Failed to ensure AudioContext:', error);
+      // Force recreation of context on error
+      if (audioContextRef.current) {
+        try {
+          await audioContextRef.current.close();
+        } catch (e) {
+          console.warn('Error closing AudioContext:', e);
+        }
+        audioContextRef.current = null;
+      }
+      throw error;
+    }
   };
 
   useEffect(() => {
@@ -58,55 +71,50 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     const setupAudioChain = async () => {
-      if (!audioTrack?.mediaStreamTrack || !isPlaying) {
-        console.log('Audio chain status:', {
-          hasTrack: !!audioTrack,
-          hasMediaStreamTrack: !!audioTrack?.mediaStreamTrack,
-          isPlaying,
-          timestamp: Date.now()
-        });
-      }
-
       if (!audioTrack?.mediaStreamTrack) {
+        console.log('No media stream track available');
         setIsPlaying(false);
         setAnalyser(null);
         return;
       }
 
       try {
+        // Force ensure audio context is running
         const audioContext = await ensureAudioContext();
-        
-        // Clean up previous chain
-        if (sourceRef.current || analyser) {
-          if (sourceRef.current) {
-            sourceRef.current.disconnect();
-            sourceRef.current = null;
-          }
-          if (analyser) {
-            analyser.disconnect();
-            setAnalyser(null);
-          }
+        console.log('AudioContext confirmed running:', audioContext.state);
+
+        // Clean up existing audio chain
+        if (sourceRef.current) {
+          sourceRef.current.disconnect();
+          sourceRef.current = null;
+        }
+        if (analyser) {
+          analyser.disconnect();
+          setAnalyser(null);
         }
 
+        // Create new audio chain
         const analyserNode = audioContext.createAnalyser();
         analyserNode.fftSize = 2048;
         analyserNode.smoothingTimeConstant = 0.8;
-        
+
         const mediaStream = new MediaStream([audioTrack.mediaStreamTrack]);
         sourceRef.current = audioContext.createMediaStreamSource(mediaStream);
         sourceRef.current.connect(analyserNode);
-        
+
         setAnalyser(analyserNode);
         setIsPlaying(true);
-
         console.log('Audio chain successfully configured');
 
         return () => {
+          console.log('Cleaning up audio chain');
           if (sourceRef.current) {
             sourceRef.current.disconnect();
             sourceRef.current = null;
           }
-          analyserNode.disconnect();
+          if (analyserNode) {
+            analyserNode.disconnect();
+          }
           setAnalyser(null);
           setIsPlaying(false);
         };
@@ -114,6 +122,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.error('Audio setup error:', error);
         setIsPlaying(false);
         setAnalyser(null);
+        // Attempt recovery by forcing AudioContext recreation on next try
+        if (audioContextRef.current) {
+          await audioContextRef.current.close().catch(console.error);
+          audioContextRef.current = null;
+        }
       }
     };
 
