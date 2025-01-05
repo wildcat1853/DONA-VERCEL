@@ -41,8 +41,8 @@ const AvatarScene: React.FC<AvatarSceneProps> = ({ avatarUrl }) => {
         <ReadyPlayerMeAvatar 
           avatarUrl={avatarUrl} 
           analyser={analyser}
-          position={[-0.05, -0.9, 0]}
-          rotation={[0, 0, 0]}
+          // position={[-0.05, -0.9, 0]}
+          // rotation={[0, 0, 0]}
           isPlaying={isPlaying}
         />
       </React.Suspense>
