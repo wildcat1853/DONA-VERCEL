@@ -38,13 +38,13 @@ const AvatarScene: React.FC<AvatarSceneProps> = ({ avatarUrl }) => {
       />
       {/* Avatar */}
       <React.Suspense fallback={null}>
-        <ReadyPlayerMeAvatar 
-          avatarUrl={avatarUrl} 
-          analyser={analyser}
-          // position={[-0.05, -0.9, 0]}
-          // rotation={[0, 0, 0]}
-          isPlaying={isPlaying}
-        />
+        <mesh position={[-0.05, -0.9, 0]}>
+          <ReadyPlayerMeAvatar 
+            avatarUrl={avatarUrl} 
+            analyser={analyser}
+            isPlaying={isPlaying}
+          />
+        </mesh>
       </React.Suspense>
     </Canvas>
   );

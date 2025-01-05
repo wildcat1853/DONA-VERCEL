@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import {
-  type JobContext,
+  JobContext,
   WorkerOptions,
   cli,
   defineAgent,
