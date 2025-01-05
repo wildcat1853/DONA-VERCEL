@@ -324,7 +324,7 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
               <div className="hidden md:block w-7/12 max-h-screen overflow-auto bg-white">
                 <div className="w-2/3 mx-auto flex flex-col gap-9 mt-20">
                   <ProjectName 
-                    initialName={"Project name"} 
+                    initialName={"Tasks"} 
                     projectId={props.projectId}
                     className="text-gray-900 text-3xl font-semibold"
                   />
