@@ -95,7 +95,7 @@ function TaskTabs({ tasks, assistantData, projectId }: Props) {
         {localTasks
           .filter(
             (el): el is Task & { status: "in progress" } =>
-              el.status == "in progress"
+              el.status === "in progress"
           )
           .map((el) => (
             <TaskCard
