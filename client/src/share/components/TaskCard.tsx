@@ -1,5 +1,3 @@
-// TaskCard.tsx
-
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { Card } from "../ui/card";
@@ -8,41 +6,40 @@ import { Checkbox } from "../ui/checkbox";
 import { Button } from "../ui/button";
 import { AlarmCheck, Calendar as GoogleCalendarIcon } from "lucide-react";
 import { toggleTaskStatus } from "@/app/actions/task";
-import { AssistantStatus } from "ai";
 import { createEventURL } from "@/app/actions/calendar";
 import { format, isToday, isTomorrow, isYesterday } from "date-fns";
-import { useDebounce } from "use-debounce";
-import { saveTask } from "@/app/actions/task";
+import { saveTask, createOrUpdateTask } from "@/app/actions/task";
 import { Task } from "@/define/define";
 import { Input } from "../ui/input";
 import confetti from "canvas-confetti";
-import { LocalizationProvider } from "@mui/x-date-pickers";
-import { DateTimePicker } from "@mui/x-date-pickers";
-import { AdapterLuxon } from "@mui/x-date-pickers/AdapterLuxon";
-import { DateTime } from "luxon";
-import { Popper, Paper } from "@mui/material";
-import { StaticDateTimePicker } from "@mui/x-date-pickers/StaticDateTimePicker";
-import { createOrUpdateTask } from "@/app/actions/task";
+
+import { useDebounce } from "use-debounce";
 import { useSession } from "next-auth/react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 
-import { TimeField } from '@mui/x-date-pickers/TimeField';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+// MUI date/time
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterLuxon } from "@mui/x-date-pickers/AdapterLuxon";
+import { DesktopDatePicker } from "@mui/x-date-pickers/DesktopDatePicker";
+import { TimeField } from "@mui/x-date-pickers/TimeField";
+import { DateTime } from "luxon";
 
 type Props = {
   name: string;
   description: string | null;
   id: string;
-  assistantStatus: AssistantStatus;
   deadline: Date | null;
-  onUpdate?: (task: Task) => void;
-  projectId: string;
   createdAt: Date;
+  projectId: string;
+  assistantStatus: any; // or your type
 } & (
   | { status: "done" }
   | { status: "in progress"; onCheckBoxClick: () => void }
-);
+) & {
+  onUpdate?: (task: Task) => void; // from parent
+};
 
+/** Format how the deadline displays on the card badge */
 function formatDeadline(date: Date): string {
   if (isToday(date)) {
     return `Today at ${format(date, "h:mm a")}`;
@@ -55,6 +52,7 @@ function formatDeadline(date: Date): string {
   }
 }
 
+/** Applies special styling if the date is 'today' */
 function getDeadlineStyling(date: Date) {
   if (isToday(date)) {
     return "bg-red-100 text-red-700 hover:bg-red-200";
@@ -64,49 +62,54 @@ function getDeadlineStyling(date: Date) {
 
 function TaskCard(props: Props) {
   const {
-    description,
     name,
+    description,
     id,
-    status,
     deadline,
-    assistantStatus,
-    onUpdate,
-    projectId,
+    status,
     createdAt,
+    projectId,
+    onUpdate,
   } = props;
+
+  // Basic local states for name/desc
   const [localName, setLocalName] = useState(name);
   const [localDescription, setLocalDescription] = useState(description || "");
   const [isLeaving, setIsLeaving] = useState(false);
 
+  // Debouncing for auto-save
   const [debouncedName] = useDebounce(localName, 1000);
   const [debouncedDescription] = useDebounce(localDescription, 1000);
 
-  const [date, setDate] = useState<Date | null>(props.deadline || null);
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [tempDate, setTempDate] = useState<DateTime | null>(null);
-  const [showDateModal, setShowDateModal] = useState(false);
+  // The final date shown on the card
+  const [date, setDate] = useState<Date | null>(deadline);
+
+  // A toggle for the "Set deadline" dialog
+  const [isEditingDeadline, setIsEditingDeadline] = useState(false);
+
+  // MUI pickers: separate date/time so changes show immediately
   const [selectedDate, setSelectedDate] = useState<DateTime | null>(
-    props.deadline ? DateTime.fromJSDate(props.deadline) : null
+    deadline ? DateTime.fromJSDate(deadline) : null
   );
   const [selectedTime, setSelectedTime] = useState<DateTime | null>(
-    props.deadline ? DateTime.fromJSDate(props.deadline) : null
+    deadline 
+      ? DateTime.fromJSDate(deadline) 
+      : DateTime.local().set({ hour: 17, minute: 0 }) // Set 5:00 PM as default
   );
 
   const saveTimeout = useRef<NodeJS.Timeout>();
-
   const { data: session } = useSession();
 
-  // console.log('TaskCard props:', props); // Debug log
-  // console.log('ProjectId in TaskCard:', projectId); // Debug log
-
+  // Whenever name/desc/date changes, we call the parent's onUpdate
+  // plus your "saveTask"
   useEffect(() => {
+    // If they've changed from original, let's push an update
     if (
       debouncedName !== name ||
       debouncedDescription !== description ||
       date !== deadline
     ) {
-      const updatedTask = {
+      const updatedTask: Task = {
         id,
         name: debouncedName,
         description: debouncedDescription,
@@ -115,7 +118,11 @@ function TaskCard(props: Props) {
         projectId,
         createdAt,
       };
+
+      // Save to your server or DB
       saveTask(updatedTask);
+
+      // Let parent know so it merges into its state
       onUpdate?.(updatedTask);
     }
   }, [
@@ -132,6 +139,7 @@ function TaskCard(props: Props) {
     onUpdate,
   ]);
 
+  // Confetti if user checks the box
   const triggerConfetti = () => {
     confetti({
       particleCount: 200,
@@ -140,90 +148,58 @@ function TaskCard(props: Props) {
     });
   };
 
-  const handleDateSelect = (newDate: DateTime | null) => {
-    setTempDate(newDate);
-  };
+  // Merge date & time on "Save"
+  const handleSaveDateTime = () => {
+    if (selectedDate) {
+      const finalDate = selectedDate
+        .set({
+          hour: selectedTime?.hour || 0,
+          minute: selectedTime?.minute || 0,
+        })
+        .toJSDate();
 
-  const handleAccept = async () => {
-    if (tempDate) {
-      setDate(tempDate.toJSDate());
-      setTempDate(null);
-      
-      // Create calendar event when deadline is set
-      try {
-        const response = await fetch('/api/create-calendar-event', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            taskName: localName,
-            description: localDescription,
-            deadline: tempDate.toJSDate(),
-          }),
-        });
-
-        if (!response.ok) {
-          console.error('Failed to create calendar event');
-        }
-      } catch (error) {
-        console.error('Error creating calendar event:', error);
-      }
+      setDate(finalDate);
+      setIsEditingDeadline(false);
     }
-    setIsPickerOpen(false);
   };
 
-  const handleButtonClick = (event: React.MouseEvent<HTMLElement>) => {
-    setIsPickerOpen(true);
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleOpenPicker = () => {
-    if (!date) {
-      setDate(new Date());
-    }
-    setIsPickerOpen(true);
-  };
-
-  const handleNameChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newName = event.target.value;
+  // Name input changes
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = e.target.value;
     setLocalName(newName);
-    
-    console.log('About to save task with projectId:', projectId); // Debug log
-    
+
+    // Slight throttle
     clearTimeout(saveTimeout.current);
     saveTimeout.current = setTimeout(() => {
       if (newName.trim()) {
         const taskData = {
-          id: id,
+          id,
           name: newName,
-          projectId: projectId,
-          status: status,
+          projectId,
+          status,
           description: localDescription,
           deadline: date,
-          createdAt: createdAt
+          createdAt,
         };
-        console.log('Saving task with data:', taskData); // Debug log
         createOrUpdateTask(taskData);
       }
     }, 500);
   };
 
-  const handleSaveDateTime = () => {
-    if (selectedDate) {
-      const finalDate = selectedDate.set({
-        hour: selectedTime?.hour || 0,
-        minute: selectedTime?.minute || 0
-      }).toJSDate();
-      
-      setDate(finalDate);
-      handleAccept();
+  // When clicking "Set deadline", initialize both date and time
+  const handleStartDeadlineEdit = () => {
+    if (!selectedDate) {
+      setSelectedDate(DateTime.local()); // Today's date
     }
-    setShowDateModal(false);
+    if (!selectedTime) {
+      setSelectedTime(DateTime.local().set({ hour: 17, minute: 0 })); // 5:00 PM
+    }
+    setIsEditingDeadline(true);
   };
 
   return (
     <>
+      {/* The card UI */}
       <Card
         className={`px-5 py-3 bg-gray-100 flex items-start gap-4 transition-all duration-500 ${
           isLeaving ? "opacity-0 transform translate-x-full" : "opacity-100"
@@ -238,7 +214,9 @@ function TaskCard(props: Props) {
               setIsLeaving(true);
               setTimeout(async () => {
                 await toggleTaskStatus(id);
-                props.onCheckBoxClick();
+                if ("onCheckBoxClick" in props) {
+                  props.onCheckBoxClick();
+                }
               }, 500);
             }
           }}
@@ -248,120 +226,112 @@ function TaskCard(props: Props) {
             value={localName}
             onChange={handleNameChange}
             placeholder="Task name"
-            className="font-semibold text-xl focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-transparent border-none shadow-none bg-transparent"
+            className="font-semibold text-xl bg-transparent border-none shadow-none focus:outline-none focus:ring-0"
           />
           <Input
             value={localDescription}
             onChange={(e) => setLocalDescription(e.target.value)}
             placeholder="Task description"
-            className="mt-1 text-sm text-gray-500 focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-transparent border-none shadow-none bg-transparent"
+            className="mt-1 text-sm text-gray-500 bg-transparent border-none shadow-none focus:outline-none focus:ring-0"
           />
-          <div className="w-full flex items-center justify-between mt-6">
-            {status === "in progress" && (
-              <div className="flex gap-2 w-full flex-wrap">
-                <LocalizationProvider dateAdapter={AdapterLuxon}>
-                  {date ? (
-                    <div>
-                      <button
-                        className="cursor-pointer border-0 p-0 bg-transparent"
-                        onClick={() => setShowDateModal(true)}
-                      >
-                        <Badge
-                          variant="outline"
-                          className={`flex items-center ${date ? getDeadlineStyling(date) : ''}`}
-                        >
-                          <AlarmCheck className="size-4 mr-1" />
-                          {date ? formatDeadline(date) : 'Set deadline'}
-                        </Badge>
-                      </button>
-                    </div>
-                  ) : (
-                    <div>
-                      <Button
+
+          {/* If status === "in progress", show the deadline UI */}
+          {status === "in progress" && (
+            <div className="flex items-center justify-between mt-6">
+              <LocalizationProvider dateAdapter={AdapterLuxon}>
+                {isEditingDeadline ? (
+                  <div className="flex items-center gap-2">
+                    <DesktopDatePicker
+                      value={selectedDate}
+                      onChange={(newVal) => {
+                        if (newVal && newVal.isValid) {
+                          setSelectedDate(newVal);
+                        }
+                      }}
+                      slotProps={{
+                        textField: {
+                          size: "small",
+                          sx: { width: '150px' }
+                        },
+                      }}
+                    />
+                    <TimeField
+                      value={selectedTime}
+                      onChange={(newVal) => {
+                        if (newVal && newVal.isValid) {
+                          setSelectedTime(newVal);
+                        }
+                      }}
+                      format="hh:mm a"
+                      slotProps={{
+                        textField: {
+                          size: "small",
+                          sx: { width: '100px' }
+                        },
+                      }}
+                    />
+                    <Button 
+                      size="sm"
+                      className="bg-blue-500 text-white hover:bg-blue-600"
+                      onClick={handleSaveDateTime}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                ) : (
+                  date ? (
+                    <button
+                      className="bg-transparent border-0 p-0 cursor-pointer"
+                      onClick={() => setIsEditingDeadline(true)}
+                    >
+                      <Badge
                         variant="outline"
-                        size="sm"
-                        className="rounded-full"
-                        onClick={handleButtonClick}
+                        className={`flex items-center ${getDeadlineStyling(date)}`}
                       >
-                        <AlarmCheck className="h-4 w-4 mr-2" />
-                        Set deadline
-                      </Button>
-                    </div>
-                  )}
-                </LocalizationProvider>
+                        <AlarmCheck className="size-4 mr-1" />
+                        {formatDeadline(date)}
+                      </Badge>
+                    </button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full"
+                      onClick={handleStartDeadlineEdit}
+                    >
+                      <AlarmCheck className="h-4 w-4 mr-2" />
+                      Set deadline
+                    </Button>
+                  )
+                )}
 
                 {date && (
                   <Button
                     onClick={async () => {
-                      // Create an end time 15 minutes after the start time
                       const endTime = new Date(date.getTime());
                       endTime.setMinutes(endTime.getMinutes() + 15);
 
                       window.open(
                         await createEventURL({
                           title: `Sync with Dona: ${name}`,
-                          description: description || '',
+                          description: localDescription || "",
                           start: date,
-                          end: endTime, // 15 minutes after start time
-                          location: '',
+                          end: endTime,
+                          location: "",
                         })
                       );
                     }}
-                    className="hidden md:flex items-center gap-2"
+                    className="hidden md:flex items-center gap-2 ml-3"
                   >
                     <GoogleCalendarIcon className="h-4 w-4" />
                     Add to calendar
                   </Button>
                 )}
-              </div>
-            )}
-          </div>
+              </LocalizationProvider>
+            </div>
+          )}
         </div>
       </Card>
-
-      <Dialog open={showDateModal} onOpenChange={setShowDateModal}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Set due date</DialogTitle>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <LocalizationProvider dateAdapter={AdapterLuxon}>
-              <DatePicker
-                value={selectedDate}
-                onChange={(newDate) => setSelectedDate(newDate)}
-                slotProps={{
-                  textField: {
-                    variant: "outlined",
-                    fullWidth: true
-                  }
-                }}
-              />
-              
-              <TimeField
-                value={selectedTime}
-                onChange={(newTime) => setSelectedTime(newTime)}
-                format="hh:mm a"
-                slotProps={{
-                  textField: {
-                    variant: "outlined",
-                    fullWidth: true
-                  }
-                }}
-              />
-            </LocalizationProvider>
-
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowDateModal(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveDateTime}>
-                Save
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

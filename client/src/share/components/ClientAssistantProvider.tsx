@@ -2,9 +2,8 @@
 
 'use client';
 
-import React, { useEffect, useState, useCallback, useContext,createContext, ReactNode } from 'react';
+import React, { useEffect, useState, useCallback, useContext, createContext, ReactNode } from 'react';
 import { Separator } from '../ui/separator';
-import TaskTabs from './TaskTabs';
 import Image from 'next/image';
 import start from '@/../public/stars.svg';
 import dynamic from 'next/dynamic';
@@ -56,10 +55,9 @@ import CircularProgress from './CircularProgress';
 import { onboardingInstructions } from '../config/onboardingInstructions';
 import { Badge } from "../ui/badge";
 import { HelpCircle, MessageCircle, ListTodo } from 'lucide-react';
-import { TaskTabsWithLiveKit } from './TaskTabs';
+import TaskTabs, { TaskTabsWithLiveKit } from './TaskTabs';
 import { SessionProvider } from "next-auth/react";
 import AccountDropdown from './AccountDropdown';
-
 
 type Props = {
   projectId: string;
@@ -331,7 +329,7 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
                     className="text-gray-900 text-3xl font-semibold"
                   />
                   <Separator className="bg-gray-200" />
-                  <TaskTabsWithLiveKit 
+                  <TaskTabs 
                     tasks={tasks} 
                     assistantData={assistantData} 
                     projectId={props.projectId}
@@ -379,7 +377,7 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
                     </div>
                   </div>
 
-                  {/* <VoiceAssistantControlBar /> */}
+                  <VoiceAssistantControlBar />
                   {/* <AudioVisualizer /> */}
                   <StartAudio label="Click to allow audio playback" />
                   <ConnectionStateToast />
