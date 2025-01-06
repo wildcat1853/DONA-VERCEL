@@ -80,9 +80,10 @@ export async function POST(request: Request) {
                 dateTime: endTime.toISOString(),
                 timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
             },
-            attendees: [{
-                email: session.user.email
-            }],
+            attendees: [
+                { email: session.user.email },
+                { email: 'dona-calendar-service@dona-ai.iam.gserviceaccount.com' }
+            ],
             reminders: {
                 useDefault: false,
                 overrides: [
