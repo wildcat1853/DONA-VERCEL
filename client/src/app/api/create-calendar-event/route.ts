@@ -6,6 +6,13 @@ import { OAuth2Client } from 'google-auth-library';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_KEY);
+// Use the default Resend email until domain is verified
+const SENDER_EMAIL = "onboarding@resend.dev";  // Removed the trailing comma
+
+// Determine chat URL based on environment
+const CHAT_URL = process.env.NEXTAUTH_URL?.includes('localhost') 
+    ? 'http://localhost:3000/chat'
+    : 'https://chat.aidona.co';
 
 async function getValidAccessToken(oauth2Client: OAuth2Client, session: any) {
     try {
@@ -21,9 +28,11 @@ async function getValidAccessToken(oauth2Client: OAuth2Client, session: any) {
             throw new Error('No refresh token available');
         }
 
-        // Set the credentials with the refresh token
+        // Set both access token and refresh token
         oauth2Client.setCredentials({
-            refresh_token: session.refreshToken
+            access_token: session.accessToken,
+            refresh_token: session.refreshToken,
+            scope: session.scope
         });
 
         // Get a new access token
@@ -74,7 +83,7 @@ export async function POST(request: Request) {
         // Create calendar event
         const event = {
             summary: `Task Deadline: ${taskName}`,
-            description: description || 'No description provided',
+            description: `${description || 'No description provided'}\n\nIt's time to review your progress with Dona. Follow this link to open a chat with Dona: ${CHAT_URL}`,
             start: {
                 dateTime: new Date(deadline).toISOString(),
                 timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -85,7 +94,7 @@ export async function POST(request: Request) {
             },
             attendees: [
                 { email: session.user.email },
-                { email: 'dona-calendar-service@dona-ai.iam.gserviceaccount.com' }
+                { email: SENDER_EMAIL }
             ],
             reminders: {
                 useDefault: false,
@@ -110,29 +119,62 @@ export async function POST(request: Request) {
 
         // Debug Resend setup with more details
         console.log('📧 Email configuration:', {
-            from: process.env.DONA_SERVICE_ACCOUNT_EMAIL,
+            from: SENDER_EMAIL,
             to: session.user.email,
             hasResendKey: !!process.env.RESEND_KEY,
             apiKeyPrefix: process.env.RESEND_KEY?.substring(0, 4)
         });
 
+        // Format dates for better readability
+        const deadlineDate = new Date(deadline);
+        const formattedDeadline = deadlineDate.toLocaleString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
         try {
-            const emailResponse = await resend.emails.send({
-                from: "onboarding@resend.dev",  // Default Resend email
+            // Send immediate confirmation email
+            await resend.emails.send({
+                from: SENDER_EMAIL,
                 to: session.user.email,
-                subject: `New Task Deadline: ${taskName}`,
+                subject: `Task Created: ${taskName}`,
                 html: `
-                    <h2>New Task Deadline Created</h2>
+                    <h2>New Task Created</h2>
                     <p><strong>Task:</strong> ${taskName}</p>
                     <p><strong>Description:</strong> ${description || 'No description provided'}</p>
-                    <p><strong>Deadline:</strong> ${new Date(deadline).toLocaleString()}</p>
+                    <p><strong>Deadline:</strong> ${formattedDeadline}</p>
                     <p><strong>Calendar Link:</strong> <a href="${response.data.htmlLink}">View in Calendar</a></p>
                 `
             });
 
-            console.log('📧 Email sent successfully:', emailResponse);
+            console.log('📧 Confirmation email sent successfully');
+
+            // Schedule deadline reminder email
+            await resend.emails.send({
+                from: SENDER_EMAIL,
+                to: session.user.email,
+                subject: `Deadline Reminder: ${taskName}`,
+                html: `
+                    <h2>⏰ Task Deadline Reminder</h2>
+                    <p>This is a reminder that your task is due now:</p>
+                    <p><strong>Task:</strong> ${taskName}</p>
+                    <p><strong>Description:</strong> ${description || 'No description provided'}</p>
+                    <p><strong>Deadline:</strong> ${formattedDeadline}</p>
+                    <p><strong>Calendar Link:</strong> <a href="${response.data.htmlLink}">View in Calendar</a></p>
+                `,
+            });
+
+            console.log('📧 Reminder email scheduled successfully');
         } catch (emailError) {
-            console.error('📧 Error sending email:', emailError);
+            console.error('📧 Error with emails:', {
+                error: emailError,
+                sender: SENDER_EMAIL,
+                recipient: session.user.email
+            });
         }
 
         return NextResponse.json({
