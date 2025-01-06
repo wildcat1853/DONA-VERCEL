@@ -3,6 +3,9 @@ import { google } from 'googleapis';
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/app/api/auth/[...nextauth]/authConfig";
 import { OAuth2Client } from 'google-auth-library';
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_KEY);
 
 async function getValidAccessToken(oauth2Client: OAuth2Client, session: any) {
     try {
@@ -104,6 +107,33 @@ export async function POST(request: Request) {
             id: response.data.id,
             link: response.data.htmlLink
         });
+
+        // Debug Resend setup with more details
+        console.log('📧 Email configuration:', {
+            from: process.env.DONA_SERVICE_ACCOUNT_EMAIL,
+            to: session.user.email,
+            hasResendKey: !!process.env.RESEND_KEY,
+            apiKeyPrefix: process.env.RESEND_KEY?.substring(0, 4)
+        });
+
+        try {
+            const emailResponse = await resend.emails.send({
+                from: "onboarding@resend.dev",  // Default Resend email
+                to: session.user.email,
+                subject: `New Task Deadline: ${taskName}`,
+                html: `
+                    <h2>New Task Deadline Created</h2>
+                    <p><strong>Task:</strong> ${taskName}</p>
+                    <p><strong>Description:</strong> ${description || 'No description provided'}</p>
+                    <p><strong>Deadline:</strong> ${new Date(deadline).toLocaleString()}</p>
+                    <p><strong>Calendar Link:</strong> <a href="${response.data.htmlLink}">View in Calendar</a></p>
+                `
+            });
+
+            console.log('📧 Email sent successfully:', emailResponse);
+        } catch (emailError) {
+            console.error('📧 Error sending email:', emailError);
+        }
 
         return NextResponse.json({
             eventId: response.data.id,
