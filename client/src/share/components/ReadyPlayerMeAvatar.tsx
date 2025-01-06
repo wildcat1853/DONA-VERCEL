@@ -185,12 +185,12 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
   // Helper function to update mouth-related morph targets
   const updateMouthMorphsForSpeech = useCallback(() => {
     if (!analyser || !dataArrayRef.current || !avatarMeshRef.current || !isMeshReadyRef.current) {
-      console.log('Missing required references:', {
-        hasAnalyser: !!analyser,
-        hasDataArray: !!dataArrayRef.current,
-        hasAvatarMesh: !!avatarMeshRef.current,
-        isMeshReady: isMeshReadyRef.current
-      });
+      // console.log('Missing required references:', {
+      //   hasAnalyser: !!analyser,
+      //   hasDataArray: !!dataArrayRef.current,
+      //   hasAvatarMesh: !!avatarMeshRef.current,
+      //   isMeshReady: isMeshReadyRef.current
+      // });
       return;
     }
 
@@ -210,11 +210,11 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
       const avgAmplitude = Array.from(dataArrayRef.current).reduce((sum, val) => sum + Math.abs(val), 0) / dataArrayRef.current.length;
       
       if (maxAmplitude > 0) {
-        console.log('Audio data stats:', {
-          maxAmplitude,
-          avgAmplitude,
-          timestamp: Date.now()
-        });
+        // console.log('Audio data stats:', {
+        //   maxAmplitude,
+        //   avgAmplitude,
+        //   timestamp: Date.now()
+        // });
       }
 
       // Validate audio data
@@ -343,12 +343,18 @@ const ReadyPlayerMeAvatar: React.FC<ReadyPlayerMeAvatarProps> = ({
 
   // Add debug effect for prop changes
   useEffect(() => {
-    console.log('Avatar props changed:', {
-      hasAnalyser: !!analyser,
-      isPlaying,
-      timestamp: Date.now()
-    });
+    // console.log('Avatar props changed:', {
+    //   hasAnalyser: !!analyser,
+    //   isPlaying,
+    //   timestamp: Date.now()
+    // });
   }, [analyser, isPlaying]);
+
+  // In the useCallback function
+  const processMessage = useCallback((message: any) => {
+    // Comment out all console.logs
+    // console.log('ReadyPlayerMeAvatar.useCallback[updateMouthShape]:', message);
+  }, []);
 
   return <primitive object={scene} dispose={null} {...props} />;
 };

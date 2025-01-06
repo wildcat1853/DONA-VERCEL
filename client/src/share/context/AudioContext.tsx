@@ -30,13 +30,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       // Force create new context if none exists or if current one is closed
       if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
-        console.log('Creating new AudioContext (previous state:', audioContextRef.current?.state, ')');
+        // console.log('Creating new AudioContext (previous state:', audioContextRef.current?.state, ')');
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
 
       // Always try to resume the context
       if (audioContextRef.current.state !== 'running') {
-        console.log('Resuming AudioContext from state:', audioContextRef.current.state);
+        // console.log('Resuming AudioContext from state:', audioContextRef.current.state);
         await audioContextRef.current.resume();
       }
 
@@ -46,7 +46,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       return audioContextRef.current;
     } catch (error) {
-      console.error('Failed to ensure AudioContext:', error);
+      // console.error('Failed to ensure AudioContext:', error);
       // Force recreation of context on error
       if (audioContextRef.current) {
         try {
@@ -81,7 +81,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       try {
         // Force ensure audio context is running
         const audioContext = await ensureAudioContext();
-        console.log('AudioContext confirmed running:', audioContext.state);
+        // console.log('AudioContext confirmed running:', audioContext.state);
 
         // Clean up existing audio chain
         if (sourceRef.current) {
@@ -104,7 +104,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         setAnalyser(analyserNode);
         setIsPlaying(true);
-        console.log('Audio chain successfully configured');
+        // console.log('Audio chain successfully configured');
 
         return () => {
           console.log('Cleaning up audio chain');

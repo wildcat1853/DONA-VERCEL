@@ -16,6 +16,7 @@ import confetti from "canvas-confetti";
 import { useDebounce } from "use-debounce";
 import { useSession } from "next-auth/react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { scheduleTaskEmails } from '@/lib/emailScheduler';
 
 // MUI date/time
 import { LocalizationProvider } from "@mui/x-date-pickers";
@@ -148,20 +149,33 @@ function TaskCard(props: Props) {
   };
 
   // Merge date & time on "Save"
-  const handleSaveDateTime = () => {
-    if (selectedDate) {
-      const finalDate = selectedDate
+  const handleSaveDateTime = async () => {
+    console.log('🎯 handleSaveDateTime triggered');
+    
+    if (!selectedDate) {
+        console.log('❌ No selected date');
+        return;
+    }
+
+    const finalDate = selectedDate
         .set({
-          hour: selectedTime?.hour || 0,
-          minute: selectedTime?.minute || 0,
+            hour: selectedTime?.hour || 0,
+            minute: selectedTime?.minute || 0,
         })
         .toJSDate();
 
-      setDate(finalDate);
-      setIsEditingDeadline(false);
+    console.log('🕒 Final date:', finalDate);
+    console.log('👤 Session state:', {
+        exists: !!session,
+        email: session?.user?.email,
+        accessToken: !!session?.accessToken
+    });
 
-      // Create updated task object
-      const updatedTask: Task = {
+    setDate(finalDate);
+    setIsEditingDeadline(false);
+
+    // Create updated task object
+    const updatedTask: Task = {
         id,
         name: localName,
         description: localDescription,
@@ -169,13 +183,62 @@ function TaskCard(props: Props) {
         deadline: finalDate,
         projectId,
         createdAt,
-      };
+    };
 
-      // Save to server
-      saveTask(updatedTask);
+    try {
+        // Save task first
+        await saveTask(updatedTask);
+        console.log('💾 Task saved successfully');
 
-      // Notify parent (this triggers the LiveKit update)
-      onUpdate?.(updatedTask);
+        // Create calendar event
+        if (session?.user?.email) {
+            try {
+                console.log('🗓️ Starting calendar event creation...');
+                const response = await fetch('/api/create-calendar-event', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        taskName: localName,
+                        description: localDescription,
+                        deadline: finalDate,
+                        projectId
+                    }),
+                });
+
+                console.log('📥 Raw response:', response);
+                const result = await response.json();
+                console.log('📬 Calendar event creation result:', result);
+
+                if (!response.ok) {
+                    console.error('❌ Failed to create calendar event:', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        result
+                    });
+                }
+            } catch (error: any) {
+                console.error('🚨 Error creating calendar event:', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                });
+            }
+        } else {
+            console.log('⚠️ No user session found for calendar event:', {
+                hasSession: !!session,
+                hasUser: !!session?.user,
+                hasEmail: !!session?.user?.email
+            });
+        }
+
+        // Notify parent
+        onUpdate?.(updatedTask);
+        console.log('✅ Parent notified of update');
+
+    } catch (error) {
+        console.error('🚨 Error in handleSaveDateTime:', error);
     }
   };
 
@@ -211,6 +274,39 @@ function TaskCard(props: Props) {
       setSelectedTime(DateTime.local().set({ hour: 17, minute: 0 })); // 5:00 PM
     }
     setIsEditingDeadline(true);
+  };
+
+  const handleDeadlineChange = async (newDeadline: Date) => {
+    if (newDeadline && session?.user?.email) {
+      try {
+        // Create Google Calendar event
+        const endTime = new Date(newDeadline.getTime() + 15 * 60000); // 15 minutes duration
+        const eventURL = await createEventURL({
+          title: `Task Deadline: ${name}`,
+          description: description || "",
+          start: newDeadline,
+          end: endTime,
+          location: "",
+        });
+
+        // Schedule emails
+        await scheduleTaskEmails(
+          { ...props, deadline: newDeadline },
+          session.user.email,
+          eventURL
+        );
+
+        // Update task
+        if (props.onUpdate) {
+          props.onUpdate({
+            ...props,
+            deadline: newDeadline,
+          });
+        }
+      } catch (error) {
+        console.error('Error handling deadline change:', error);
+      }
+    }
   };
 
   return (
@@ -289,7 +385,10 @@ function TaskCard(props: Props) {
                     <Button 
                       size="sm"
                       className="bg-blue-500 text-white hover:bg-blue-600"
-                      onClick={handleSaveDateTime}
+                      onClick={() => {
+                        console.log('🔘 Save button clicked');
+                        handleSaveDateTime();
+                      }}
                     >
                       Save
                     </Button>

@@ -108,6 +108,44 @@ export async function createOrUpdateTask(taskData: TaskDataWithEmail) {
             createdAt: new Date()
         });
     }
+
+    // If there's a deadline, create a calendar event
+    if (deadline && taskData.userEmail) {
+        try {
+            console.log('🗓️ Attempting to create calendar event:', {
+                deadline,
+                userEmail: taskData.userEmail,
+                taskName: taskData.name
+            });
+
+            const response = await fetch('/api/create-calendar-event', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    taskName: taskData.name,
+                    description: taskData.description,
+                    deadline: deadline,
+                    projectId: taskData.projectId
+                }),
+            });
+
+            const result = await response.json();
+            console.log('📬 Calendar event creation response:', result);
+
+            if (!response.ok) {
+                console.error('Failed to create calendar event:', result);
+            }
+        } catch (error) {
+            console.error('🚨 Error creating calendar event:', error);
+        }
+    } else {
+        console.log('⏭️ Skipping calendar event creation:', {
+            hasDeadline: !!deadline,
+            hasUserEmail: !!taskData.userEmail
+        });
+    }
     
     const savedTask = await db.query.task.findFirst({
         columns: {

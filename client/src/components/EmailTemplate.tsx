@@ -2,111 +2,66 @@ import * as React from 'react';
 
 interface EmailTemplateProps {
   userEmail: string;
-  scheduledDate: string;
+  taskName: string;
+  taskDescription: string;
+  deadline: string;
   meetingLink: string;
-  isReminder?: boolean;
+  emailType: 'creation' | 'deadline';
 }
 
 export const EmailTemplate: React.FC<Readonly<EmailTemplateProps>> = ({
   userEmail,
-  scheduledDate,
+  taskName,
+  taskDescription,
+  deadline,
   meetingLink,
-  isReminder = false,
+  emailType,
 }) => (
   <div style={{ fontFamily: 'Arial, sans-serif', padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
-    {isReminder ? (
-      // Reminder email template
-      <>
-        <h2 style={{ color: '#2D3748' }}>Hey from Dona</h2>
-        <p>Hey {userEmail}!</p>
-        <p>I hope you didn&apos;t forget about our session today. Don&apos;t worry, you just need to check in and give update about your progress.</p>
-        <p>Don&apos;t worry if you didn&apos;t get much done - I&apos;m here to help, not judge!</p>
-        <div style={{ 
-          display: 'flex', 
-          gap: '24px',
-          marginTop: '20px'
-        }}>
-          <a 
-            href={meetingLink} 
-            style={{
-              display: 'inline-block',
-              backgroundColor: '#4A5568',
-              color: 'white',
-              padding: '10px 20px',
-              textDecoration: 'none',
-              borderRadius: '5px',
-            }}
-          >
-            View in Calendar
-          </a>
-          <a 
-            href={`${process.env.NEXTAUTH_URL}`}
-            style={{
-              display: 'inline-block',
-              backgroundColor: '#3B82F6',
-              color: 'white',
-              padding: '10px 20px',
-              textDecoration: 'none',
-              borderRadius: '5px',
-            }}
-          >
-            Talk to Dona
-          </a>
-        </div>
-      </>
+    <h2 style={{ color: '#2D3748' }}>
+      {emailType === 'creation' ? 
+        '✅ Task Created' : 
+        '⏰ Task Deadline: Review progress with Dona'}
+    </h2>
+    <p>Hey {userEmail}!</p>
+    
+    {emailType === 'creation' ? (
+      <p>Your task <strong>{taskName}</strong> has been created. On the deadline, Dona is going to send you a link to review progress.</p>
     ) : (
-      // Initial confirmation email template
-      <>
-        <h2 style={{ color: '#2D3748' }}>Your Session with Dona is Scheduled</h2>
-        <p>Hello {userEmail}!</p>
-        <p>Your follow-up session with Dona has been scheduled for:</p>
-        <p style={{ 
-          fontSize: '18px', 
-          fontWeight: 'bold', 
-          color: '#4A5568', 
-          margin: '20px 0',
-          padding: '15px',
-          backgroundColor: '#F7FAFC',
-          borderRadius: '5px'
-        }}>
-          {scheduledDate}
-        </p>
-        <p>We&apos;ll discuss your progress and help you stay on track with your goals.</p>
-        <p>The calendar invitation has been sent to your email. You can manage the event directly from your calendar.</p>
-        <div style={{ 
-          display: 'flex', 
-          gap: '24px',
-          marginTop: '20px'
-        }}>
-          <a 
-            href={meetingLink} 
-            style={{
-              display: 'inline-block',
-              backgroundColor: '#4A5568',
-              color: 'white',
-              padding: '10px 20px',
-              textDecoration: 'none',
-              borderRadius: '5px',
-            }}
-          >
-            View in Calendar
-          </a>
-          <a 
-            href={`${process.env.NEXTAUTH_URL}`}
-            style={{
-              display: 'inline-block',
-              backgroundColor: '#3B82F6',
-              color: 'white',
-              padding: '10px 20px',
-              textDecoration: 'none',
-              borderRadius: '5px',
-            }}
-          >
-            Talk to Dona
-          </a>
-        </div>
-      </>
+      <p>It's time to review your progress on task <strong>{taskName}</strong>. Please visit the link and report your progress to Dona.</p>
     )}
+
+    <div style={{ 
+      backgroundColor: '#F7FAFC', 
+      padding: '15px', 
+      borderRadius: '5px',
+      margin: '20px 0'
+    }}>
+      <p><strong>Task Details:</strong></p>
+      <p>Description: {taskDescription || 'No description provided'}</p>
+      <p>Due: {deadline}</p>
+    </div>
+
+    <div style={{ 
+      display: 'flex', 
+      gap: '24px',
+      marginTop: '20px'
+    }}>
+      <a 
+        href={meetingLink} 
+        style={{
+          display: 'inline-block',
+          backgroundColor: '#3B82F6',
+          color: 'white',
+          padding: '10px 20px',
+          textDecoration: 'none',
+          borderRadius: '5px',
+        }}
+      >
+        {emailType === 'creation' ? 'View Task' : 'Review Progress with Dona'}
+      </a>
+    </div>
+    
     <p style={{ color: '#718096', fontSize: '14px', marginTop: '30px' }}>
       - Dona AI Assistant
     </p>
