@@ -11,7 +11,7 @@ const SENDER_EMAIL = "onboarding@resend.dev";  // Removed the trailing comma
 
 // Determine chat URL based on environment
 const CHAT_URL = process.env.NEXTAUTH_URL?.includes('localhost') 
-    ? 'http://localhost:3000/chat'
+    ? 'http://localhost:3000'
     : 'https://chat.aidona.co';
 
 async function getValidAccessToken(oauth2Client: OAuth2Client, session: any) {
@@ -148,6 +148,19 @@ export async function POST(request: Request) {
                     <p><strong>Description:</strong> ${description || 'No description provided'}</p>
                     <p><strong>Deadline:</strong> ${formattedDeadline}</p>
                     <p><strong>Calendar Link:</strong> <a href="${response.data.htmlLink}">View in Calendar</a></p>
+                    <div style="margin-top: 30px; text-align: center;">
+                        <a href="${CHAT_URL}" 
+                           style="background-color: #0066ff; 
+                                  color: white; 
+                                  padding: 14px 28px; 
+                                  text-decoration: none; 
+                                  border-radius: 6px; 
+                                  font-size: 16px; 
+                                  font-weight: bold; 
+                                  display: inline-block;">
+                            Create New Task with Dona
+                        </a>
+                    </div>
                 `
             });
 
@@ -165,6 +178,19 @@ export async function POST(request: Request) {
                     <p><strong>Description:</strong> ${description || 'No description provided'}</p>
                     <p><strong>Deadline:</strong> ${formattedDeadline}</p>
                     <p><strong>Calendar Link:</strong> <a href="${response.data.htmlLink}">View in Calendar</a></p>
+                    <div style="margin-top: 30px; text-align: center;">
+                        <a href="${CHAT_URL}" 
+                           style="background-color: #0066ff; 
+                                  color: white; 
+                                  padding: 14px 28px; 
+                                  text-decoration: none; 
+                                  border-radius: 6px; 
+                                  font-size: 16px; 
+                                  font-weight: bold; 
+                                  display: inline-block;">
+                            Report Progress to Dona
+                        </a>
+                    </div>
                 `,
             });
 
