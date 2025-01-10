@@ -56,7 +56,6 @@ import { onboardingInstructions } from '../config/onboardingInstructions';
 import { Badge } from "../ui/badge";
 import { HelpCircle, MessageCircle, ListTodo } from 'lucide-react';
 import TaskTabs, { TaskTabsWithLiveKit } from './TaskTabs';
-import { SessionProvider } from "next-auth/react";
 import AccountDropdown from './AccountDropdown';
 
 type Props = {
@@ -244,7 +243,7 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
   }, []);
 
   return (
-    <SessionProvider>
+    <>
       <Dialog open={showPermissionDialog} onOpenChange={setShowPermissionDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -398,7 +397,7 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
       ) : (
         <p>Loading...</p>
       )}
-    </SessionProvider>
+    </>
   );
 };
 
