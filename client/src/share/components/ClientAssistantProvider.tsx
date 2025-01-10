@@ -56,6 +56,7 @@ import { onboardingInstructions } from '../config/onboardingInstructions';
 import { Badge } from "../ui/badge";
 import { HelpCircle, MessageCircle, ListTodo } from 'lucide-react';
 import TaskTabs, { TaskTabsWithLiveKit } from './TaskTabs';
+import { SessionProvider } from "next-auth/react";
 import AccountDropdown from './AccountDropdown';
 
 type Props = {
@@ -68,125 +69,26 @@ type Props = {
 
 const avatarUrl = 'https://models.readyplayer.me/670c2238e4f39be58fe308ae.glb?morphTargets=mouthSmile,mouthOpen,mouthFunnel,browOuterUpLeft,browOuterUpRight,tongueOut,ARKit';
 
-// Update the OnboardingControls component to include both buttons
-const OnboardingControls = ({ 
-  userId, 
-  assistantData,
-  tasks 
-}: { 
-  userId: string, 
-  assistantData: any,
-  tasks: Task[] 
-}) => {
-  const { localParticipant } = useLocalParticipant();
-  const room = useRoomContext();
-
-  const handleRepeatOnboarding = async () => {
-    try {
-      if (room.state !== 'connected' || !localParticipant) {
-        console.warn('❌ Room or participant not ready');
-        return;
-      }
-
-      // Keep existing attribute-based logic for repeat
-      await assistantData.updateOnboardingStatus(true);
-      const currentAttributes = localParticipant.attributes || {};
-      const newAttributes = {
-        ...currentAttributes,
-        repeatOnboarding: 'true',
-        timestamp: Date.now().toString(),
-        userId: userId
-      };
-      
-      await localParticipant.setAttributes(newAttributes);
-      console.log('✅ Repeat onboarding attributes set');
-    } catch (error) {
-      console.error('❌ Error in repeat onboarding:', error);
-    }
-  };
-
-  const handleDisableOnboarding = async () => {
-    try {
-      if (room.state !== 'connected' || !localParticipant) {
-        console.warn('❌ Room or participant not ready');
-        return;
-      }
-
-      console.log('🔍 Disable Onboarding Debug:', {
-        tasksAvailable: !!tasks,
-        tasksLength: tasks?.length,
-        tasksList: tasks
-      });
-
-      // Update database status
-      await assistantData.updateOnboardingStatus(false);
-
-      // Use data message for disable
-      const message = {
-        type: 'onboardingControl',
-        action: 'disable',
-        timestamp: Date.now(),
-        userId: userId,
-        tasks: tasks
-      };
-
-      console.log('📤 Sending disable onboarding message:', message);
-      const encoder = new TextEncoder();
-      const data = encoder.encode(JSON.stringify(message));
-      localParticipant.publishData(data, {
-        reliable: true,
-      });
-    } catch (error) {
-      console.error('❌ Error in disable onboarding:', error);
-    }
-  };
-
-  return (
-    <div className="fixed top-4 right-4 flex items-center gap-3 z-50">
-      {/* <button
-        onClick={() => handleRepeatOnboarding()}
-        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 hover:bg-white/90 border border-gray-200 transition-colors shadow-sm"
-        title="Repeat Onboarding"
-      >
-        <HelpCircle className="w-5 h-5 text-gray-600" />
-        <span className="text-sm text-gray-600">How it works</span>
-      </button> */}
-      
-      {/* <button
-        onClick={() => handleDisableOnboarding()}
-        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 hover:bg-white/90 border border-gray-200 transition-colors shadow-sm"
-        title="Turn Off Onboarding"
-      >
-        <span className="text-sm text-gray-600">Turn off onboarding</span>
-      </button> */}
-    </div>
-  );
-};
-
 const getServerUrl = () => {
   console.log('🔧 Connecting to:', process.env.NEXT_PUBLIC_LIVEKIT_URL);
   return process.env.NEXT_PUBLIC_LIVEKIT_URL;
 };
 
-const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) => {
-  const [isOnboarding, setIsOnboarding] = useState(false);
-  const assistantData = useAssistant({ projectId: props.projectId, projectThreadId: props.projectThreadId, userId });
-  const { isOnboarding: assistantIsOnboarding, isLoading } = assistantData
+const ClientAssistantProvider: React.FC<Props> = (props) => {
+  const { projectId, projectThreadId, userId } = props;
+  const assistantData = useAssistant({ projectId, projectThreadId, userId });
+
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const [token, setToken] = useState('');
   const [roomName, setRoomName] = useState('');
   const name = 'User';
   
-  console.log('Debug Onboarding State:', {
-    isOnboarding: assistantIsOnboarding,
-    isLoading,
-    projectId: props.projectId
+  console.log('Debug State:', {
+    projectId
   });
   
   const [audioAllowed, setAudioAllowed] = useState(false);
   const [showMicrophoneDialog, setShowMicrophoneDialog] = useState(false);
-
-  // Add state for mobile view control
   const [showTasks, setShowTasks] = useState(true);
 
   useEffect(() => {
@@ -224,8 +126,7 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
               voice: "sage",
               instructions: assistantInstructions.join('\n'),
               metadata: {
-                userId: userId,
-                isOnboarding: assistantIsOnboarding,
+                userId: userId
               }
             },
           }),
@@ -242,8 +143,9 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
     fetchToken();
   }, []);
 
+  // Rest of your component remains the same
   return (
-    <>
+    <SessionProvider>
       <Dialog open={showPermissionDialog} onOpenChange={setShowPermissionDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -312,7 +214,7 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
         > 
           <AudioProvider>
             <LiveKitStateManager 
-              tasks={tasks} 
+              tasks={props.tasks} 
               userId={userId}
             />
             <div className="fixed top-4 left-4 z-50">
@@ -324,14 +226,14 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
                 <div className="w-2/3 mx-auto flex flex-col gap-9 mt-20">
                   <ProjectName 
                     initialName={"Tasks"} 
-                    projectId={props.projectId}
+                    projectId={projectId}
                     className="text-gray-900 text-3xl font-semibold"
                   />
                   <Separator className="bg-gray-200" />
                   <TaskTabs 
-                    tasks={tasks} 
+                    tasks={props.tasks} 
                     assistantData={assistantData} 
-                    projectId={props.projectId}
+                    projectId={projectId}
                   />
                 </div>
               </div>
@@ -357,9 +259,9 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
                   <div className="px-4 py-6">
                     <div className="max-h-[40vh] overflow-y-auto">
                       <TaskTabsWithLiveKit 
-                        tasks={tasks} 
+                        tasks={props.tasks} 
                         assistantData={assistantData} 
-                        projectId={props.projectId}
+                        projectId={projectId}
                       />
                     </div>
                   </div>
@@ -384,11 +286,7 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
 
                 {/* Onboarding Controls */}
                 <div className="md:absolute md:top-4 md:right-4 fixed bottom-24 right-4 flex items-center gap-3 z-50">
-                  <OnboardingControls 
-                    userId={userId} 
-                    assistantData={assistantData} 
-                    tasks={tasks} 
-                  />
+                 
                 </div>
               </div>
             </div>
@@ -397,7 +295,7 @@ const ClientAssistantProvider: React.FC<Props> = ({ tasks, userId, ...props }) =
       ) : (
         <p>Loading...</p>
       )}
-    </>
+    </SessionProvider>
   );
 };
 
