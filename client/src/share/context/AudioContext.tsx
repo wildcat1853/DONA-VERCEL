@@ -131,7 +131,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     setupAudioChain();
-  }, [audioTrack]);
+  }, [audioTrack, analyser]);
 
   // Only log significant state changes
   useEffect(() => {

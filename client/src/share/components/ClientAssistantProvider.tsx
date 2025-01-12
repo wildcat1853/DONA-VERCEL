@@ -141,7 +141,7 @@ const ClientAssistantProvider: React.FC<Props> = (props) => {
     };
 
     fetchToken();
-  }, []);
+  }, [userId]);
 
   // Rest of your component remains the same
   return (
