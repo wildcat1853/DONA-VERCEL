@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authConfig } from "./api/auth/[...nextauth]/authConfig";
+import { PageViewTracker } from "@/components/PageViewTracker";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -17,7 +16,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <PageViewTracker />
+        {children}
+      </body>
     </html>
   );
 }

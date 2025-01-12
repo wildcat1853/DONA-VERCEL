@@ -148,6 +148,16 @@ function TaskTabs({ tasks, assistantData, projectId }: Props) {
                 ));
               }}
               onUpdate={(updatedTask) => {
+                if (updatedTask.deadline && !el.deadline) {
+                  track("Deadline Added", {
+                    projectId,
+                    taskId: updatedTask.id,
+                    userId: assistantData?.userId,
+                    deadline: updatedTask.deadline.toISOString(),
+                    timestamp: new Date().toISOString()
+                  });
+                }
+                
                 setLocalTasks(localTasks.map(t => 
                   t.id === updatedTask.id ? updatedTask : t
                 ));
