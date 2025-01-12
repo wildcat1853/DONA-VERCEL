@@ -72,16 +72,21 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     const setupAudioChain = async () => {
       if (!audioTrack?.mediaStreamTrack) {
-        console.log('No media stream track available');
         setIsPlaying(false);
         setAnalyser(null);
         return;
       }
 
       try {
-        // Force ensure audio context is running
         const audioContext = await ensureAudioContext();
-        // console.log('AudioContext confirmed running:', audioContext.state);
+        
+        // Add error handling for audio processing
+        audioContext.onstatechange = () => {
+          if (audioContext.state === 'suspended') {
+            console.warn('Audio context suspended');
+            audioContext.resume().catch(console.error);
+          }
+        };
 
         // Clean up existing audio chain
         if (sourceRef.current) {
@@ -107,14 +112,12 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         // console.log('Audio chain successfully configured');
 
         return () => {
-          console.log('Cleaning up audio chain');
+          // Ensure proper cleanup
           if (sourceRef.current) {
             sourceRef.current.disconnect();
             sourceRef.current = null;
           }
-          if (analyserNode) {
-            analyserNode.disconnect();
-          }
+          analyserNode.disconnect();
           setAnalyser(null);
           setIsPlaying(false);
         };
@@ -122,16 +125,21 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.error('Audio setup error:', error);
         setIsPlaying(false);
         setAnalyser(null);
-        // Attempt recovery by forcing AudioContext recreation on next try
-        if (audioContextRef.current) {
-          await audioContextRef.current.close().catch(console.error);
-          audioContextRef.current = null;
+        
+        // Force cleanup on error
+        if (sourceRef.current) {
+          sourceRef.current.disconnect();
+          sourceRef.current = null;
+        }
+        if (analyser) {
+          analyser.disconnect();
+          setAnalyser(null);
         }
       }
     };
 
     setupAudioChain();
-  }, [audioTrack, analyser]);
+  }, [audioTrack]);
 
   // Only log significant state changes
   useEffect(() => {

@@ -1,6 +1,6 @@
 "use client";
 import { Task } from "@/define/define";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import TaskCard from "./TaskCard";
 import { Button } from "../ui/button";
@@ -9,35 +9,51 @@ import { v4 as uuidv4 } from 'uuid';
 import { useLocalParticipant, useRoomContext } from '@livekit/components-react';
 import { RoomEvent, DataPacket_Kind } from 'livekit-client';
 
-type TaskStatus = "done" | "in progress";
-
 type Props = { tasks: Task[]; assistantData: any; projectId: string };
 
 // Create a new component for LiveKit data messaging
 const TaskUpdater = ({ tasks }: { tasks: Task[] }) => {
   const { localParticipant } = useLocalParticipant();
   const room = useRoomContext();
+  const hasInitializedRef = useRef(false);
 
-  // Update agent whenever tasks change
   useEffect(() => {
-    if (localParticipant && room) {
-      const taskUpdate = {
-        type: 'taskUpdate',
-        tasks: tasks,
-        timestamp: Date.now()
-      };
+    if (!localParticipant || !room) return;
 
-      // Convert to Uint8Array
-      const encoder = new TextEncoder();
-      const data = encoder.encode(JSON.stringify(taskUpdate));
+    const sendData = (type: 'initialTasks' | 'taskUpdate') => {
+      try {
+        const taskData = {
+          type,
+          tasks: tasks,
+          timestamp: Date.now()
+        };
 
-      // Publish data reliably to the room
-      localParticipant.publishData(data, {
-        reliable: true,
-      });
+        const encoder = new TextEncoder();
+        const data = encoder.encode(JSON.stringify(taskData));
 
-      console.log('📤 TaskUpdater: Sent task update');
+        localParticipant.publishData(data, {
+          reliable: true,
+        });
+
+        console.log(`📤 TaskUpdater: Sent ${type}`);
+      } catch (error) {
+        console.error('Failed to send task data:', error);
+      }
+    };
+
+    // Send initial tasks only once
+    if (!hasInitializedRef.current) {
+      sendData('initialTasks');
+      hasInitializedRef.current = true;
+      return;
     }
+
+    // Debounce regular updates
+    const timeoutId = setTimeout(() => {
+      sendData('taskUpdate');
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
   }, [tasks, localParticipant, room]);
 
   return null;
@@ -46,46 +62,13 @@ const TaskUpdater = ({ tasks }: { tasks: Task[] }) => {
 function TaskTabs({ tasks, assistantData, projectId }: Props) {
   const { status } = assistantData;
   const [localTasks, setLocalTasks] = useState<Task[]>(() => tasks);
-  const { localParticipant } = useLocalParticipant();
-  const room = useRoomContext();
-
-  // Add function to send task updates
-  const sendTaskUpdate = useCallback((updatedTasks: Task[]) => {
-    if (localParticipant && room) {
-      const taskUpdate = {
-        type: 'taskUpdate',
-        tasks: updatedTasks,
-        timestamp: Date.now()
-      };
-
-      // Convert to Uint8Array
-      const encoder = new TextEncoder();
-      const data = encoder.encode(JSON.stringify(taskUpdate));
-
-      // Publish data reliably to the room
-      localParticipant.publishData(data, {
-        reliable: true,
-      });
-
-      console.log('📤 TaskTabs: Sent task update after status change');
-    }
-  }, [localParticipant, room]);
-
-  // Modify the checkbox click handler
-  const handleTaskStatusChange = (taskId: string) => {
-    const updatedTasks = localTasks.map(t => 
-      t.id === taskId ? { ...t, status: "done" as TaskStatus } : t
-    );
-    setLocalTasks(updatedTasks);
-    sendTaskUpdate(updatedTasks);
-  };
 
   const addEmptyTask = () => {
     const newTask: Task = {
       id: uuidv4(),
       name: "",
       description: "",
-      status: "in progress" as TaskStatus,
+      status: "in progress",
       createdAt: new Date(),
       deadline: null,
       projectId: projectId,
@@ -143,13 +126,15 @@ function TaskTabs({ tasks, assistantData, projectId }: Props) {
               status={el.status}
               assistantStatus={status}
               deadline={el.deadline}
-              onCheckBoxClick={() => handleTaskStatusChange(el.id)}
+              onCheckBoxClick={() => {
+                setLocalTasks(localTasks.map(t => 
+                  t.id === el.id ? { ...t, status: "done" } : t
+                ));
+              }}
               onUpdate={(updatedTask) => {
-                const newTasks = localTasks.map(t => 
+                setLocalTasks(localTasks.map(t => 
                   t.id === updatedTask.id ? updatedTask : t
-                );
-                setLocalTasks(newTasks);
-                sendTaskUpdate(newTasks);
+                ));
               }}
             />
           ))}
