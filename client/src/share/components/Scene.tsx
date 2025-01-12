@@ -16,7 +16,7 @@ const Scene = ({ avatarUrl }: SceneProps) => {
   return (
     <div style={{ width: '100%', height: '100vh' }}>
       <Suspense fallback={null}>
-        <Canvas>
+        <Canvas frameloop="always">
           <OrbitControls />
           <ambientLight intensity={0.5} />
           <pointLight position={[10, 10, 10]} />
