@@ -8,6 +8,7 @@ import { Plus } from "lucide-react";
 import { v4 as uuidv4 } from 'uuid';
 import { useLocalParticipant, useRoomContext } from '@livekit/components-react';
 import { RoomEvent, DataPacket_Kind } from 'livekit-client';
+import { track } from "@/share/utils/mixpanel";
 
 type Props = { tasks: Task[]; assistantData: any; projectId: string };
 
@@ -73,6 +74,21 @@ function TaskTabs({ tasks, assistantData, projectId }: Props) {
       deadline: null,
       projectId: projectId,
     };
+
+    console.log("🎯 Tracking task creation:", {
+      projectId,
+      taskId: newTask.id,
+      userId: assistantData?.userId,
+      timestamp: new Date().toISOString()
+    });
+
+    track("Task Created", {
+      projectId,
+      taskId: newTask.id,
+      userId: assistantData?.userId,
+      timestamp: new Date().toISOString()
+    });
+
     setLocalTasks([newTask, ...localTasks]);
   };
 

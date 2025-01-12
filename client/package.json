@@ -79,6 +79,7 @@
     "lucide-react": "^0.469.0",
     "luxon": "^3.5.0",
     "markdown-to-jsx": "^7.5.0",
+    "mixpanel-browser": "^2.58.0",
     "nanoid": "latest",
     "natural": "^8.0.1",
     "next": "^14.0.4",
@@ -110,5 +111,8 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "ts-node": "^10.9.2"
+  "ts-node": "^10.9.2",
+  "devDependencies": {
+    "@types/mixpanel-browser": "^2.51.0"
+  }
 }
