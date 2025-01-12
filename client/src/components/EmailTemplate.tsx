@@ -28,7 +28,7 @@ export const EmailTemplate: React.FC<Readonly<EmailTemplateProps>> = ({
     {emailType === 'creation' ? (
       <p>Your task <strong>{taskName}</strong> has been created. On the deadline, Dona is going to send you a link to review progress.</p>
     ) : (
-      <p>It's time to review your progress on task <strong>{taskName}</strong>. Please visit the link and report your progress to Dona.</p>
+      <p>It&apos;s time to review your progress on task <strong>{taskName}</strong>. Please visit the link and report your progress to Dona.</p>
     )}
 
     <div style={{ 
