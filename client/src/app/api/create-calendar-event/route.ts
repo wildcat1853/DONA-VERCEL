@@ -7,7 +7,7 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_KEY);
 // Use the default Resend email until domain is verified
-const SENDER_EMAIL = "onboarding@resend.dev";  // Removed the trailing comma
+const SENDER_EMAIL = "dona@aidona.co";  // Removed the trailing comma
 
 // Determine chat URL based on environment
 const CHAT_URL = process.env.NEXTAUTH_URL?.includes('localhost') 
