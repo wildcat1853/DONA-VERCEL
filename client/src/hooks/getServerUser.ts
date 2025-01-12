@@ -12,8 +12,8 @@ export default async function getServerUser() {
     const session = await getServerSession(authConfig);
     
     if (!session?.user?.email) {
-      console.log('No authenticated session, redirecting to auth');
-      redirect('/auth');
+      console.log('No authenticated session');
+      return null;
     }
 
     let userData = await db.query.user.findFirst({
@@ -42,6 +42,6 @@ export default async function getServerUser() {
     return userData;
   } catch (error) {
     console.error('Auth or database error:', error);
-    redirect('/auth');
+    return null;
   }
 }
