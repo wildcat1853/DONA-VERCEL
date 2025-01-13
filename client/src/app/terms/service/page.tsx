@@ -25,7 +25,7 @@ export default function TermsOfService() {
           <h2 className="text-2xl font-semibold mb-4">2. Intellectual Property</h2>
           <p>
             All content and materials within the App, including logos, text, and graphics, are owned 
-            by [Your Company Name] or its licensors. You may not reproduce, distribute, or modify 
+            by NZT48 Inc or its licensors. You may not reproduce, distribute, or modify 
             this content without prior written consent.
           </p>
         </section>

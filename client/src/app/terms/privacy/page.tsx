@@ -6,7 +6,7 @@ export default function PrivacyPolicy() {
 
       <div className="prose prose-gray max-w-none">
         <p className="mb-6">
-          [Your Company Name] (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;) is committed to protecting your privacy. 
+          NZT48 Inc (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;) is committed to protecting your privacy. 
           This Privacy Policy explains how we collect, use, and share your personal information 
           when you use Dona AI (the &ldquo;App&rdquo;) and related services.
         </p>
