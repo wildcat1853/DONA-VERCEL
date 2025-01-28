@@ -297,7 +297,7 @@ const ClientAssistantProvider: React.FC<Props> = (props) => {
                 <motion.div 
                   className="absolute md:top-0 md:right-0 md:w-full md:h-full 
                               overflow-hidden shadow-lg md:border-0 md:shadow-none
-                              bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE]"
+                              bg-white"
                   style={{
                     width: dragY.get() === 100 ? '100%' : '8rem',
                     height: dragY.get() === 100 ? '100%' : '8rem'
@@ -305,6 +305,12 @@ const ClientAssistantProvider: React.FC<Props> = (props) => {
                   variants={variants}
                   initial="expanded"
                   animate={isExpanded ? "collapsed" : "expanded"}
+                  transition={{
+                    type: "spring",
+                    stiffness: 100,
+                    damping: 15,
+                    mass: 0.8
+                  }}
                 >
                   <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE] animate-gradient-xy">
                     <div className="absolute inset-0 flex flex-col justify-end">
@@ -322,12 +328,30 @@ const ClientAssistantProvider: React.FC<Props> = (props) => {
                   dragConstraints={{ top: 0, bottom: 0 }}
                   dragElastic={0.2}
                   initial={{ height: '35%' }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 100,
+                    damping: 15,
+                    mass: 0.8
+                  }}
+                  onDrag={(_, info) => {
+                    dragY.set(info.offset.y);
+                  }}
+                  onDragEnd={() => {
+                    const shouldExpand = dragY.get() < 50;
+                    setIsExpanded(shouldExpand);
+                    animate(dragY, shouldExpand ? 0 : 100, {
+                      type: "spring",
+                      stiffness: 100,
+                      damping: 15
+                    });
+                  }}
                 >
-                  <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-2" />
+                  <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3" />
                   
-                  <div className="px-4 h-full">
+                  <div className="px-4 pt-2 pb-6 h-full">
                     <div className={`overflow-y-auto h-[calc(100%-2rem)] transition-all ${
-                      isExpanded ? 'max-h-[70vh]' : 'max-h-[28vh]'
+                      isExpanded ? 'max-h-[70vh]' : 'max-h-[25vh]'
                     }`}>
                       <TaskTabsWithLiveKit 
                         tasks={props.tasks} 
