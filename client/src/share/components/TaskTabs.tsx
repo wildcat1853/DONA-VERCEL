@@ -97,7 +97,7 @@ function TaskTabs({ tasks, assistantData, projectId }: Props) {
 
   return (
     <Tabs defaultValue="todo" className="w-full">
-      <div className="flex justify-between items-start h-[80px] flex-wrap gap-4">
+      <div className="flex justify-between items-start md:h-[80px] h-[60px] flex-wrap gap-4">
         <TabsList className="flex space-x-2 bg-gray-200 rounded-full p-1 w-[200px] h-[45px] min-w-[200px]">
           <TabsTrigger
             value="todo"
@@ -118,14 +118,14 @@ function TaskTabs({ tasks, assistantData, projectId }: Props) {
         </TabsList>
         <Button
           onClick={addEmptyTask}
-          className="w-[120px] flex items-center justify-center gap-2 py-6 text-blue-500 hover:text-blue-600 hover:bg-blue-50 border border-solid border-blue-200"
+          className="w-[120px] flex items-center justify-center gap-2 md:py-6 py-4 text-blue-500 hover:text-blue-600 hover:bg-blue-50 border border-solid border-blue-200"
         >
           <Plus className="h-4 w-4" />
           Add task
         </Button>
       </div>
 
-      <TabsContent value="todo" className="mt-6 mb-2 space-y-4">
+      <TabsContent value="todo" className="md:mt-6 mt-2 mb-2 space-y-4">
         {localTasks
           .filter(
             (el): el is Task & { status: "in progress" } =>
@@ -166,7 +166,7 @@ function TaskTabs({ tasks, assistantData, projectId }: Props) {
           ))}
       </TabsContent>
       
-      <TabsContent value="done" className="mt-6 mb-2 space-y-4">
+      <TabsContent value="done" className="md:mt-6 mt-2 mb-2 space-y-4">
         {localTasks
           .filter((el): el is Task & { status: "done" } => el.status == "done")
           .map((el) => (
