@@ -58,6 +58,7 @@ import { HelpCircle, MessageCircle, ListTodo } from 'lucide-react';
 import TaskTabs, { TaskTabsWithLiveKit } from './TaskTabs';
 import { SessionProvider } from "next-auth/react";
 import AccountDropdown from './AccountDropdown';
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 
 type Props = {
   projectId: string;
@@ -90,6 +91,33 @@ const ClientAssistantProvider: React.FC<Props> = (props) => {
   const [audioAllowed, setAudioAllowed] = useState(false);
   const [showMicrophoneDialog, setShowMicrophoneDialog] = useState(false);
   const [showTasks, setShowTasks] = useState(true);
+
+  // Animation states
+  const [isExpanded, setIsExpanded] = useState(false);
+  const dragY = useMotionValue(100);
+  
+  // Bottom sheet transforms with smoother transitions
+  const mobileContainerStyle = {
+    height: useTransform(dragY, [0, 100], ['80%', '25%']),
+    borderRadius: useTransform(dragY, [0, 100], ['2rem 2rem 0 0', '2rem']),
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  };
+
+  // Avatar container transforms with smoother transitions
+  const avatarContainerStyle = {
+    width: useTransform(dragY, [0, 100], ['100%', '8rem']),
+    height: useTransform(dragY, [0, 100], ['100%', '8rem']),
+    borderRadius: useTransform(dragY, [0, 100], ['0%', '50%']),
+    x: useTransform(dragY, [0, 100], ['0%', '-50%']),
+    top: useTransform(dragY, [0, 100], ['0', '1rem']),
+    left: useTransform(dragY, [0, 100], ['0%', '50%']),
+    border: useTransform(dragY, [0, 100], ['none', '4px solid white']),
+    transition: {
+      type: "spring",
+      stiffness: 100,
+      damping: 15
+    }
+  };
 
   useEffect(() => {
     const requestMediaPermissions = async () => {
@@ -142,6 +170,28 @@ const ClientAssistantProvider: React.FC<Props> = (props) => {
 
     fetchToken();
   }, [userId]);
+
+  // Define proper types for the animation variants
+  const variants = {
+    expanded: {
+      width: '100%',
+      height: '100%',
+      borderRadius: '0%',
+      x: '0%',
+      top: '0',
+      left: '0%',
+      border: 'none'
+    },
+    collapsed: {
+      width: '8rem',
+      height: '8rem',
+      borderRadius: '50%',
+      x: '-50%',
+      top: '1rem',
+      left: '50%',
+      border: '4px solid white'
+    }
+  };
 
   // Rest of your component remains the same
   return (
@@ -244,20 +294,64 @@ const ClientAssistantProvider: React.FC<Props> = (props) => {
                 <RoomEventListener />
                 
                 {/* Avatar and Background */}
-                <div className="absolute top-0 right-0 w-full h-full bg-F1F2F4">
+                <motion.div 
+                  className="absolute md:top-0 md:right-0 md:w-full md:h-full bg-F1F2F4
+                              overflow-hidden shadow-lg md:border-0 md:shadow-none"
+                  style={{
+                    width: dragY.get() === 100 ? '100%' : '8rem',
+                    height: dragY.get() === 100 ? '100%' : '8rem'
+                  }}
+                  variants={variants}
+                  initial="expanded"
+                  animate={isExpanded ? "collapsed" : "expanded"}
+                  transition={{
+                    type: "spring",
+                    stiffness: 100,
+                    damping: 15,
+                    mass: 0.8
+                  }}
+                >
                   <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE] animate-gradient-xy">
                     <div className="absolute inset-0 flex flex-col justify-end">
-                      <AvatarScene avatarUrl={avatarUrl} ></AvatarScene>
-                     
-                      <div className="absolute bottom-0 left-0 right-0 h-3/4 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+                      <AvatarScene avatarUrl={avatarUrl} />
+                      <div className="absolute bottom-0 left-0 right-0 h-3/4 bg-gradient-to-t from-white to-transparent pointer-events-none md:block hidden"></div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
 
-                {/* Mobile Recent Tasks Panel */}
-                <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm rounded-t-3xl shadow-lg z-40">
-                  <div className="px-4 py-6">
-                    <div className="max-h-[40vh] overflow-y-auto">
+                {/* Mobile Tasks Panel */}
+                <motion.div 
+                  className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm shadow-lg z-40"
+                  style={mobileContainerStyle}
+                  drag="y"
+                  dragConstraints={{ top: 0, bottom: 0 }}
+                  dragElastic={0.2}
+                  initial={{ height: '25%' }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 100,
+                    damping: 15,
+                    mass: 0.8
+                  }}
+                  onDrag={(_, info) => {
+                    dragY.set(info.offset.y);
+                  }}
+                  onDragEnd={() => {
+                    const shouldExpand = dragY.get() < 50;
+                    setIsExpanded(shouldExpand);
+                    animate(dragY, shouldExpand ? 0 : 100, {
+                      type: "spring",
+                      stiffness: 100,
+                      damping: 15
+                    });
+                  }}
+                >
+                  <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3" />
+                  
+                  <div className="px-4 py-6 h-full">
+                    <div className={`overflow-y-auto h-[calc(100%-2rem)] transition-all ${
+                      isExpanded ? 'max-h-[70vh]' : 'max-h-[15vh]'
+                    }`}>
                       <TaskTabsWithLiveKit 
                         tasks={props.tasks} 
                         assistantData={assistantData} 
@@ -265,7 +359,7 @@ const ClientAssistantProvider: React.FC<Props> = (props) => {
                       />
                     </div>
                   </div>
-                </div>
+                </motion.div>
 
                 {/* Desktop Controls */}
                 <div className="absolute bottom-14 w-full z-10 hidden md:block">
