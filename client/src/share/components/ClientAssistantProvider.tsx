@@ -98,7 +98,7 @@ const ClientAssistantProvider: React.FC<Props> = (props) => {
   
   // Bottom sheet transforms with smoother transitions
   const mobileContainerStyle = {
-    height: useTransform(dragY, [0, 100], ['80%', '25%']),
+    height: useTransform(dragY, [0, 100], ['80%', '35%']),
     borderRadius: useTransform(dragY, [0, 100], ['2rem 2rem 0 0', '2rem']),
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   };
@@ -295,8 +295,9 @@ const ClientAssistantProvider: React.FC<Props> = (props) => {
                 
                 {/* Avatar and Background */}
                 <motion.div 
-                  className="absolute md:top-0 md:right-0 md:w-full md:h-full bg-F1F2F4
-                              overflow-hidden shadow-lg md:border-0 md:shadow-none"
+                  className="absolute md:top-0 md:right-0 md:w-full md:h-full 
+                              overflow-hidden shadow-lg md:border-0 md:shadow-none
+                              bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE]"
                   style={{
                     width: dragY.get() === 100 ? '100%' : '8rem',
                     height: dragY.get() === 100 ? '100%' : '8rem'
@@ -304,12 +305,6 @@ const ClientAssistantProvider: React.FC<Props> = (props) => {
                   variants={variants}
                   initial="expanded"
                   animate={isExpanded ? "collapsed" : "expanded"}
-                  transition={{
-                    type: "spring",
-                    stiffness: 100,
-                    damping: 15,
-                    mass: 0.8
-                  }}
                 >
                   <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE] animate-gradient-xy">
                     <div className="absolute inset-0 flex flex-col justify-end">
@@ -321,36 +316,18 @@ const ClientAssistantProvider: React.FC<Props> = (props) => {
 
                 {/* Mobile Tasks Panel */}
                 <motion.div 
-                  className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm shadow-lg z-40"
+                  className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-lg z-40"
                   style={mobileContainerStyle}
                   drag="y"
                   dragConstraints={{ top: 0, bottom: 0 }}
                   dragElastic={0.2}
-                  initial={{ height: '25%' }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 100,
-                    damping: 15,
-                    mass: 0.8
-                  }}
-                  onDrag={(_, info) => {
-                    dragY.set(info.offset.y);
-                  }}
-                  onDragEnd={() => {
-                    const shouldExpand = dragY.get() < 50;
-                    setIsExpanded(shouldExpand);
-                    animate(dragY, shouldExpand ? 0 : 100, {
-                      type: "spring",
-                      stiffness: 100,
-                      damping: 15
-                    });
-                  }}
+                  initial={{ height: '35%' }}
                 >
-                  <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3" />
+                  <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-2" />
                   
-                  <div className="px-4 py-6 h-full">
+                  <div className="px-4 h-full">
                     <div className={`overflow-y-auto h-[calc(100%-2rem)] transition-all ${
-                      isExpanded ? 'max-h-[70vh]' : 'max-h-[15vh]'
+                      isExpanded ? 'max-h-[70vh]' : 'max-h-[28vh]'
                     }`}>
                       <TaskTabsWithLiveKit 
                         tasks={props.tasks} 
