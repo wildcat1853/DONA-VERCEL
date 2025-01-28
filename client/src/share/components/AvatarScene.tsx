@@ -19,7 +19,10 @@ const AvatarScene: React.FC<AvatarSceneProps> = ({ avatarUrl }) => {
   return (
     <Canvas
       style={{ width: '100%', height: '100%' }}
+      gl={{ alpha: true }}
+      className="bg-[#FAF0F1]"
     >
+      <color attach="background" args={["#FAF0F1"]} />
       <PerspectiveCamera 
         makeDefault 
         position={[0, 0.6, 0.88]}

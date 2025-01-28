@@ -300,22 +300,16 @@ const ClientAssistantProvider: React.FC<Props> = (props) => {
                               bg-white"
                   style={{
                     width: dragY.get() === 100 ? '100%' : '8rem',
-                    height: dragY.get() === 100 ? '100%' : '8rem'
+                    height: dragY.get() === 100 ? '100%' : '8rem',
+                    zIndex: isExpanded ? 30 : 40
                   }}
                   variants={variants}
                   initial="expanded"
                   animate={isExpanded ? "collapsed" : "expanded"}
-                  transition={{
-                    type: "spring",
-                    stiffness: 100,
-                    damping: 15,
-                    mass: 0.8
-                  }}
                 >
-                  <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE] animate-gradient-xy">
-                    <div className="absolute inset-0 flex flex-col justify-end">
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#E5F1F1] via-[#FAF0F1] to-[#EDD9FE]">
+                    <div className="relative h-full">
                       <AvatarScene avatarUrl={avatarUrl} />
-                      <div className="absolute bottom-0 left-0 right-0 h-3/4 bg-gradient-to-t from-white to-transparent pointer-events-none md:block hidden"></div>
                     </div>
                   </div>
                 </motion.div>
