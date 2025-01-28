@@ -267,7 +267,7 @@ const ClientAssistantProvider: React.FC<Props> = (props) => {
               tasks={props.tasks} 
               userId={userId}
             />
-            <div className="fixed top-4 left-4 z-50">
+            <div className="fixed top-4 left-4 z-50 hidden md:block">
               <AccountDropdown />
             </div>
             <div className="flex flex-col md:flex-row h-screen">
